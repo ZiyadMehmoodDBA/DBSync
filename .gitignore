@@ -1,0 +1,33 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+.vscode/settings.json
+TestResults/
+publish/
+
+# Secrets
+.env
+.env.local
+.env.*.local
+server/.env
+*.pem
+*.key
+*.p12
+*.pfx
+credentials.json
+secrets.json
+
+# Node
+node_modules/
+dist/
+.vite/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+*.override.yml
