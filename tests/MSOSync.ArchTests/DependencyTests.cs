@@ -1,0 +1,54 @@
+using System.Reflection;
+using NetArchTest.Rules;
+using Xunit;
+
+namespace MSOSync.ArchTests;
+
+public class DependencyTests
+{
+    private static readonly string[] InternalNamespaces =
+    [
+        "MSOSync.Common", "MSOSync.Configuration", "MSOSync.Persistence",
+        "MSOSync.Security", "MSOSync.Metadata", "MSOSync.Trigger",
+        "MSOSync.Event", "MSOSync.Routing", "MSOSync.Node", "MSOSync.Channel",
+        "MSOSync.Batch", "MSOSync.Transport", "MSOSync.Engine", "MSOSync.Scheduler",
+        "MSOSync.Metrics", "MSOSync.Topology", "MSOSync.Api"
+    ];
+
+    [Fact]
+    public void Common_HasNoInternalProjectDependencies()
+    {
+        var others = InternalNamespaces.Where(n => n != "MSOSync.Common").ToArray();
+
+        var result = Types.InNamespace("MSOSync.Common")
+            .ShouldNot()
+            .HaveDependencyOnAny(others)
+            .GetResult();
+
+        Assert.True(result.IsSuccessful,
+            "MSOSync.Common must not depend on any other MSOSync project. " +
+            "Failing types: " + string.Join(", ", result.FailingTypeNames ?? []));
+    }
+
+    [Fact]
+    public void ApiAndApp_AreNotDependedOnByDomainModules()
+    {
+        var domainNamespaces = InternalNamespaces
+            .Where(n => n != "MSOSync.Api" && n != "MSOSync.App")
+            .ToArray();
+
+        // NetArchTest.Rules 1.3.2 does not have Types.InNamespaces; load assemblies explicitly.
+        var domainAssemblies = AppDomain.CurrentDomain.GetAssemblies()
+            .Where(a => domainNamespaces.Any(ns => a.GetName().Name == ns))
+            .ToList();
+
+        var result = Types.InAssemblies(domainAssemblies)
+            .ShouldNot()
+            .HaveDependencyOnAny("MSOSync.Api", "MSOSync.App")
+            .GetResult();
+
+        Assert.True(result.IsSuccessful,
+            "Domain modules must not depend on MSOSync.Api or MSOSync.App. " +
+            "Failing types: " + string.Join(", ", result.FailingTypeNames ?? []));
+    }
+}
