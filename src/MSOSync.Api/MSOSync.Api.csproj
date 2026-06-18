@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <Description>REST controllers, GlobalExceptionHandler, Swagger config</Description>
+    <OutputType>Library</OutputType>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="FluentValidation.AspNetCore" />
+    <PackageReference Include="Swashbuckle.AspNetCore" />
+    <PackageReference Include="MediatR" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\MSOSync.Common\MSOSync.Common.csproj" />
+    <ProjectReference Include="..\MSOSync.Configuration\MSOSync.Configuration.csproj" />
+    <ProjectReference Include="..\MSOSync.Security\MSOSync.Security.csproj" />
+    <ProjectReference Include="..\MSOSync.Metadata\MSOSync.Metadata.csproj" />
+    <ProjectReference Include="..\MSOSync.Trigger\MSOSync.Trigger.csproj" />
+    <ProjectReference Include="..\MSOSync.Event\MSOSync.Event.csproj" />
+    <ProjectReference Include="..\MSOSync.Routing\MSOSync.Routing.csproj" />
+    <ProjectReference Include="..\MSOSync.Node\MSOSync.Node.csproj" />
+    <ProjectReference Include="..\MSOSync.Channel\MSOSync.Channel.csproj" />
+    <ProjectReference Include="..\MSOSync.Batch\MSOSync.Batch.csproj" />
+    <ProjectReference Include="..\MSOSync.Transport\MSOSync.Transport.csproj" />
+    <ProjectReference Include="..\MSOSync.Engine\MSOSync.Engine.csproj" />
+    <ProjectReference Include="..\MSOSync.Topology\MSOSync.Topology.csproj" />
+  </ItemGroup>
+</Project>
