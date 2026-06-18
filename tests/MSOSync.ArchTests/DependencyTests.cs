@@ -19,6 +19,10 @@ public class DependencyTests
     [Fact]
     public void Common_HasNoInternalProjectDependencies()
     {
+        var outputDir = Path.GetDirectoryName(typeof(DependencyTests).Assembly.Location)!;
+        var path = Path.Combine(outputDir, "MSOSync.Common.dll");
+        if (File.Exists(path)) Assembly.LoadFrom(path);
+
         var others = InternalNamespaces.Where(n => n != "MSOSync.Common").ToArray();
 
         var result = Types.InNamespace("MSOSync.Common")

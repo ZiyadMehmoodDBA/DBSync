@@ -4,6 +4,8 @@ Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
     .CreateBootstrapLogger();
 
+int exitCode = 0;
+
 try
 {
     var builder = WebApplication.CreateBuilder(args);
@@ -35,8 +37,11 @@ try
 catch (Exception ex)
 {
     Log.Fatal(ex, "MSOSync terminated unexpectedly");
+    exitCode = 1;
 }
 finally
 {
     await Log.CloseAndFlushAsync();
 }
+
+return exitCode;
