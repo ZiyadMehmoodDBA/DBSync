@@ -1,3 +1,4 @@
+using System.IO;
 using System.Reflection;
 using NetArchTest.Rules;
 using Xunit;
@@ -37,10 +38,17 @@ public class DependencyTests
             .Where(n => n != "MSOSync.Api" && n != "MSOSync.App")
             .ToArray();
 
-        // NetArchTest.Rules 1.3.2 does not have Types.InNamespaces; load assemblies explicitly.
+        // Force-load assemblies — .NET loads lazily; GetAssemblies() without this returns an empty set
+        var outputDir = Path.GetDirectoryName(typeof(DependencyTests).Assembly.Location)!;
+        foreach (var ns in domainNamespaces)
+        {
+            var path = Path.Combine(outputDir, ns + ".dll");
+            if (File.Exists(path)) Assembly.LoadFrom(path);
+        }
+
         var domainAssemblies = AppDomain.CurrentDomain.GetAssemblies()
             .Where(a => domainNamespaces.Any(ns => a.GetName().Name == ns))
-            .ToList();
+            .ToArray();
 
         var result = Types.InAssemblies(domainAssemblies)
             .ShouldNot()
