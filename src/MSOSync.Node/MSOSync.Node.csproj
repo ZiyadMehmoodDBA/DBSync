@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>Node registration, heartbeat, status evaluation</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="MediatR" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\MSOSync.Common\MSOSync.Common.csproj" />
+    <ProjectReference Include="..\MSOSync.Persistence\MSOSync.Persistence.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>OpenTelemetry metrics collectors, Prometheus export</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="OpenTelemetry" />
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.Http" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" />
+    <PackageReference Include="OpenTelemetry.Exporter.Prometheus.AspNetCore" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\MSOSync.Common\MSOSync.Common.csproj" />
+    <ProjectReference Include="..\MSOSync.Persistence\MSOSync.Persistence.csproj" />
+  </ItemGroup>
+</Project>

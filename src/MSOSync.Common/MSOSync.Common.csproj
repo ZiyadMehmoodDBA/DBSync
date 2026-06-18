@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>Shared models, exceptions, enums, constants, and utilities</Description>
+  </PropertyGroup>
+</Project>

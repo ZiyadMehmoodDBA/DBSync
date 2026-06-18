@@ -1,0 +1,3 @@
+namespace MSOSync.Batch;
+
+// placeholder

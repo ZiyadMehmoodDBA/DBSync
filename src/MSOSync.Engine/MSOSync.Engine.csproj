@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>SyncEngine, ApplyEngine, ApplyPipeline orchestration — depends on interfaces only</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="MediatR" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\MSOSync.Common\MSOSync.Common.csproj" />
+  </ItemGroup>
+</Project>

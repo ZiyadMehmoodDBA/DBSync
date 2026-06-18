@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>EventReader, EventPurger, MediatR domain events</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="MediatR" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\MSOSync.Common\MSOSync.Common.csproj" />
+    <ProjectReference Include="..\MSOSync.Persistence\MSOSync.Persistence.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>T-SQL DDL generation, trigger install/drop/rebuild, drift detection</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\MSOSync.Common\MSOSync.Common.csproj" />
+    <ProjectReference Include="..\MSOSync.Persistence\MSOSync.Persistence.csproj" />
+    <ProjectReference Include="..\MSOSync.Metadata\MSOSync.Metadata.csproj" />
+  </ItemGroup>
+</Project>

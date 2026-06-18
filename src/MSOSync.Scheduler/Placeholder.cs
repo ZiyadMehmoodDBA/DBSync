@@ -1,0 +1,3 @@
+namespace MSOSync.Scheduler;
+
+// placeholder

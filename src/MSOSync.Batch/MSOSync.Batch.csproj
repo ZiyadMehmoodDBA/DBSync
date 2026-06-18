@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>BatchCreator, BatchStateMachine, RetryEvaluator, BatchPurger</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="MediatR" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\MSOSync.Common\MSOSync.Common.csproj" />
+    <ProjectReference Include="..\MSOSync.Persistence\MSOSync.Persistence.csproj" />
+    <ProjectReference Include="..\MSOSync.Event\MSOSync.Event.csproj" />
+    <ProjectReference Include="..\MSOSync.Routing\MSOSync.Routing.csproj" />
+    <ProjectReference Include="..\MSOSync.Channel\MSOSync.Channel.csproj" />
+  </ItemGroup>
+</Project>
