@@ -10,8 +10,10 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
     </PackageReference>
     <PackageReference Include="FluentAssertions" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\MSOSync.Persistence\MSOSync.Persistence.csproj" />
+    <ProjectReference Include="..\..\src\MSOSync.App\MSOSync.App.csproj" />
   </ItemGroup>
 </Project>

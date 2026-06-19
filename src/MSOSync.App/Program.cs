@@ -57,6 +57,11 @@ try
     Log.Information("MSOSync starting on {Env}", app.Environment.EnvironmentName);
     await app.RunAsync();
 }
+catch (HostAbortedException)
+{
+    // Rethrow so WebApplicationFactory can intercept the host during integration tests.
+    throw;
+}
 catch (Exception ex)
 {
     Log.Fatal(ex, "MSOSync terminated unexpectedly");
