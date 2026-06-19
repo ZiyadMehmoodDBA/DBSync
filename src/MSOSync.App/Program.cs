@@ -2,6 +2,7 @@ using FluentValidation;
 using FluentValidation.AspNetCore;
 using MSOSync.Api.Controllers.Auth;
 using MSOSync.App;
+using MSOSync.Common;
 using MSOSync.Persistence;
 using MSOSync.Security;
 using Serilog;
@@ -26,6 +27,8 @@ try
     builder.Services.AddSwaggerGen();
     builder.Services.AddPersistence(builder.Configuration);
     builder.Services.AddSecurity(builder.Configuration);
+    builder.Services.AddHttpContextAccessor();
+    builder.Services.AddScoped<ICurrentUserService, HttpContextCurrentUserService>();
 
     builder.Services.AddControllers()
         .AddApplicationPart(typeof(AuthController).Assembly);

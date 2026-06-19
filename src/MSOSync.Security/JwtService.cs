@@ -33,6 +33,7 @@ public sealed class JwtService
         var claims = new List<Claim>
         {
             new(JwtRegisteredClaimNames.Sub, username),
+            new Claim(ClaimTypes.Name, username),
             new("userId", userId.ToString()),
             new(JwtRegisteredClaimNames.Iat,
                 DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(),
