@@ -6,8 +6,6 @@ namespace MSOSync.Security.Middleware;
 
 public sealed class NodeTokenAuthMiddleware(RequestDelegate next)
 {
-    private const string SyncPathPrefix = "/api/v1/sync/";
-
     public async Task InvokeAsync(HttpContext context, NodeSecurityService nodeSecurityService)
     {
         if (!context.Request.Path.StartsWithSegments("/api/v1/sync", StringComparison.OrdinalIgnoreCase))
