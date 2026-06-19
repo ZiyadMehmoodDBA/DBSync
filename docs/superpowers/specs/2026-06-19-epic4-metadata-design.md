@@ -244,17 +244,19 @@ public sealed class SyncNodeSecurity
 }
 ```
 
-### NodeSecurityService.ProvisionTokenAsync
+### NodeSecurityService.PrepareToken
 
 Add to `NodeSecurityService` (and its interface if one exists):
 
 ```csharp
-public async Task<NodeProvisionResult> ProvisionTokenAsync(string nodeId, CancellationToken ct = default)
+public NodeProvisionResult PrepareToken(string nodeId)
 {
     var raw = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
     var hash = hasher.Hash(raw);  // BCryptPasswordHasher
 
-    var existing = await db.NodeSecurities.FindAsync([nodeId], ct);
+    var existing = db.NodeSecurities.Local.FirstOrDefault(s => s.NodeId == nodeId)
+        ?? db.NodeSecurities.Find(nodeId);
+
     if (existing != null)
     {
         existing.CurrentTokenHash = hash;
@@ -271,10 +273,11 @@ public async Task<NodeProvisionResult> ProvisionTokenAsync(string nodeId, Cancel
         });
     }
 
-    await db.SaveChangesAsync(ct);
     return new NodeProvisionResult(nodeId, raw);
 }
 ```
+
+**Transaction-neutral:** `PrepareToken` stages changes on the shared `AppDbContext` but does NOT call `SaveChangesAsync`. The caller (`NodeMetadataService.ApproveRegistrationAsync`) owns the single `SaveChangesAsync` that commits the registration, the new node, and the token in one atomic transaction.
 
 `NodeProvisionResult` record in `MSOSync.Security`:
 
@@ -286,7 +289,8 @@ public sealed record NodeProvisionResult(string NodeId, string RawToken);
 
 - Build solution: `dotnet build MSOSync.sln` — 0 warnings, 0 errors
 - Integration: confirm `node_token` absent from `sys.columns`, `rotation_scheduled` present
-- `ProvisionTokenAsync` generates a verifiable BCrypt hash
+- `PrepareToken` stages SyncNodeSecurity row without calling SaveChanges
+- `PrepareToken` generates a verifiable BCrypt hash
 
 ---
 
@@ -627,8 +631,9 @@ public interface INodeMetadataService
 
 2. Set request.Approved = true
 3. Create SyncNode (status = "APPROVED", group from request, sync_url from request)
-4. Call NodeSecurityService.ProvisionTokenAsync(nodeId) → NodeProvisionResult
-5. SaveChangesAsync (request update + node create in one transaction)
+4. Call NodeSecurityService.PrepareToken(nodeId) → NodeProvisionResult
+   (stages SyncNodeSecurity on the shared DbContext — does NOT SaveChanges)
+5. SaveChangesAsync — single commit: registration update + new node + new security row
 6. Publish NodeMetadataChangedEvent
 7. Return NodeProvisionResult (raw token shown once)
 ```
