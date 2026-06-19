@@ -22,7 +22,6 @@ public sealed class NodeSecurityServiceTests
         db.NodeSecurities.Add(new SyncNodeSecurity
         {
             NodeId = "node1",
-            NodeToken = raw,
             CurrentTokenHash = hasher.Hash(raw)
         });
         await db.SaveChangesAsync();
@@ -41,7 +40,6 @@ public sealed class NodeSecurityServiceTests
         db.NodeSecurities.Add(new SyncNodeSecurity
         {
             NodeId = "node1",
-            NodeToken = currentRaw,
             CurrentTokenHash = hasher.Hash(currentRaw),
             NextTokenHash = hasher.Hash(nextRaw)
         });
@@ -59,7 +57,6 @@ public sealed class NodeSecurityServiceTests
         db.NodeSecurities.Add(new SyncNodeSecurity
         {
             NodeId = "node1",
-            NodeToken = "correct-token",
             CurrentTokenHash = hasher.Hash("correct-token")
         });
         await db.SaveChangesAsync();

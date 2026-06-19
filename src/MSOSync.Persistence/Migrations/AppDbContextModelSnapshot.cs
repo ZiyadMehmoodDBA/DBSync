@@ -464,12 +464,9 @@ namespace MSOSync.Persistence.Migrations
                         .HasColumnType("varchar(255)")
                         .HasColumnName("next_token_hash");
 
-                    b.Property<string>("NodeToken")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .IsUnicode(false)
-                        .HasColumnType("varchar(255)")
-                        .HasColumnName("node_token");
+                    b.Property<DateTime?>("RotationScheduled")
+                        .HasColumnType("datetime2(7)")
+                        .HasColumnName("rotation_scheduled");
 
                     b.HasKey("NodeId");
 

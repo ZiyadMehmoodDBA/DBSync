@@ -14,10 +14,15 @@ public sealed class SyncNodeSecurityConfiguration : IEntityTypeConfiguration<Syn
         builder.ToTable("sync_node_security", Schema);
         builder.HasKey(e => e.NodeId);
 
-        builder.Property(e => e.NodeId).HasColumnName("node_id").HasColumnType("varchar(50)").HasMaxLength(50).IsUnicode(false);
-        builder.Property(e => e.NodeToken).HasColumnName("node_token").HasColumnType("varchar(255)").HasMaxLength(255).IsUnicode(false).IsRequired();
-        builder.Property(e => e.CurrentTokenHash).HasColumnName("current_token_hash").HasColumnType("varchar(255)").HasMaxLength(255).IsUnicode(false).IsRequired();
-        builder.Property(e => e.NextTokenHash).HasColumnName("next_token_hash").HasColumnType("varchar(255)").HasMaxLength(255).IsUnicode(false);
-        builder.Property(e => e.CreatedTime).HasColumnName("created_time").HasColumnType("datetime2(7)");
+        builder.Property(e => e.NodeId)
+            .HasColumnName("node_id").HasColumnType("varchar(50)").HasMaxLength(50).IsUnicode(false);
+        builder.Property(e => e.CurrentTokenHash)
+            .HasColumnName("current_token_hash").HasColumnType("varchar(255)").HasMaxLength(255).IsUnicode(false).IsRequired();
+        builder.Property(e => e.NextTokenHash)
+            .HasColumnName("next_token_hash").HasColumnType("varchar(255)").HasMaxLength(255).IsUnicode(false);
+        builder.Property(e => e.RotationScheduled)
+            .HasColumnName("rotation_scheduled").HasColumnType("datetime2(7)");
+        builder.Property(e => e.CreatedTime)
+            .HasColumnName("created_time").HasColumnType("datetime2(7)");
     }
 }

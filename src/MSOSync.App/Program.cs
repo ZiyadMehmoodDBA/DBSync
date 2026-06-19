@@ -1,7 +1,10 @@
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using MSOSync.Api.Controllers.Auth;
+using MSOSync.Api.Exceptions;
 using MSOSync.App;
+using MSOSync.Common;
+using MSOSync.Metadata;
 using MSOSync.Persistence;
 using MSOSync.Security;
 using Serilog;
@@ -26,6 +29,8 @@ try
     builder.Services.AddSwaggerGen();
     builder.Services.AddPersistence(builder.Configuration);
     builder.Services.AddSecurity(builder.Configuration);
+    builder.Services.AddHttpContextAccessor();
+    builder.Services.AddScoped<ICurrentUserService, HttpContextCurrentUserService>();
 
     builder.Services.AddControllers()
         .AddApplicationPart(typeof(AuthController).Assembly);
@@ -33,10 +38,14 @@ try
     builder.Services.AddFluentValidationAutoValidation();
     builder.Services.AddValidatorsFromAssemblyContaining<AuthController>();
 
+    builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+    builder.Services.AddProblemDetails();
+    builder.Services.AddMetadata(builder.Configuration);
     builder.Services.AddHostedService<AdminBootstrapper>();
 
     var app = builder.Build();
 
+    app.UseExceptionHandler();
     app.UseSecurityHeaders();
     app.UseAuthentication();
     app.UseNodeTokenAuth();
