@@ -4,7 +4,7 @@ using MSOSync.Persistence.Entities;
 
 namespace MSOSync.Security;
 
-public sealed class UserService(AppDbContext db)
+public sealed class UserService(AppDbContext db) : IUserService
 {
     public Task<SyncUser?> FindByUsernameAsync(string username, CancellationToken ct = default) =>
         db.Users
