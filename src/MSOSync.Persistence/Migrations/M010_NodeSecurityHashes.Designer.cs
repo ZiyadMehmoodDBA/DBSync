@@ -11,7 +11,6 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace MSOSync.Persistence.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260619000010_NodeSecurityHashes")]
     partial class M010_NodeSecurityHashes
     {
         /// <inheritdoc />
