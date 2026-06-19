@@ -49,6 +49,7 @@
   </ItemGroup>
   <ItemGroup Label="Extensions">
     <PackageVersion Include="Microsoft.Extensions.Caching.Memory" Version="9.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="9.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Http" Version="9.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Hosting" Version="9.0.0" />
   </ItemGroup>

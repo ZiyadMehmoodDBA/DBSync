@@ -1,4 +1,5 @@
 using Serilog;
+using MSOSync.Persistence;
 
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
@@ -18,6 +19,7 @@ try
 
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddSwaggerGen();
+    builder.Services.AddPersistence(builder.Configuration);
 
     var app = builder.Build();
 
