@@ -1,6 +1,7 @@
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using MSOSync.Api.Controllers.Auth;
+using MSOSync.Api.Exceptions;
 using MSOSync.App;
 using MSOSync.Common;
 using MSOSync.Persistence;
@@ -36,10 +37,13 @@ try
     builder.Services.AddFluentValidationAutoValidation();
     builder.Services.AddValidatorsFromAssemblyContaining<AuthController>();
 
+    builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+    builder.Services.AddProblemDetails();
     builder.Services.AddHostedService<AdminBootstrapper>();
 
     var app = builder.Build();
 
+    app.UseExceptionHandler();
     app.UseSecurityHeaders();
     app.UseAuthentication();
     app.UseNodeTokenAuth();
