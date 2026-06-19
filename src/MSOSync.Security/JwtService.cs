@@ -67,7 +67,7 @@ public sealed class JwtService
                 },
                 out _);
         }
-        catch
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return null;
         }

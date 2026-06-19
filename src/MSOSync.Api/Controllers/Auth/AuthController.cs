@@ -45,7 +45,8 @@ public sealed class AuthController(AuthenticationService authService) : Controll
         [FromBody] RefreshRequest request,
         CancellationToken ct)
     {
-        await authService.LogoutAsync(request.RefreshToken, ct);
+        _ = long.TryParse(User.FindFirstValue("userId"), out var callerUserId);
+        await authService.LogoutAsync(request.RefreshToken, callerUserId, ct);
         return NoContent();
     }
 

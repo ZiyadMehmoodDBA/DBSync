@@ -73,8 +73,17 @@ public sealed class JwtServiceTests
     [Fact]
     public void Ctor_MissingSecret_ThrowsInvalidOperation()
     {
-        var config = new ConfigurationBuilder().Build();
-        var act = () => new JwtService(config);
-        act.Should().Throw<InvalidOperationException>().WithMessage("*MSOSYNC_JWT_SECRET*");
+        var saved = Environment.GetEnvironmentVariable("MSOSYNC_JWT_SECRET");
+        Environment.SetEnvironmentVariable("MSOSYNC_JWT_SECRET", null);
+        try
+        {
+            var config = new ConfigurationBuilder().Build();
+            var act = () => new JwtService(config);
+            act.Should().Throw<InvalidOperationException>().WithMessage("*MSOSYNC_JWT_SECRET*");
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("MSOSYNC_JWT_SECRET", saved);
+        }
     }
 }

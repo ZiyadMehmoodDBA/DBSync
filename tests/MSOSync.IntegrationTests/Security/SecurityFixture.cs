@@ -2,7 +2,6 @@
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
@@ -29,26 +28,6 @@ public sealed class SecurityFixture : WebApplicationFactory<Program>, IAsyncLife
 
     public string AdminUsername { get; } = "testadmin";
     public string AdminPassword { get; } = "TestP@ss1!";
-
-    protected override void ConfigureWebHost(IWebHostBuilder builder)
-    {
-        builder.UseEnvironment("Test");
-
-        builder.ConfigureAppConfiguration((_, cfg) =>
-        {
-            cfg.AddInMemoryCollection(new Dictionary<string, string?>
-            {
-                ["ConnectionStrings:DefaultConnection"] = ConnStr,
-                ["Jwt:Secret"] = JwtSecret,
-            });
-        });
-
-        builder.ConfigureServices(services =>
-        {
-            // Suppress AdminBootstrapper — seeding is done in InitializeAsync
-            // (No Admin:Username / Admin:Password in config, so it no-ops anyway)
-        });
-    }
 
     protected override IHost CreateHost(IHostBuilder builder)
     {

@@ -120,7 +120,7 @@ public sealed class AuthenticationService(
         return new RefreshResult(true, accessToken, rawNew, newRefreshEntity.ExpiresAt, null);
     }
 
-    public async Task LogoutAsync(string rawRefreshToken, CancellationToken ct = default)
+    public async Task LogoutAsync(string rawRefreshToken, long callerUserId, CancellationToken ct = default)
     {
         var tokens = await db.UserRefreshTokens
             .AsNoTracking()
@@ -128,7 +128,7 @@ public sealed class AuthenticationService(
             .ToListAsync(ct);
 
         var match = tokens.FirstOrDefault(t => hasher.Verify(rawRefreshToken, t.TokenHash));
-        if (match == null) return;
+        if (match == null || match.UserId != callerUserId) return;
 
         await db.UserRefreshTokens
             .Where(t => t.TokenId == match.TokenId)

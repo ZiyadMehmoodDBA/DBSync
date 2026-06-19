@@ -28,7 +28,6 @@ public static class SecurityServiceExtensions
         services.AddSingleton<BCryptPasswordHasher>();
         services.AddSingleton<PasswordPolicy>();
         services.AddScoped<IUserService, UserService>();
-        services.AddScoped<UserService>();
         services.AddScoped<AuthenticationService>();
         services.AddScoped<NodeSecurityService>();
         services.AddScoped<AuditService>();

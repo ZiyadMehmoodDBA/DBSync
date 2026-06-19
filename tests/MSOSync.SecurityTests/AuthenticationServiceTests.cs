@@ -234,7 +234,7 @@ public sealed class AuthenticationServiceTests
         var (svc, _) = MakeService(db, seedUser: user);
 
         var login = await svc.LoginAsync("alice", "Password1!", "corr-1");
-        await svc.LogoutAsync(login.RefreshToken!);
+        await svc.LogoutAsync(login.RefreshToken!, 1L);
 
         var result = await svc.RefreshAsync(login.RefreshToken!, "corr-2");
         result.Success.Should().BeFalse();
