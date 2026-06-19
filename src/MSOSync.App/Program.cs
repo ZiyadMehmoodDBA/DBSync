@@ -1,5 +1,10 @@
-using Serilog;
+using FluentValidation;
+using FluentValidation.AspNetCore;
+using MSOSync.Api.Controllers.Auth;
+using MSOSync.App;
 using MSOSync.Persistence;
+using MSOSync.Security;
+using Serilog;
 
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
@@ -20,8 +25,24 @@ try
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddSwaggerGen();
     builder.Services.AddPersistence(builder.Configuration);
+    builder.Services.AddSecurity(builder.Configuration);
+
+    builder.Services.AddControllers()
+        .AddApplicationPart(typeof(AuthController).Assembly);
+
+    builder.Services.AddFluentValidationAutoValidation();
+    builder.Services.AddValidatorsFromAssemblyContaining<AuthController>();
+
+    builder.Services.AddHostedService<AdminBootstrapper>();
 
     var app = builder.Build();
+
+    app.UseSecurityHeaders();
+    app.UseAuthentication();
+    app.UseNodeTokenAuth();
+    app.UseAuthorization();
+
+    app.MapControllers();
 
     app.MapGet("/health", () => Results.Ok(new { status = "UP", version = "0.1.0" }))
        .WithName("Health")

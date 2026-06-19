@@ -9,6 +9,7 @@
     <PackageReference Include="Serilog.Sinks.File" />
     <PackageReference Include="Serilog.Enrichers.Thread" />
     <PackageReference Include="Serilog.Enrichers.Environment" />
+    <PackageReference Include="FluentValidation.AspNetCore" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MSOSync.Api\MSOSync.Api.csproj" />
