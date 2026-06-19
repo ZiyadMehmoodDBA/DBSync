@@ -451,6 +451,19 @@ namespace MSOSync.Persistence.Migrations
                         .HasColumnType("datetime2(7)")
                         .HasColumnName("created_time");
 
+                    b.Property<string>("CurrentTokenHash")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(255)")
+                        .HasColumnName("current_token_hash");
+
+                    b.Property<string>("NextTokenHash")
+                        .HasMaxLength(255)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(255)")
+                        .HasColumnName("next_token_hash");
+
                     b.Property<string>("NodeToken")
                         .IsRequired()
                         .HasMaxLength(255)
