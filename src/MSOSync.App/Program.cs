@@ -4,6 +4,7 @@ using MSOSync.Api.Controllers.Auth;
 using MSOSync.Api.Exceptions;
 using MSOSync.App;
 using MSOSync.Common;
+using MSOSync.Metadata;
 using MSOSync.Persistence;
 using MSOSync.Security;
 using Serilog;
@@ -39,6 +40,7 @@ try
 
     builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
     builder.Services.AddProblemDetails();
+    builder.Services.AddMetadata(builder.Configuration);
     builder.Services.AddHostedService<AdminBootstrapper>();
 
     var app = builder.Build();
