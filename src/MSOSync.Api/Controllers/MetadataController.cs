@@ -17,19 +17,21 @@ public sealed class MetadataController(
     [Authorize]
     public async Task<IActionResult> GetSummary(CancellationToken ct)
     {
-        var allNodes      = await nodes.GetNodesAsync(ct);
-        var allTriggers   = await triggers.GetTriggersAsync(ct);
-        var allRouters    = await routers.GetRoutersAsync(ct);
-        var allChannels   = await channels.GetChannelsAsync(ct);
-        var allParameters = await parameters.GetParametersAsync(ct);
+        var nodesTask      = nodes.GetNodesAsync(ct);
+        var triggersTask   = triggers.GetTriggersAsync(ct);
+        var routersTask    = routers.GetRoutersAsync(ct);
+        var channelsTask   = channels.GetChannelsAsync(ct);
+        var parametersTask = parameters.GetParametersAsync(ct);
+
+        await Task.WhenAll(nodesTask, triggersTask, routersTask, channelsTask, parametersTask);
 
         return Ok(new
         {
-            nodes      = allNodes.Count,
-            triggers   = allTriggers.Count,
-            routers    = allRouters.Count,
-            channels   = allChannels.Count,
-            parameters = allParameters.Count
+            nodes      = nodesTask.Result.Count,
+            triggers   = triggersTask.Result.Count,
+            routers    = routersTask.Result.Count,
+            channels   = channelsTask.Result.Count,
+            parameters = parametersTask.Result.Count
         });
     }
 }
