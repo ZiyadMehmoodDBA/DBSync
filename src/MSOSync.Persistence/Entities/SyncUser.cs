@@ -8,5 +8,7 @@ public sealed class SyncUser
     public bool Enabled { get; set; } = true;
     public DateTime? LastLogin { get; set; }
     public int FailedAttempts { get; set; } = 0;
+    public DateTime? LockedUntil { get; set; }
+    public DateTime? PasswordChangedAt { get; set; }
     public DateTime? CreatedTime { get; set; }
 }

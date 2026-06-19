@@ -30,6 +30,7 @@ public sealed class AppDbContext : DbContext
     public DbSet<SyncUser> Users => Set<SyncUser>();
     public DbSet<SyncRole> Roles => Set<SyncRole>();
     public DbSet<SyncUserRole> UserRoles => Set<SyncUserRole>();
+    public DbSet<SyncUserRefreshToken> UserRefreshTokens => Set<SyncUserRefreshToken>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

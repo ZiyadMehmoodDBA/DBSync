@@ -20,6 +20,8 @@ public sealed class SyncUserConfiguration : IEntityTypeConfiguration<SyncUser>
         builder.Property(e => e.Enabled).HasColumnName("enabled").HasDefaultValue(true);
         builder.Property(e => e.LastLogin).HasColumnName("last_login").HasColumnType("datetime2(7)");
         builder.Property(e => e.FailedAttempts).HasColumnName("failed_attempts").HasDefaultValue(0);
+        builder.Property(e => e.LockedUntil).HasColumnName("locked_until").HasColumnType("datetime2(7)");
+        builder.Property(e => e.PasswordChangedAt).HasColumnName("password_changed_at").HasColumnType("datetime2(7)");
         builder.Property(e => e.CreatedTime).HasColumnName("created_time").HasColumnType("datetime2(7)");
 
         builder.HasIndex(e => e.Username).IsUnique().HasDatabaseName("UQ_sync_user_username");

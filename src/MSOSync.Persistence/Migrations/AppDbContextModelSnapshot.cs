@@ -918,6 +918,14 @@ namespace MSOSync.Persistence.Migrations
                         .HasColumnType("datetime2(7)")
                         .HasColumnName("last_login");
 
+                    b.Property<DateTime?>("LockedUntil")
+                        .HasColumnType("datetime2(7)")
+                        .HasColumnName("locked_until");
+
+                    b.Property<DateTime?>("PasswordChangedAt")
+                        .HasColumnType("datetime2(7)")
+                        .HasColumnName("password_changed_at");
+
                     b.Property<string>("PasswordHash")
                         .IsRequired()
                         .HasMaxLength(255)
@@ -939,6 +947,53 @@ namespace MSOSync.Persistence.Migrations
                         .HasDatabaseName("UQ_sync_user_username");
 
                     b.ToTable("sync_user", "msosync");
+                });
+
+            modelBuilder.Entity("MSOSync.Persistence.Entities.SyncUserRefreshToken", b =>
+                {
+                    b.Property<long>("TokenId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("token_id");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("TokenId"));
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("datetime2(7)")
+                        .HasColumnName("expires_at");
+
+                    b.Property<long?>("FamilyId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("family_id");
+
+                    b.Property<DateTime>("IssuedAt")
+                        .HasColumnType("datetime2(7)")
+                        .HasColumnName("issued_at");
+
+                    b.Property<DateTime?>("RevokedAt")
+                        .HasColumnType("datetime2(7)")
+                        .HasColumnName("revoked_at");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(255)")
+                        .HasColumnName("token_hash");
+
+                    b.Property<long>("UserId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("TokenId");
+
+                    b.HasIndex("TokenHash")
+                        .HasDatabaseName("IX_sync_user_refresh_token_hash");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("IX_sync_user_refresh_token_user_id");
+
+                    b.ToTable("sync_user_refresh_token", "msosync");
                 });
 
             modelBuilder.Entity("MSOSync.Persistence.Entities.SyncUserRole", b =>
@@ -964,6 +1019,16 @@ namespace MSOSync.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("FK_sync_batch_error_batch_id");
+                });
+
+            modelBuilder.Entity("MSOSync.Persistence.Entities.SyncUserRefreshToken", b =>
+                {
+                    b.HasOne("MSOSync.Persistence.Entities.SyncUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("FK_sync_user_refresh_token_user_id");
                 });
 #pragma warning restore 612, 618
         }
