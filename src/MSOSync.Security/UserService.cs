@@ -16,7 +16,7 @@ public sealed class UserService(AppDbContext db)
         await db.Users
             .Where(u => u.UserId == user.UserId)
             .ExecuteUpdateAsync(s =>
-                s.SetProperty(u => u.FailedAttempts, user.FailedAttempts + 1), ct);
+                s.SetProperty(u => u.FailedAttempts, u => u.FailedAttempts + 1), ct);
     }
 
     public async Task LockUserAsync(SyncUser user, DateTime lockedUntil, CancellationToken ct = default)

@@ -29,6 +29,7 @@ public sealed class AuditServiceTests
         audit.ActionName.Should().Be("LOGIN_SUCCESS");
         audit.Username.Should().Be("alice");
         audit.CorrelationId.Should().Be("corr-1");
+        audit.ObjectName.Should().BeNull();
     }
 
     [Fact]
@@ -41,6 +42,7 @@ public sealed class AuditServiceTests
 
         var audit = await db.Audits.SingleAsync();
         audit.ActionName.Should().Be("LOGIN_FAILURE");
+        audit.ObjectName.Should().BeNull();
     }
 
     [Fact]
@@ -54,5 +56,18 @@ public sealed class AuditServiceTests
         var audit = await db.Audits.SingleAsync();
         audit.ActionName.Should().Be("TOKEN_REUSE_DETECTED");
         audit.ObjectName.Should().Be("family:99");
+    }
+
+    [Fact]
+    public async Task Handle_AccountLocked_WritesAuditRecord()
+    {
+        await using var db = MakeDbContext();
+        var svc = new AuditService(db);
+
+        await svc.Handle(new AccountLockedEvent("carol", "corr-4"), default);
+
+        var audit = await db.Audits.SingleAsync();
+        audit.ActionName.Should().Be("ACCOUNT_LOCKED");
+        audit.Username.Should().Be("carol");
     }
 }
