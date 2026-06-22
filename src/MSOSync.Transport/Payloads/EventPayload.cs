@@ -6,6 +6,6 @@ public sealed record EventPayload(
     string  TriggerId,
     string  EventType,
     string  TableName,
-    long?   TransactionId,
+    string? TransactionId,
     string? PkData,
     string? RowData);

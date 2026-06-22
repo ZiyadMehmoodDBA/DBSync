@@ -3,7 +3,7 @@ namespace MSOSync.Transport.Payloads;
 public sealed record AckPayload(
     long            BatchId,
     long            BatchSequence,
-    string          NodeId,
+    string          AckNodeId,
     bool            Success,
-    string?         ErrorMessage,
+    string?         ErrorCode,
     DateTimeOffset  AckTime);
