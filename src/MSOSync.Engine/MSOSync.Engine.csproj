@@ -7,5 +7,9 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MSOSync.Common\MSOSync.Common.csproj" />
+    <ProjectReference Include="..\MSOSync.Trigger\MSOSync.Trigger.csproj" />
+    <ProjectReference Include="..\MSOSync.Event\MSOSync.Event.csproj" />
+    <ProjectReference Include="..\MSOSync.Routing\MSOSync.Routing.csproj" />
+    <ProjectReference Include="..\MSOSync.Batch\MSOSync.Batch.csproj" />
   </ItemGroup>
 </Project>
