@@ -19,7 +19,6 @@ public sealed class SmartTransportServiceTests
         IBatchStateMachine?  stateMachine = null)
     {
         var db           = TestDb.Create();
-        var compression  = new GzipCompressionService();
         var clock        = new FakeClock();
         var classifier   = new TransportFailureClassifier();
         var sm           = stateMachine ?? new BatchStateMachine(db, clock);
@@ -71,8 +70,11 @@ public sealed class SmartTransportServiceTests
         var meta       = new Mock<INodeMetadataService>();
         meta.Setup(m => m.GetNodeAsync("target", default)).ReturnsAsync(ActivePullNode());
         var httpClient = new Mock<INodeHttpClient>();
+        var nodeProps  = Microsoft.Extensions.Options.Options.Create(
+            new MSOSync.Common.NodeProperties { NodeId = "local", GroupId = "g", SyncUrl = "http://local", NodeToken = "tok" });
+        var pushClient = new PushClient(httpClient.Object, nodeProps);
 
-        var svc   = CreateService(meta.Object);
+        var svc   = CreateService(meta.Object, pushClient);
         var batch = new SyncOutgoingBatch { BatchId = 1, NodeId = "target", ChannelId = "ch", Status = (byte)BatchStatus.New, BatchSequence = 1 };
 
         await svc.SendBatchAsync(batch, [], default);

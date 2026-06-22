@@ -56,8 +56,7 @@ public sealed class SequenceVerificationTests
         var (svc, _) = Create();
         var lastSeq = await svc.GetLastSequenceAsync("source1", "default");
 
-        // First batch: lastSeq=0, batchSequence=1 → lastSeq + 1 == batchSequence → OK
-        (lastSeq + 1 == 1).Should().BeTrue();
+        lastSeq.Should().Be(0L, "no batches exist, sentinel value is 0");
     }
 
     [Fact]
@@ -69,7 +68,6 @@ public sealed class SequenceVerificationTests
 
         var lastSeq = await svc.GetLastSequenceAsync("source1", "default");
         lastSeq.Should().Be(2);
-        (lastSeq + 1 == 3).Should().BeTrue();
     }
 
     [Fact]
