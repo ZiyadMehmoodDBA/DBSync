@@ -13,6 +13,7 @@ public static class BatchPipelineExtensions
         services.AddScoped<IBatchCreator, BatchCreator>();
         services.AddScoped<RetryProcessor>();
         services.AddScoped<BatchPurger>();
+        services.AddScoped<IBatchTransportQueryService, BatchTransportQueryService>();
         return services;
     }
 }

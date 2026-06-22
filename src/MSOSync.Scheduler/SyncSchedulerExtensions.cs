@@ -11,10 +11,11 @@ public static class SyncSchedulerExtensions
         IConfiguration _)
     {
         services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<SchedulerRecovery>());
-        services.AddHostedService<SchedulerRecovery>();  // runs first
+        services.AddHostedService<SchedulerRecovery>();  // runs first on startup
         services.AddHostedService<SyncJob>();
         services.AddHostedService<RetryJob>();
         services.AddHostedService<PurgeJob>();
+        services.AddHostedService<PullJob>();
         return services;
     }
 }

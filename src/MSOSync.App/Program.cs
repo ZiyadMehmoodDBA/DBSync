@@ -12,6 +12,8 @@ using MSOSync.Persistence;
 using MSOSync.Routing;
 using MSOSync.Scheduler;
 using MSOSync.Security;
+using MSOSync.Topology;
+using MSOSync.Transport;
 using MSOSync.Trigger;
 using Serilog;
 
@@ -54,6 +56,9 @@ try
     builder.Services.AddBatchPipeline(builder.Configuration);
     builder.Services.AddSyncEngine(builder.Configuration);
     builder.Services.AddSyncScheduler(builder.Configuration);
+    builder.Services.Configure<NodeProperties>(builder.Configuration.GetSection("Node"));
+    builder.Services.AddTransportServices(builder.Configuration);
+    builder.Services.AddTopologyServices();
     builder.Services.AddHostedService<AdminBootstrapper>();
 
     var app = builder.Build();
