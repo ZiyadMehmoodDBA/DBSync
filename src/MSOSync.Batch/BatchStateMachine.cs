@@ -12,6 +12,7 @@ public sealed class BatchStateMachine(AppDbContext db, IClock clock) : IBatchSta
         (BatchStatus.New,          BatchStatus.Sending),      // PUSH: start sending
         (BatchStatus.New,          BatchStatus.Acknowledged),  // PULL: ACK success (batch was never moved)
         (BatchStatus.New,          BatchStatus.Error),         // PULL: negative ACK
+        (BatchStatus.New,          BatchStatus.Retry),         // Recovery: stale New → Retry
         (BatchStatus.Sending,      BatchStatus.Acknowledged),  // PUSH: success
         (BatchStatus.Sending,      BatchStatus.Error),         // PUSH: failure / timeout
         (BatchStatus.Error,        BatchStatus.Retry),
@@ -22,7 +23,6 @@ public sealed class BatchStateMachine(AppDbContext db, IClock clock) : IBatchSta
 
     public async Task<bool> MoveToSendingAsync(long batchId, CancellationToken ct = default)
     {
-        if (!IsValidFrom(BatchStatus.Sending)) return false;
         var sentTime = clock.UtcNow;
 
         var rows = await db.OutgoingBatches
@@ -67,13 +67,10 @@ public sealed class BatchStateMachine(AppDbContext db, IClock clock) : IBatchSta
     public async Task<bool> MoveToRetryAsync(long batchId, CancellationToken ct = default)
     {
         var rows = await db.OutgoingBatches
-            .Where(b => b.BatchId == batchId && b.Status == (byte)BatchStatus.Error)
+            .Where(b => b.BatchId == batchId
+                     && (b.Status == (byte)BatchStatus.New || b.Status == (byte)BatchStatus.Error))
             .ExecuteUpdateAsync(s => s.SetProperty(b => b.Status, (byte)BatchStatus.Retry), ct);
 
         return rows == 1;
     }
-
-    // Helper: checks if any existing status can transition TO the given target
-    private static bool IsValidFrom(BatchStatus to) =>
-        ValidTransitions.Any(t => t.To == to);
 }
