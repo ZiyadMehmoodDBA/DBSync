@@ -7,7 +7,6 @@ namespace MSOSync.Batch;
 
 public sealed class RetryProcessor(
     AppDbContext db,
-    IBatchStateMachine stateMachine,
     IClock clock,
     ILogger<RetryProcessor> logger)
 {
@@ -26,19 +25,22 @@ public sealed class RetryProcessor(
         var count = 0;
         foreach (var batch in candidates)
         {
-            var succeeded = await stateMachine.TransitionAsync(
-                batch.BatchId, BatchStatus.Error, BatchStatus.Retry, ct);
-
-            if (!succeeded) continue;
-
             var delayMinutes = Math.Pow(2, batch.RetryCount) * 5.0; // RetryCount is pre-increment
-            batch.NextRetryTime = now.AddMinutes(delayMinutes);
-            batch.RetryCount++;
-            await db.SaveChangesAsync(ct);
-            count++;
+            var newRetryTime = now.AddMinutes(delayMinutes);
+            var newRetryCount = batch.RetryCount + 1;
 
+            var rows = await db.OutgoingBatches
+                .Where(b => b.BatchId == batch.BatchId && b.Status == (byte)BatchStatus.Error)
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(b => b.Status,        (byte)BatchStatus.Retry)
+                    .SetProperty(b => b.RetryCount,    newRetryCount)
+                    .SetProperty(b => b.NextRetryTime, newRetryTime), ct);
+
+            if (rows != 1) continue; // lost race — skip
+
+            count++;
             logger.LogInformation("Batch {BatchId} queued for retry #{Count}, next={Next:u}",
-                batch.BatchId, batch.RetryCount, batch.NextRetryTime);
+                batch.BatchId, newRetryCount, newRetryTime);
         }
 
         return count;
