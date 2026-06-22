@@ -30,7 +30,7 @@ MSOSync.Common          ← IClock, existing exceptions
 MSOSync.Persistence     ← Lock/ added: IDatabaseLockProvider, DatabaseLockProvider,
     |                              DatabaseLockLease, LockNames
     ↓
-MSOSync.Trigger         ← TriggerDDLBuilder, ITriggerInstallationService,
+MSOSync.Trigger         ← SqlServerTriggerBuilder, ITriggerInstallationService,
     |                      TriggerInstallationService, ITriggerDriftDetector,
     |                      TriggerDriftDetector, TriggerVerifyResult
     |
@@ -39,9 +39,9 @@ MSOSync.Event           ← IEventReader, EventReader, IEventPurger, EventPurger
 MSOSync.Routing         ← IRoutingService, RoutingService
     |                      (IMemoryCache, 60 s TTL, MediatR invalidation)
     |
-MSOSync.Batch           ← IBatchCreator, BatchCreator, BatchCompressor,
+MSOSync.Batch           ← IBatchCreator, BatchCreator, GzipBatchCompressor,
     |                      IBatchStateMachine, BatchStateMachine,
-    |                      RetryEvaluator, BatchPurger, BatchStatus enum,
+    |                      RetryProcessor, BatchPurger, BatchStatus enum,
     |                      OutgoingBatchDto
     ↓
 MSOSync.Engine          ← ITransportService, NoOpTransportService, SyncEngine
@@ -127,7 +127,7 @@ WHERE  lock_name = @lockName AND lock_owner = @owner
 
 ## 4. MSOSync.Trigger
 
-### `TriggerDDLBuilder`
+### `SqlServerTriggerBuilder`
 Generates `CREATE OR ALTER TRIGGER` DDL from `SyncTrigger` metadata. Key invariants:
 - Node ID embedded as `N'<nodeId>'` literal (passed in at build time, not queried at runtime)
 - `FOR JSON PATH, WITHOUT_ARRAY_WRAPPER` on INSERTED/DELETED
@@ -138,7 +138,7 @@ Generates `CREATE OR ALTER TRIGGER` DDL from `SyncTrigger` metadata. Key invaria
 ### `ITriggerInstallationService` / `TriggerInstallationService`
 - `InstallAsync(SyncTrigger trigger, string nodeId, CancellationToken ct)` — builds DDL, executes via `AppDbContext.Database.ExecuteSqlRawAsync`, bumps `trigger_version`, writes `SyncTriggerHist`
 - `DropAsync(string triggerId, CancellationToken ct)` — drops SQL Server trigger if exists
-- `RebuildAsync(string triggerId, CancellationToken ct)` — drop + install in sequence
+- `RebuildAsync(string triggerId, CancellationToken ct)` — regenerates DDL and re-executes `CREATE OR ALTER TRIGGER` (no drop; zero-gap rebuild), then bumps `trigger_version` and writes history
 
 ### `ITriggerDriftDetector` / `TriggerDriftDetector`
 - `DetectAllAsync(CancellationToken ct)` — queries `sys.triggers` vs `sync_trigger` for this node; emits log and metrics for DRIFT/MISSING
@@ -156,7 +156,7 @@ public sealed record TriggerVerifyResult(
 ```
 
 ### DI: `AddTriggerEngine(IServiceCollection, IConfiguration)`
-Registers `TriggerDDLBuilder` (singleton), `ITriggerInstallationService`, `ITriggerDriftDetector` (scoped).
+Registers `SqlServerTriggerBuilder` (singleton), `ITriggerInstallationService`, `ITriggerDriftDetector` (scoped).
 
 ---
 
@@ -186,12 +186,14 @@ Task<IReadOnlyList<string>> ResolveAsync(string triggerId, CancellationToken ct)
 ```
 Resolves `triggerId → [targetNodeId, ...]` via `sync_trigger_router` + `sync_router` join.
 
-**Cache:** `IMemoryCache`, key `routing:trigger:{triggerId}`, 60-second absolute expiration.
+**Cache:** `IMemoryCache`, key `routing:trigger:{triggerId}`, 60-second absolute expiration. Each entry also registers a `CancellationChangeToken` from a shared `_routesCts` field.
 
 **Invalidation:** Three MediatR notification handlers registered in this module:
-- `TriggerMetadataChangedEvent` → `cache.Remove("routing:trigger:{triggerId}")`
-- `RouterMetadataChangedEvent` → `cache.Clear()` (router change affects all routes)
-- `ChannelMetadataChangedEvent` → `cache.Clear()`
+- `TriggerMetadataChangedEvent` → `cache.Remove("routing:trigger:{triggerId}")` — precise single-key eviction
+- `RouterMetadataChangedEvent` → cancel `_routesCts` and replace with new `CancellationTokenSource` — evicts all routing entries via token without touching other IMemoryCache entries
+- `ChannelMetadataChangedEvent` → same token-cancel pattern as router change
+
+This avoids a global `cache.Clear()` that would evict entries belonging to other modules.
 
 ### DI: `AddRoutingServices(IServiceCollection)`
 
@@ -207,9 +209,12 @@ EF value converter: `New`→`"NE"`, `Sent`→`"SE"`, `Ok`→`"OK"`, `Error`→`"
 
 ### `IBatchStateMachine` / `BatchStateMachine`
 ```csharp
+bool CanTransition(BatchStatus from, BatchStatus to);
 Task<bool> TransitionAsync(long batchId, BatchStatus from, BatchStatus to, CancellationToken ct);
 ```
-Executes: `UPDATE sync_outgoing_batch SET status = @to WHERE batch_id = @id AND status = @from`
+`CanTransition` centralizes the valid-transition table and is used by `TransitionAsync` as a guard before issuing the `UPDATE`.
+
+`TransitionAsync` executes: `UPDATE sync_outgoing_batch SET status = @to WHERE batch_id = @id AND status = @from`
 Returns `true` if `rowsAffected == 1`.
 
 **Valid transitions:**
@@ -231,24 +236,24 @@ Task<IReadOnlyList<SyncOutgoingBatch>> CreateBatchesAsync(
 ```
 Grouping: `channel_id → target_node_id → transaction_id`. Transaction boundaries never split. Respects `max_batch_to_send` (row count) and `max_data_size` (cumulative `row_data` bytes) from `SyncChannel`. All inserts (`sync_outgoing_batch`, `sync_data_event_batch`) and `is_processed=1` updates run in one DB transaction.
 
-### `BatchCompressor`
+### `GzipBatchCompressor`
 ```csharp
 byte[] Compress(byte[] data);
 byte[] Decompress(byte[] data);
 ```
-`GZipStream` wrapping `MemoryStream`. Used by transport layer (Epic 6); defined here so batch payload type is self-contained.
+`GZipStream` wrapping `MemoryStream`. Naming makes algorithm explicit; future `BrotliBatchCompressor` or `LZ4BatchCompressor` can implement the same implicit interface. Used by transport layer (Epic 6); defined here so batch payload type is self-contained.
 
-### `RetryEvaluator`
+### `RetryProcessor`
 ```csharp
-Task<int> EvaluateAsync(CancellationToken ct);
+Task<int> ProcessAsync(CancellationToken ct);
 ```
-Finds `sync_outgoing_batch WHERE status = 'ER' AND retry_count < max_retries AND next_retry_time <= @now`. Transitions `Error → Retry` via `BatchStateMachine`. Sets `next_retry_time = now + 2^(retryCount-1) × 5min`. Returns count of batches queued for retry.
+Finds `sync_outgoing_batch WHERE status = 'ER' AND retry_count < max_retries AND next_retry_time <= @now`. Transitions `Error → Retry` via `BatchStateMachine`. Sets `next_retry_time = now + 2^(retryCount-1) × 5min`. Returns count of batches queued for retry. Name reflects state mutation (not read-only evaluation).
 
 ### `BatchPurger`
 ```csharp
 Task<int> PurgeAsync(CancellationToken ct);
 ```
-Deletes `sync_outgoing_batch` in terminal states (`Ok`, `Ok` / `Partial`) older than `retention_days`. Never purges `Error` or `Retry` states automatically.
+Deletes `sync_outgoing_batch` in terminal state (`Ok`) older than `retention_days`. Never purges `Error` or `Retry` states automatically. (`BatchStatus` has no Partial state.)
 
 ### `OutgoingBatchDto`
 ```csharp
@@ -310,6 +315,15 @@ Orchestration order (strict):
 3. For each event: `routingService.ResolveAsync(triggerId, ct)` — build routes map
 4. `batchCreator.CreateBatchesAsync(events, routes, ct)` — write batches
 5. For each batch: `transport.SendBatchAsync(batch, ct)` — no-op this epic
+6. `mediator.Publish(new SyncCycleCompletedEvent(EventsRead, BatchesCreated, Duration), ct)` — enables future metrics/telemetry without touching engine code
+
+```csharp
+public sealed record SyncCycleCompletedEvent(
+    int EventsRead,
+    int BatchesCreated,
+    TimeSpan Duration) : INotification;
+```
+No handler registered in this epic; MediatR publish is a no-op when no handler exists.
 
 ### DI: `AddSyncEngine(IServiceCollection, IConfiguration)`
 Registers `SyncEngine` (scoped), `ITransportService → NoOpTransportService` (scoped).
@@ -327,15 +341,20 @@ await _syncEngine.RunAsync(ct);
 ```
 
 ### `RetryJob : BackgroundService`
-`PeriodicTimer` every 5 minutes. Acquires `LockNames.RetryEngine`. Calls `RetryEvaluator.EvaluateAsync(ct)`.
+`PeriodicTimer` every 5 minutes. Acquires `LockNames.RetryEngine`. Calls `RetryProcessor.ProcessAsync(ct)`.
 
 ### `PurgeJob : BackgroundService`
 `PeriodicTimer` daily at 02:00 UTC (`IClock` to determine next fire time). Acquires `LockNames.PurgeEngine`. Calls `EventPurger.PurgeAsync(ct)` + `BatchPurger.PurgeAsync(ct)`.
 
+### `RecoveryReason` enum (MSOSync.Scheduler)
+```csharp
+public enum RecoveryReason { Restart, OverdueRetry }
+```
+
 ### `SchedulerRecovery : IHostedService`
 Runs once during `StartAsync` before background workers begin. Actions:
-1. `SENT → RETRY` — batches that left the node but were never ACKed (restart scenario)
-2. `RETRY` with `next_retry_time <= now` — requeue overdue retries
+1. `SENT → RETRY` — batches that left the node but were never ACKed (restart scenario); logs `RecoveryReason.Restart`
+2. `RETRY` with `next_retry_time <= now` — requeue overdue retries; logs `RecoveryReason.OverdueRetry`
 3. `NEW` — untouched; `SyncJob` picks up on first tick
 4. Publishes `SchedulerRecoveryEvent` (MediatR) → audit entry
 
@@ -391,12 +410,12 @@ SQLite in-memory (same `TestAppDbContext` pattern as `MSOSync.MetadataTests`) + 
 
 | Test class | Key cases |
 |---|---|
-| `TriggerDDLBuilderTests` | DDL contains table name, `FOR JSON PATH`, `CURRENT_TRANSACTION_ID()`, embedded node ID literal, correct schema; respects Insert/Update/Delete flags |
+| `SqlServerTriggerBuilderTests` | DDL contains table name, `FOR JSON PATH`, `CURRENT_TRANSACTION_ID()`, embedded node ID literal, correct schema; respects Insert/Update/Delete flags |
 | `BatchCreatorTests` | Groups by channel/node/transaction; transaction boundary never split even at `max_batch_to_send` limit; `max_data_size` enforced |
-| `BatchStateMachineTests` | All valid transitions return `true`; invalid transitions return `false`; concurrent `Sent→Error` + `Sent→Ok` — exactly one succeeds |
-| `RetryEvaluatorTests` | Finds eligible ERROR batches; respects `next_retry_time` via `FakeClock`; exponential delay formula correct; `max_retries` ceiling respected |
-| `RoutingServiceTests` | Cache hit returns without DB call; cache miss queries DB; MediatR event clears cache; TTL expiration causes cache miss after 61 seconds (FakeClock) |
-| `SyncEngineTests` | Orchestration order verified (drift → read → route → create → transport); transport called once per batch |
+| `BatchStateMachineTests` | `CanTransition` returns true for all valid pairs, false for invalid; `TransitionAsync` all valid transitions return `true`; invalid transitions return `false`; concurrent `Sent→Error` + `Sent→Ok` — exactly one succeeds |
+| `RetryProcessorTests` | Finds eligible ERROR batches; respects `next_retry_time` via `FakeClock`; exponential delay formula correct; `max_retries` ceiling respected |
+| `RoutingServiceTests` | Cache hit returns without DB call; cache miss queries DB; MediatR event invalidates cache; TTL expiration causes cache miss after 61 seconds (FakeClock) |
+| `SyncEngineTests` | Orchestration order verified (drift → read → route → create → transport); transport called once per batch; **no-events case: verify route/create/transport never called when `ReadAsync` returns empty** |
 
 ### Integration Tests — `MSOSync.IntegrationTests` (new `EngineCollection`)
 
@@ -412,6 +431,7 @@ SQLite in-memory (same `TestAppDbContext` pattern as `MSOSync.MetadataTests`) + 
 | Two concurrent `SyncJob` ticks → exactly one acquires lock | `DatabaseLockProvider` / `DatabaseLockLease` |
 | Seed SENT batch → restart → verify SENT→RETRY | `SchedulerRecovery` restart case |
 | Seed RETRY batch with overdue `next_retry_time` → verify requeued | `SchedulerRecovery` overdue-retry case |
+| Install trigger, manually `ALTER TRIGGER` to corrupt it, `POST /triggers/{id}/verify` → `{ status: "DRIFT" }` | Drift detection via real SQL Server `sys.triggers` |
 
 ---
 
