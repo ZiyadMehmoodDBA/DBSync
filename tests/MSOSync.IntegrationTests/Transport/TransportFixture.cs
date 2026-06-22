@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -56,7 +57,7 @@ public sealed class TransportFixture : WebApplicationFactory<Program>, IAsyncLif
         {
             ["ConnectionStrings:DefaultConnection"] = _connStr,
             ["Jwt:Secret"]           = JwtSecret,
-            ["Node:Id"]              = LocalNodeId,
+            ["Node:NodeId"]          = LocalNodeId,
             ["Node:GroupId"]         = GroupId,
             ["Node:SyncUrl"]         = "http://localhost",
             ["Sync:IntervalSeconds"] = "30",

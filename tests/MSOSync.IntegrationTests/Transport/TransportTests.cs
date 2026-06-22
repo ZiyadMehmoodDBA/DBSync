@@ -43,7 +43,7 @@ public sealed class TransportTests(TransportFixture fixture)
         // Ensure "default" channel exists (seeded in fixture, but gap-ch isn't)
         var payload = new BatchPayload(
             BatchId:       2001,
-            BatchSequence: 5,
+            BatchSequence: 1,
             ChannelId:     "default",
             SourceNodeId:  TransportFixture.SourceNodeId,
             TargetNodeId:  TransportFixture.LocalNodeId,
@@ -63,7 +63,7 @@ public sealed class TransportTests(TransportFixture fixture)
         // Only one IncomingBatch row
         await using var db = CreateDbContext();
         var count = await db.IncomingBatches.CountAsync(
-            b => b.BatchSequence == 5 && b.SourceNodeId == TransportFixture.SourceNodeId);
+            b => b.BatchSequence == 1 && b.SourceNodeId == TransportFixture.SourceNodeId);
         count.Should().Be(1);
     }
 
