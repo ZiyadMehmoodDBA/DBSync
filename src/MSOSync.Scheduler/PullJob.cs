@@ -110,7 +110,7 @@ public sealed class PullJob(
             foreach (var batch in response.Batches)
             {
                 var applied = await ProcessBatchAsync(
-                    batch, source, localNodeId, batchQuery, pullClient, applyService, clock, ct);
+                    batch, source, localNodeId, lastSeq, batchQuery, pullClient, applyService, clock, ct);
                 if (applied)
                     lastSeq = batch.BatchSequence;
             }
@@ -123,14 +123,13 @@ public sealed class PullJob(
         BatchPayload               batch,
         SourceNodeInfo             source,
         string                     localNodeId,
+        long                       lastSeq,
         IBatchTransportQueryService batchQuery,
         PullClient                 pullClient,
         IApplyService              applyService,
         IClock                     clock,
         CancellationToken          ct)
     {
-        var lastSeq = await batchQuery.GetLastSequenceAsync(source.NodeId, batch.ChannelId, ct);
-
         // Sequence gap check
         if (lastSeq + 1 != batch.BatchSequence)
         {
@@ -174,7 +173,7 @@ public sealed class PullJob(
 
         await pullClient.PostAckAsync(source.SyncUrl,
             new AckPayload(batch.BatchId, batch.BatchSequence, localNodeId,
-                result.Success, result.ErrorMessage, ackTime), ct);
+                result.Success, result.Success ? null : "APPLY_FAILURE", ackTime), ct);
 
         return result.Success;
     }

@@ -80,7 +80,8 @@ public sealed class SyncController(
             using var ms = new MemoryStream();
             await Request.Body.CopyToAsync(ms, ct);
             var decompressed = compression.Decompress(ms.ToArray());
-            payload = JsonSerializer.Deserialize<BatchPayload>(decompressed, JsonOpts)!;
+            payload = JsonSerializer.Deserialize<BatchPayload>(decompressed, JsonOpts)
+                      ?? throw new InvalidOperationException("Null payload");
         }
         catch (Exception ex)
         {
