@@ -27,6 +27,7 @@ public sealed class SyncNodeConfiguration : IEntityTypeConfiguration<SyncNode>
             .HasColumnType("tinyint")
             .HasConversion<byte>()
             .HasDefaultValue(TransportMode.Pull)
+            .ValueGeneratedNever()
             .IsRequired();
 
         builder.HasIndex(e => e.LastHeartbeat).HasDatabaseName("IX_sync_node_last_heartbeat");
