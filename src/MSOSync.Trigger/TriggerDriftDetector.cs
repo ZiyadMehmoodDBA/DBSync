@@ -13,9 +13,6 @@ public sealed class TriggerDriftDetector(
     IConfiguration config,
     ILogger<TriggerDriftDetector> logger) : ITriggerDriftDetector
 {
-    private static readonly string Schema =
-        Environment.GetEnvironmentVariable("MSOSYNC_SCHEMA") ?? "msosync";
-
     private string NodeId => config["Node:Id"] ?? Environment.MachineName;
 
     public async Task DetectAllAsync(CancellationToken ct = default)
@@ -26,9 +23,16 @@ public sealed class TriggerDriftDetector(
 
         foreach (var t in triggers)
         {
-            var result = await VerifyAsync(t.TriggerId, ct);
-            if (result.Status != TriggerDriftStatus.Valid)
-                logger.LogWarning("Trigger {TriggerId} status={Status}", t.TriggerId, result.Status);
+            try
+            {
+                var result = await VerifyAsync(t.TriggerId, ct);
+                if (result.Status != TriggerDriftStatus.Valid)
+                    logger.LogWarning("Trigger {TriggerId} status={Status}", t.TriggerId, result.Status);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Drift check failed for trigger {TriggerId}", t.TriggerId);
+            }
         }
     }
 
@@ -40,13 +44,14 @@ public sealed class TriggerDriftDetector(
         var nodeId = NodeId;
         var triggerName = builder.GetTriggerName(triggerId);
 
-        // Query actual DDL from sys.sql_modules
+        // Query actual DDL from sys.sql_modules (parameterised to prevent SQL injection)
         var installedDdl = await db.Database
-            .SqlQueryRaw<string>(
-                $"SELECT m.definition " +
-                $"FROM sys.sql_modules m " +
-                $"JOIN sys.triggers t ON t.object_id = m.object_id " +
-                $"WHERE t.name = N'{triggerName}'")
+            .SqlQuery<string>($"""
+                SELECT m.definition AS Value
+                FROM sys.sql_modules m
+                JOIN sys.triggers t ON t.object_id = m.object_id
+                WHERE t.name = {triggerName}
+                """)
             .FirstOrDefaultAsync(ct);
 
         if (installedDdl == null)
