@@ -30,6 +30,7 @@ public sealed class BatchTransportQueryService(AppDbContext db) : IBatchTranspor
         // DataEventBatches links events to outgoing batches
         var eventIds = await db.DataEventBatches
             .Where(deb => deb.BatchId == batchId)
+            .AsNoTracking()
             .Select(deb => deb.EventId)
             .ToListAsync(ct);
 
