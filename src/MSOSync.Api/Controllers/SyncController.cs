@@ -157,7 +157,7 @@ public sealed class SyncController(
 
     // ── PING: health check ───────────────────────────────────────────────────
 
-    [HttpPost("ping")]
+    [HttpGet("ping")]
     public async Task<IActionResult> Ping(CancellationToken ct)
     {
         var props   = nodeProps.Value;

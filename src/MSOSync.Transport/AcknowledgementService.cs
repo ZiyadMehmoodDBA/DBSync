@@ -18,11 +18,12 @@ public sealed class AcknowledgementService(
     /// Called by SmartTransportService after a PUSH attempt completes.
     /// </summary>
     public async Task AcknowledgeOutgoingAsync(
-        long              batchId,
-        bool              success,
-        DateTimeOffset    ackTime,
-        string?           errorMessage,
-        CancellationToken ct = default)
+        long                      batchId,
+        bool                      success,
+        DateTimeOffset            ackTime,
+        TransportFailureReason?   reason,
+        string?                   errorMessage,
+        CancellationToken         ct = default)
     {
         if (success)
         {
@@ -37,12 +38,13 @@ public sealed class AcknowledgementService(
                 db.BatchErrors.Add(new SyncBatchError
                 {
                     BatchId      = batchId,
-                    ConflictType = TransportFailureReason.HttpError.ToString(),
+                    ConflictType = (reason ?? TransportFailureReason.HttpError).ToString(),
                     ErrorMessage = errorMessage
                 });
                 await db.SaveChangesAsync(ct);
             }
-            logger.LogWarning("Batch {BatchId} push failed: {Error}", batchId, errorMessage);
+            logger.LogWarning("Batch {BatchId} push failed reason={Reason}: {Error}",
+                batchId, reason, errorMessage);
         }
     }
 

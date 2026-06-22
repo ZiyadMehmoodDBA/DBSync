@@ -27,6 +27,21 @@ try
 {
     var builder = WebApplication.CreateBuilder(args);
 
+    // Guard: NodeToken must not be stored in JSON config — env var only
+    if (builder.Configuration is Microsoft.Extensions.Configuration.IConfigurationRoot cfgRoot)
+    {
+        foreach (var provider in cfgRoot.Providers)
+        {
+            if (provider is Microsoft.Extensions.Configuration.Json.JsonConfigurationProvider
+                && provider.TryGet("Node:NodeToken", out _))
+            {
+                throw new InvalidOperationException(
+                    "Node:NodeToken must not be stored in JSON config files. " +
+                    "Set the MSOSYNC_NODE_TOKEN environment variable instead.");
+            }
+        }
+    }
+
     builder.Host.UseSerilog((ctx, services, cfg) => cfg
         .ReadFrom.Configuration(ctx.Configuration)
         .ReadFrom.Services(services)

@@ -27,7 +27,7 @@ public sealed class SmartTransportServiceTests
             new MSOSync.Common.NodeProperties { NodeId = "local", GroupId = "g", SyncUrl = "http://local", NodeToken = "tok" });
         var pc           = pushClient ?? new PushClient(Mock.Of<INodeHttpClient>(), nodeProps);
 
-        return new SmartTransportService(nodeMetadata, pc, sm, ack, classifier,
+        return new SmartTransportService(nodeMetadata, pc, sm, ack, classifier, clock,
             NullLogger<SmartTransportService>.Instance);
     }
 

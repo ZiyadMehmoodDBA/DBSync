@@ -139,7 +139,7 @@ public sealed class PullJob(
 
             await pullClient.PostAckAsync(source.SyncUrl,
                 new AckPayload(batch.BatchId, batch.BatchSequence, localNodeId,
-                    false, "SEQUENCE_GAP", DateTimeOffset.UtcNow), ct);
+                    false, "SEQUENCE_GAP", new DateTimeOffset(clock.UtcNow, TimeSpan.Zero)), ct);
             return false;
         }
 
@@ -150,7 +150,7 @@ public sealed class PullJob(
                 source.NodeId, batch.BatchSequence);
             await pullClient.PostAckAsync(source.SyncUrl,
                 new AckPayload(batch.BatchId, batch.BatchSequence, localNodeId,
-                    true, null, DateTimeOffset.UtcNow), ct);
+                    true, null, new DateTimeOffset(clock.UtcNow, TimeSpan.Zero)), ct);
             return true;
         }
 
@@ -169,7 +169,7 @@ public sealed class PullJob(
 
         await batchQuery.InsertIncomingBatchAsync(incoming, ct);
         var result  = await applyService.ApplyAsync(incoming, batch, ct);
-        var ackTime = DateTimeOffset.UtcNow;
+        var ackTime = new DateTimeOffset(clock.UtcNow, TimeSpan.Zero);
 
         await pullClient.PostAckAsync(source.SyncUrl,
             new AckPayload(batch.BatchId, batch.BatchSequence, localNodeId,

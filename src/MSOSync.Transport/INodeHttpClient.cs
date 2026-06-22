@@ -22,4 +22,14 @@ public interface INodeHttpClient
         string            nodeId,
         string            nodeToken,
         CancellationToken ct = default);
+
+    /// <summary>
+    /// POST and discard the response body (e.g. /ack returns 200 OK with no body).
+    /// </summary>
+    Task PostVoidAsync<TRequest>(
+        string            url,
+        TRequest          body,
+        string            nodeId,
+        string            nodeToken,
+        CancellationToken ct = default);
 }

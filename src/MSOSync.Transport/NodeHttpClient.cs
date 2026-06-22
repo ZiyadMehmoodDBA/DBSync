@@ -19,7 +19,7 @@ public sealed class NodeHttpClient(
     {
         var response = await SendAsync(url, body, nodeId, nodeToken, ct);
         response.EnsureSuccessStatusCode();
-        var json = await response.Content.ReadAsStringAsync(ct);
+        var json = await ReadBodyAsync(response, ct);
         return JsonSerializer.Deserialize<TResponse>(json, JsonOpts)!;
     }
 
@@ -29,8 +29,23 @@ public sealed class NodeHttpClient(
         var response = await SendAsync(url, body, nodeId, nodeToken, ct);
         if (response.StatusCode == HttpStatusCode.NoContent) return default;
         response.EnsureSuccessStatusCode();
-        var json = await response.Content.ReadAsStringAsync(ct);
+        var json = await ReadBodyAsync(response, ct);
         return JsonSerializer.Deserialize<TResponse>(json, JsonOpts);
+    }
+
+    public async Task PostVoidAsync<TRequest>(
+        string url, TRequest body, string nodeId, string nodeToken, CancellationToken ct)
+    {
+        var response = await SendAsync(url, body, nodeId, nodeToken, ct);
+        response.EnsureSuccessStatusCode();
+    }
+
+    private async Task<string> ReadBodyAsync(HttpResponseMessage response, CancellationToken ct)
+    {
+        var bytes = await response.Content.ReadAsByteArrayAsync(ct);
+        if (response.Content.Headers.ContentEncoding.Contains("gzip"))
+            bytes = compression.Decompress(bytes);
+        return Encoding.UTF8.GetString(bytes);
     }
 
     private async Task<HttpResponseMessage> SendAsync<TRequest>(

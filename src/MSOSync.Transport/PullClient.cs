@@ -35,7 +35,7 @@ public sealed class PullClient(
         var props = nodeProps.Value;
         var url   = $"{sourceSyncUrl.TrimEnd('/')}/api/v1/sync/ack";
 
-        await nodeHttp.PostAsync<AckPayload, PushResponse>(
+        await nodeHttp.PostVoidAsync<AckPayload>(
             url, ack, props.NodeId, props.NodeToken, ct);
     }
 }

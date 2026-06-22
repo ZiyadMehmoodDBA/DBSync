@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using MSOSync.Common;
 using MSOSync.Persistence;
 using MSOSync.Persistence.Entities;
 using MSOSync.Transport.Payloads;
@@ -11,6 +12,7 @@ namespace MSOSync.Transport;
 /// </summary>
 public sealed class NoOpApplyService(
     AppDbContext              db,
+    IClock                    clock,
     ILogger<NoOpApplyService> logger) : IApplyService
 {
     public async Task<ApplyResult> ApplyAsync(
@@ -25,7 +27,7 @@ public sealed class NoOpApplyService(
             incoming.BatchId, payload.RowCount);
 
         incoming.Status      = IncomingBatchStatus.Applied;
-        incoming.AppliedTime = DateTime.UtcNow;
+        incoming.AppliedTime = clock.UtcNow;
         await db.SaveChangesAsync(ct);
 
         return new ApplyResult(true, payload.RowCount, 0, null);
