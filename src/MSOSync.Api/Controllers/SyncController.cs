@@ -89,11 +89,11 @@ public sealed class SyncController(
             return BadRequest("Invalid compressed payload");
         }
 
-        var myNodeId = User.FindFirst("nodeId")?.Value;
-        if (payload.TargetNodeId != myNodeId)
+        var ownNodeId = nodeProps.Value.NodeId;
+        if (payload.TargetNodeId != ownNodeId)
         {
-            logger.LogWarning("Push: TargetNodeId {Target} != authenticated nodeId {Me}",
-                payload.TargetNodeId, myNodeId);
+            logger.LogWarning("Push: TargetNodeId {Target} != local nodeId {Me}",
+                payload.TargetNodeId, ownNodeId);
             return Unauthorized();
         }
 
