@@ -3,12 +3,16 @@ using Microsoft.AspNetCore.Mvc;
 using MSOSync.Api.Dtos.Nodes;
 using MSOSync.Metadata.Dtos;
 using MSOSync.Metadata.Interfaces;
+using MSOSync.Trigger;
 
 namespace MSOSync.Api.Controllers;
 
 [ApiController]
 [Route("api/v1/triggers")]
-public sealed class TriggersController(ITriggerMetadataService triggerService) : ControllerBase
+public sealed class TriggersController(
+    ITriggerMetadataService triggerService,
+    ITriggerInstallationService installationService,
+    ITriggerDriftDetector driftDetector) : ControllerBase
 {
     [HttpGet]
     [Authorize]
@@ -107,6 +111,22 @@ public sealed class TriggersController(ITriggerMetadataService triggerService) :
     public async Task<IActionResult> GetTriggerHistory(string triggerId, CancellationToken ct)
     {
         var result = await triggerService.GetTriggerHistoryAsync(triggerId, ct);
+        return Ok(result);
+    }
+
+    [HttpPost("{triggerId}/rebuild")]
+    [Authorize(Policy = "OperatorOrAbove")]
+    public async Task<IActionResult> RebuildTrigger(string triggerId, CancellationToken ct)
+    {
+        var result = await installationService.RebuildAsync(triggerId, ct);
+        return Ok(result);
+    }
+
+    [HttpPost("{triggerId}/verify")]
+    [Authorize]
+    public async Task<IActionResult> VerifyTrigger(string triggerId, CancellationToken ct)
+    {
+        var result = await driftDetector.VerifyAsync(triggerId, ct);
         return Ok(result);
     }
 }

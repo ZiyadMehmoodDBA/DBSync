@@ -3,10 +3,16 @@ using FluentValidation.AspNetCore;
 using MSOSync.Api.Controllers.Auth;
 using MSOSync.Api.Exceptions;
 using MSOSync.App;
+using MSOSync.Batch;
 using MSOSync.Common;
+using MSOSync.Engine;
+using MSOSync.Event;
 using MSOSync.Metadata;
 using MSOSync.Persistence;
+using MSOSync.Routing;
+using MSOSync.Scheduler;
 using MSOSync.Security;
+using MSOSync.Trigger;
 using Serilog;
 
 Log.Logger = new LoggerConfiguration()
@@ -41,6 +47,13 @@ try
     builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
     builder.Services.AddProblemDetails();
     builder.Services.AddMetadata(builder.Configuration);
+    builder.Services.AddSingleton<IClock, SystemClock>();
+    builder.Services.AddTriggerEngine(builder.Configuration);
+    builder.Services.AddEventServices();
+    builder.Services.AddRoutingServices();
+    builder.Services.AddBatchPipeline(builder.Configuration);
+    builder.Services.AddSyncEngine(builder.Configuration);
+    builder.Services.AddSyncScheduler(builder.Configuration);
     builder.Services.AddHostedService<AdminBootstrapper>();
 
     var app = builder.Build();

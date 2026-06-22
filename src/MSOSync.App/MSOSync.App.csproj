@@ -14,6 +14,11 @@
   <ItemGroup>
     <ProjectReference Include="..\MSOSync.Api\MSOSync.Api.csproj" />
     <ProjectReference Include="..\MSOSync.Persistence\MSOSync.Persistence.csproj" />
+    <ProjectReference Include="..\MSOSync.Trigger\MSOSync.Trigger.csproj" />
+    <ProjectReference Include="..\MSOSync.Event\MSOSync.Event.csproj" />
+    <ProjectReference Include="..\MSOSync.Routing\MSOSync.Routing.csproj" />
+    <ProjectReference Include="..\MSOSync.Batch\MSOSync.Batch.csproj" />
+    <ProjectReference Include="..\MSOSync.Engine\MSOSync.Engine.csproj" />
     <ProjectReference Include="..\MSOSync.Scheduler\MSOSync.Scheduler.csproj" />
     <ProjectReference Include="..\MSOSync.Metrics\MSOSync.Metrics.csproj" />
   </ItemGroup>
