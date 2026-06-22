@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using MSOSync.Persistence.Lock;
 using MSOSync.Persistence.Queries;
 
 namespace MSOSync.Persistence;
@@ -26,6 +27,8 @@ public static class PersistenceServiceExtensions
         services.AddScoped<GetNodeByIdQuery>();
         services.AddScoped<GetNodeSecurityQuery>();
         services.AddScoped<GetUserByUsernameQuery>();
+
+        services.AddScoped<IDatabaseLockProvider, DatabaseLockProvider>();
 
         services.AddHealthChecks()
             .AddCheck<PersistenceHealthCheck>("database");
