@@ -105,11 +105,17 @@ migrationBuilder.AddForeignKey(
     principalColumn: "node_id",
     onDelete: ReferentialAction.Restrict);
 
-// Index for O(log N) sequence lookup (technical debt: replace with sync_node_channel_state later)
+// Index for O(log N) sequence lookup; includes channel_id for per-source-per-channel queries
 migrationBuilder.CreateIndex(
-    name: "IX_sync_incoming_batch_source_sequence",
+    name: "IX_sync_incoming_batch_source_channel_sequence",
     schema: "msosync", table: "sync_incoming_batch",
-    columns: new[] { "source_node_id", "batch_sequence" });
+    columns: new[] { "source_node_id", "channel_id", "batch_sequence" });
+
+// Unique constraint: prevent duplicate replay at DB level
+migrationBuilder.Sql(
+    "ALTER TABLE [msosync].[sync_incoming_batch] " +
+    "ADD CONSTRAINT UQ_sync_incoming_batch_source_sequence " +
+    "UNIQUE (source_node_id, batch_sequence)");
 ```
 
 ### New enums (MSOSync.Persistence)
@@ -359,7 +365,9 @@ Replaces `GzipBatchCompressor` (deleted from `MSOSync.Batch`).
 public enum TransportFailureReason
 {
     Timeout, HttpError, ConnectionRefused,
-    CompressionFailure, SequenceGap, ApplyFailure, Unknown
+    CompressionFailure, SequenceGap, ApplyFailure,
+    AuthenticationFailure,   // 401/403 — node token invalid or rotated
+    Unknown
 }
 ```
 
@@ -372,7 +380,7 @@ public interface ITransportFailureClassifier
 }
 ```
 
-Mappings: `TaskCanceledException/OperationCanceledException(timeout)→Timeout`, `HttpRequestException→ConnectionRefused`, `InvalidDataException→CompressionFailure`, `JsonException→CompressionFailure`, else `Unknown`.
+Mappings: `TaskCanceledException/OperationCanceledException(timeout)→Timeout`, `HttpRequestException(401/403)→AuthenticationFailure`, `HttpRequestException(other)→ConnectionRefused`, `InvalidDataException→CompressionFailure`, `JsonException→CompressionFailure`, else `Unknown`.
 
 ### `INodeHttpClient` + `NodeHttpClient`
 
@@ -433,11 +441,11 @@ public interface IBatchTransportQueryService
 }
 ```
 
-Implementation (`BatchTransportQueryService`) uses `AppDbContext` (scoped). Lives in `MSOSync.Transport` — this is the only class in Transport that touches EF directly.
+Interface lives in `MSOSync.Transport`. Implementation (`BatchTransportQueryService`) lives in **`MSOSync.Batch`** (uses `AppDbContext` there, where DB access is already established). `MSOSync.Transport` depends on the interface only — Transport remains persistence-free.
 
 ### `TransportServiceExtensions.AddTransportServices()`
 
-Registers: `GzipCompressionService` (singleton), `INodeHttpClient`/`NodeHttpClient` (typed HttpClient + Polly), `SmartTransportService` as `ITransportService` (scoped), `PushClient` (scoped), `PullClient` (scoped), `AcknowledgementService` (scoped), `IApplyService`/`NoOpApplyService` (scoped), `ITransportFailureClassifier`/`TransportFailureClassifier` (singleton), `IBatchTransportQueryService`/`BatchTransportQueryService` (scoped).
+Registers: `GzipCompressionService` (singleton), `INodeHttpClient`/`NodeHttpClient` (typed HttpClient + Polly), `SmartTransportService` as `ITransportService` (scoped), `PushClient` (scoped), `PullClient` (scoped), `AcknowledgementService` (scoped), `IApplyService`/`NoOpApplyService` (scoped), `ITransportFailureClassifier`/`TransportFailureClassifier` (singleton). `IBatchTransportQueryService`/`BatchTransportQueryService` registered in `AddBatchPipeline()` — implementation lives in `MSOSync.Batch`.
 
 ---
 
@@ -515,7 +523,10 @@ ExecuteAsync:
             IApplyService.ApplyAsync
             POST /ack
           msosync_pull_batches_total += response.Batches.Count
-          msosync_pull_duration_seconds.Record(elapsed)
+          msosync_pull_duration_seconds
+  msosync_ack_total
+  msosync_duplicate_push_total
+  msosync_sequence_gap_total.Record(elapsed)
           
           if response.MoreAvailable → goto poll (immediate re-poll)
         
@@ -568,7 +579,7 @@ SQLite in-memory, same structure as `MSOSync.EngineTests`.
 | `AcknowledgementServiceTests` | success → Acknowledged; failure → Error + SyncBatchError; duplicate → 200 no-op |
 | `GzipCompressionServiceTests` | compress/decompress round-trip; large payload; empty payload |
 | `TransportFailureClassifierTests` | TimeoutException→Timeout; HttpRequestException→ConnectionRefused; JsonException→CompressionFailure |
-| `SequenceVerificationTests` | first batch (seq=1, lastSeq=0) OK; gap (1,2,4) → SequenceGap; replay (seq already exists) → idempotent |
+| `SequenceVerificationTests` | first batch (seq=1, lastSeq=0) OK; gap `[1,2,4]` → SequenceGap; replay (seq already exists) → idempotent |
 
 ### Integration tests (`MSOSync.IntegrationTests/Transport/`)
 
@@ -588,12 +599,13 @@ Docker-gated (Testcontainers.MsSql). `WebApplicationFactory<Program>`.
 | Test | Validates |
 |---|---|
 | `Push_AckLost_ReplayIgnored` | Push batch → apply succeeds → ACK times out (source retries) → duplicate push ignored → one IncomingBatch row |
+| `SequenceGap_Returns409` | Receive seq=1, seq=2, then seq=4 (gap) → 409 with `{"code":"SEQUENCE_GAP"}` + SyncBatchError row |
 
 ---
 
 ## 10. Technical Debt
 
-- **`sync_node_channel_state`** table (`source_node_id, channel_id, last_sequence`) — O(1) sequence lookup, replacing `MAX(batch_sequence)` query. Add in Epic 9 (Observability) or before load testing.
+- **`sync_node_channel_state`** table (`source_node_id, channel_id, last_sequence`) — O(1) sequence lookup, replacing `MAX(batch_sequence)` query. Promoted to Epic 8 (Scheduling & Recovery) — load testing at 1M–10M events/day will make `MAX()` expensive.
 - **`ITransportStrategy` plugin pattern** — replace `if (mode == Push)` branch with strategy resolver. Add when streaming/gRPC transport needed (post-CE).
 - **Unique constraint** on `sync_incoming_batch(source_node_id, batch_sequence)` — enforce at DB level once sequence tracking is stable.
 - **`MSOSYNC_TRANSPORT_MODE` env var** — removed; transport mode is node metadata (DB), not deployment config.
