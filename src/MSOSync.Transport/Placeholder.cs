@@ -1,3 +1,0 @@
-namespace MSOSync.Transport;
-
-// placeholder

@@ -11,7 +11,6 @@ public static class BatchPipelineExtensions
     {
         services.AddScoped<IBatchStateMachine, BatchStateMachine>();
         services.AddScoped<IBatchCreator, BatchCreator>();
-        services.AddSingleton<GzipBatchCompressor>();
         services.AddScoped<RetryProcessor>();
         services.AddScoped<BatchPurger>();
         return services;
