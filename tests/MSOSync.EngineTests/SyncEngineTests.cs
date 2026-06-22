@@ -46,7 +46,7 @@ public sealed class SyncEngineTests
 
         routingMock.Verify(r => r.ResolveAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
         creatorMock.Verify(c => c.CreateBatchesAsync(It.IsAny<IReadOnlyList<SyncDataEvent>>(), It.IsAny<IReadOnlyDictionary<long, IReadOnlyList<string>>>(), It.IsAny<CancellationToken>()), Times.Never);
-        transportMock.Verify(t => t.SendBatchAsync(It.IsAny<SyncOutgoingBatch>(), It.IsAny<CancellationToken>()), Times.Never);
+        transportMock.Verify(t => t.SendBatchAsync(It.IsAny<SyncOutgoingBatch>(), It.IsAny<IReadOnlyList<SyncDataEvent>>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -72,7 +72,7 @@ public sealed class SyncEngineTests
 
         routingMock.Verify(r => r.ResolveAsync("t1", It.IsAny<CancellationToken>()), Times.Once);
         creatorMock.Verify(c => c.CreateBatchesAsync(It.IsAny<IReadOnlyList<SyncDataEvent>>(), It.IsAny<IReadOnlyDictionary<long, IReadOnlyList<string>>>(), It.IsAny<CancellationToken>()), Times.Once);
-        transportMock.Verify(t => t.SendBatchAsync(batch, It.IsAny<CancellationToken>()), Times.Once);
+        transportMock.Verify(t => t.SendBatchAsync(batch, It.IsAny<IReadOnlyList<SyncDataEvent>>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -94,7 +94,7 @@ public sealed class SyncEngineTests
         var engine = CreateEngine(reader: readerMock.Object, creator: creatorMock.Object, transport: transportMock.Object);
         await engine.RunAsync();
 
-        transportMock.Verify(t => t.SendBatchAsync(It.IsAny<SyncOutgoingBatch>(), It.IsAny<CancellationToken>()), Times.Exactly(2));
+        transportMock.Verify(t => t.SendBatchAsync(It.IsAny<SyncOutgoingBatch>(), It.IsAny<IReadOnlyList<SyncDataEvent>>(), It.IsAny<CancellationToken>()), Times.Exactly(2));
     }
 
     [Fact]

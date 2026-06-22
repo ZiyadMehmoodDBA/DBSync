@@ -11,7 +11,7 @@ public static class SyncEngineExtensions
         IConfiguration _)
     {
         services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<SyncEngine>());
-        services.AddScoped<ITransportService, NoOpTransportService>();
+        // ITransportService registered by AddTransportServices() in MSOSync.Transport
         services.AddScoped<SyncEngine>();
         return services;
     }

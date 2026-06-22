@@ -46,9 +46,9 @@ public sealed class SyncEngine(
         // 4. Create batches
         var batches = await batchCreator.CreateBatchesAsync(events, routes, ct);
 
-        // 5. Send each batch (no-op this epic)
+        // 5. Send each batch via transport (PUSH or PULL no-op)
         foreach (var batch in batches)
-            await transport.SendBatchAsync(batch, ct);
+            await transport.SendBatchAsync(batch, events, ct);
 
         // 6. Publish cycle event
         var duration = clock.UtcNow - start;
