@@ -1,3 +1,0 @@
-namespace MSOSync.Routing;
-
-// placeholder

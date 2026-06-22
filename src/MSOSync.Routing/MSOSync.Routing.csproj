@@ -3,6 +3,7 @@
     <Description>Router rules, trigger-to-router mappings, in-memory route cache</Description>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="MediatR" />
     <PackageReference Include="Microsoft.Extensions.Caching.Memory" />
   </ItemGroup>
   <ItemGroup>
