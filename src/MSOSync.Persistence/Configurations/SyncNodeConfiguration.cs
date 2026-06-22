@@ -22,6 +22,12 @@ public sealed class SyncNodeConfiguration : IEntityTypeConfiguration<SyncNode>
         builder.Property(e => e.LastHeartbeat).HasColumnName("last_heartbeat").HasColumnType("datetime2(7)");
         builder.Property(e => e.HeartbeatInterval).HasColumnName("heartbeat_interval").HasDefaultValue(60);
         builder.Property(e => e.SyncEnabled).HasColumnName("sync_enabled").HasDefaultValue(true);
+        builder.Property(e => e.TransportMode)
+            .HasColumnName("transport_mode")
+            .HasColumnType("tinyint")
+            .HasConversion<byte>()
+            .HasDefaultValue(TransportMode.Pull)
+            .IsRequired();
 
         builder.HasIndex(e => e.LastHeartbeat).HasDatabaseName("IX_sync_node_last_heartbeat");
     }

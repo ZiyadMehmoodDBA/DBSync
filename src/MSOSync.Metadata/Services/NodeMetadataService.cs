@@ -145,7 +145,8 @@ public sealed class NodeMetadataService(
 
     private static NodeDto MapNode(SyncNode n) =>
         new(n.NodeId, n.GroupId, n.SyncUrl, n.Status,
-            n.RegistrationTime, n.LastHeartbeat, n.HeartbeatInterval, n.SyncEnabled);
+            n.RegistrationTime, n.LastHeartbeat, n.HeartbeatInterval, n.SyncEnabled,
+            n.TransportMode);
 
     private static RegistrationRequestDto MapRegistration(SyncRegistrationRequest r) =>
         new(r.RequestId, r.NodeId, r.NodeGroup, r.SyncUrl, r.NodeVersion, r.DbType, r.RequestTime, r.Approved);

@@ -1,3 +1,5 @@
+using MSOSync.Persistence;
+
 namespace MSOSync.Metadata.Dtos;
 
 public sealed record NodeDto(
@@ -8,4 +10,5 @@ public sealed record NodeDto(
     DateTime? RegistrationTime,
     DateTime? LastHeartbeat,
     int HeartbeatInterval,
-    bool SyncEnabled);
+    bool SyncEnabled,
+    TransportMode TransportMode);

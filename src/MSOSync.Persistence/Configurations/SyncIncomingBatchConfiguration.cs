@@ -19,11 +19,22 @@ public sealed class SyncIncomingBatchConfiguration : IEntityTypeConfiguration<Sy
         builder.Property(e => e.ChannelId).HasColumnName("channel_id").HasColumnType("varchar(50)").HasMaxLength(50).IsUnicode(false).IsRequired();
         builder.Property(e => e.Status).HasColumnName("status").HasColumnType("tinyint").HasConversion<byte>();
         builder.Property(e => e.RowCount).HasColumnName("row_count");
+        builder.Property(e => e.BatchSequence).HasColumnName("batch_sequence").IsRequired();
+        builder.Property(e => e.SourceNodeId).HasColumnName("source_node_id").HasColumnType("varchar(50)").HasMaxLength(50).IsUnicode(false).IsRequired();
+        builder.Property(e => e.ReceivedTime).HasColumnName("received_time").HasColumnType("datetime2(7)").IsRequired();
         builder.Property(e => e.LoadTime).HasColumnName("load_time").HasColumnType("datetime2(7)");
         builder.Property(e => e.ExtractTime).HasColumnName("extract_time").HasColumnType("datetime2(7)");
         builder.Property(e => e.AppliedTime).HasColumnName("applied_time").HasColumnType("datetime2(7)");
         builder.Property(e => e.ApplyTimeMs).HasColumnName("apply_time_ms");
 
         builder.HasIndex(e => new { e.NodeId, e.Status }).HasDatabaseName("IX_sync_incoming_batch_node_status");
+        builder.HasIndex(e => new { e.SourceNodeId, e.ChannelId, e.BatchSequence })
+            .HasDatabaseName("IX_sync_incoming_batch_source_channel_sequence");
+
+        builder.HasOne<SyncNode>()
+            .WithMany()
+            .HasForeignKey(e => e.SourceNodeId)
+            .HasConstraintName("FK_sync_incoming_batch_source_node")
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

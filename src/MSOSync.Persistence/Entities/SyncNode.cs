@@ -10,4 +10,5 @@ public sealed class SyncNode
     public DateTime? LastHeartbeat { get; set; }
     public int HeartbeatInterval { get; set; } = 60;
     public bool SyncEnabled { get; set; } = true;
+    public TransportMode TransportMode { get; set; } = TransportMode.Pull;
 }
