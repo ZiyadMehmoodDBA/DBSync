@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="FluentAssertions" />
+    <PackageReference Include="Moq" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\MSOSync.Common\MSOSync.Common.csproj" />
+    <ProjectReference Include="..\..\src\MSOSync.Persistence\MSOSync.Persistence.csproj" />
+    <ProjectReference Include="..\..\src\MSOSync.Trigger\MSOSync.Trigger.csproj" />
+    <ProjectReference Include="..\..\src\MSOSync.Event\MSOSync.Event.csproj" />
+    <ProjectReference Include="..\..\src\MSOSync.Routing\MSOSync.Routing.csproj" />
+    <ProjectReference Include="..\..\src\MSOSync.Batch\MSOSync.Batch.csproj" />
+    <ProjectReference Include="..\..\src\MSOSync.Engine\MSOSync.Engine.csproj" />
+    <ProjectReference Include="..\..\src\MSOSync.Metadata\MSOSync.Metadata.csproj" />
+  </ItemGroup>
+</Project>
