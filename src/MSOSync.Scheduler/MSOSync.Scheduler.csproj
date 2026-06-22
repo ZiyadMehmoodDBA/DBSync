@@ -12,5 +12,8 @@
     <ProjectReference Include="..\MSOSync.Batch\MSOSync.Batch.csproj" />
     <ProjectReference Include="..\MSOSync.Event\MSOSync.Event.csproj" />
     <ProjectReference Include="..\MSOSync.Engine\MSOSync.Engine.csproj" />
+    <ProjectReference Include="..\MSOSync.Transport\MSOSync.Transport.csproj" />
+    <ProjectReference Include="..\MSOSync.Topology\MSOSync.Topology.csproj" />
+    <ProjectReference Include="..\MSOSync.Metadata\MSOSync.Metadata.csproj" />
   </ItemGroup>
 </Project>
