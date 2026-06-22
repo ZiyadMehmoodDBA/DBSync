@@ -22,7 +22,7 @@ public sealed class BatchPurger(AppDbContext db, IClock clock, ILogger<BatchPurg
         // Delete junction rows for batches that will be purged (Ok OR exhausted Error)
         var batchIdsToPurge = await db.OutgoingBatches
             .Where(b => b.CreateTime < cutoff &&
-                       (b.Status == (byte)BatchStatus.Ok ||
+                       (b.Status == (byte)BatchStatus.Acknowledged ||
                        (b.Status == (byte)BatchStatus.Error && b.RetryCount >= MaxRetries)))
             .Select(b => b.BatchId)
             .ToListAsync(ct);
@@ -36,11 +36,11 @@ public sealed class BatchPurger(AppDbContext db, IClock clock, ILogger<BatchPurg
 
         var deleted = await db.OutgoingBatches
             .Where(b => b.CreateTime < cutoff &&
-                       (b.Status == (byte)BatchStatus.Ok ||
+                       (b.Status == (byte)BatchStatus.Acknowledged ||
                        (b.Status == (byte)BatchStatus.Error && b.RetryCount >= MaxRetries)))
             .ExecuteDeleteAsync(ct);
 
-        logger.LogInformation("BatchPurger deleted {Count} batches (Ok or exhausted Error) older than {Cutoff:u}", deleted, cutoff);
+        logger.LogInformation("BatchPurger deleted {Count} batches (Acknowledged or exhausted Error) older than {Cutoff:u}", deleted, cutoff);
         return deleted;
     }
 }

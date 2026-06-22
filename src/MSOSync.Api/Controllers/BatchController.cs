@@ -83,8 +83,7 @@ public sealed class BatchController(
             .FirstOrDefaultAsync(b => b.BatchId == batchId, ct);
         if (batch == null) return NotFound();
 
-        var transitioned = await stateMachine.TransitionAsync(
-            batchId, BatchStatus.Error, BatchStatus.Retry, ct);
+        var transitioned = await stateMachine.MoveToRetryAsync(batchId, ct);
 
         if (!transitioned)
             return Conflict(new { code = "INVALID_TRANSITION",

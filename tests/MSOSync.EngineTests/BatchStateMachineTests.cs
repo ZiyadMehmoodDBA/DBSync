@@ -1,6 +1,6 @@
-// tests/MSOSync.EngineTests/BatchStateMachineTests.cs
 using FluentAssertions;
 using MSOSync.Batch;
+using MSOSync.Common;
 using MSOSync.Persistence;
 using MSOSync.Persistence.Entities;
 using Xunit;
@@ -12,10 +12,10 @@ public sealed class BatchStateMachineTests
     private static (BatchStateMachine Sm, AppDbContext Db) Create()
     {
         var db = TestDbContext.Create();
-        return (new BatchStateMachine(db), db);
+        return (new BatchStateMachine(db, new FakeClock()), db);
     }
 
-    private static SyncOutgoingBatch MakeBatch(BatchStatus status)
+    private static async Task<SyncOutgoingBatch> AddBatch(AppDbContext db, BatchStatus status)
     {
         var b = new SyncOutgoingBatch
         {
@@ -24,74 +24,112 @@ public sealed class BatchStateMachineTests
             ChannelId     = "default",
             Status        = (byte)status
         };
+        db.OutgoingBatches.Add(b);
+        await db.SaveChangesAsync();
         return b;
     }
 
-    [Theory]
-    [InlineData(BatchStatus.New,   BatchStatus.Sent)]
-    [InlineData(BatchStatus.Sent,  BatchStatus.Ok)]
-    [InlineData(BatchStatus.Sent,  BatchStatus.Error)]
-    [InlineData(BatchStatus.Error, BatchStatus.Retry)]
-    [InlineData(BatchStatus.Retry, BatchStatus.Sent)]
-    [InlineData(BatchStatus.Retry, BatchStatus.Error)]
-    public void CanTransition_ValidPairs_ReturnsTrue(BatchStatus from, BatchStatus to)
-    {
-        var (sm, _) = Create();
-        sm.CanTransition(from, to).Should().BeTrue();
-    }
-
-    [Theory]
-    [InlineData(BatchStatus.New,   BatchStatus.Ok)]
-    [InlineData(BatchStatus.New,   BatchStatus.Error)]
-    [InlineData(BatchStatus.Ok,    BatchStatus.Sent)]
-    [InlineData(BatchStatus.Error, BatchStatus.Ok)]
-    public void CanTransition_InvalidPairs_ReturnsFalse(BatchStatus from, BatchStatus to)
-    {
-        var (sm, _) = Create();
-        sm.CanTransition(from, to).Should().BeFalse();
-    }
-
     [Fact]
-    public async Task TransitionAsync_ValidTransition_ReturnsTrue()
+    public async Task MoveToSendingAsync_FromNew_TransitionsAndSetsSentTime()
     {
         var (sm, db) = Create();
-        var batch = MakeBatch(BatchStatus.New);
-        db.OutgoingBatches.Add(batch);
-        await db.SaveChangesAsync();
+        var batch    = await AddBatch(db, BatchStatus.New);
 
-        var result = await sm.TransitionAsync(batch.BatchId, BatchStatus.New, BatchStatus.Sent);
+        var result = await sm.MoveToSendingAsync(batch.BatchId);
 
         result.Should().BeTrue();
         db.ChangeTracker.Clear();
         var updated = await db.OutgoingBatches.FindAsync(batch.BatchId);
-        updated!.Status.Should().Be((byte)BatchStatus.Sent);
+        updated!.Status.Should().Be((byte)BatchStatus.Sending);
+        updated.SentTime.Should().NotBeNull();
     }
 
     [Fact]
-    public async Task TransitionAsync_WrongCurrentStatus_ReturnsFalse()
+    public async Task MoveToSendingAsync_FromError_ReturnsFalse()
     {
         var (sm, db) = Create();
-        var batch = MakeBatch(BatchStatus.Error);
-        db.OutgoingBatches.Add(batch);
-        await db.SaveChangesAsync();
+        var batch    = await AddBatch(db, BatchStatus.Error);
 
-        var result = await sm.TransitionAsync(batch.BatchId, BatchStatus.New, BatchStatus.Sent);
+        var result = await sm.MoveToSendingAsync(batch.BatchId);
 
         result.Should().BeFalse();
-        db.ChangeTracker.Clear();
-        var unchanged = await db.OutgoingBatches.FindAsync(batch.BatchId);
-        unchanged!.Status.Should().Be((byte)BatchStatus.Error);
     }
 
     [Fact]
-    public async Task TransitionAsync_InvalidTransitionPair_ReturnsFalse()
+    public async Task MoveToAcknowledgedAsync_FromSending_SetsAckTime()
     {
         var (sm, db) = Create();
-        var batch = MakeBatch(BatchStatus.New);
-        db.OutgoingBatches.Add(batch);
-        await db.SaveChangesAsync();
+        var batch    = await AddBatch(db, BatchStatus.Sending);
+        var ackTime  = DateTimeOffset.UtcNow;
 
-        var result = await sm.TransitionAsync(batch.BatchId, BatchStatus.New, BatchStatus.Ok);
+        var result = await sm.MoveToAcknowledgedAsync(batch.BatchId, ackTime);
+
+        result.Should().BeTrue();
+        db.ChangeTracker.Clear();
+        var updated = await db.OutgoingBatches.FindAsync(batch.BatchId);
+        updated!.Status.Should().Be((byte)BatchStatus.Acknowledged);
+        updated.AckTime.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task MoveToAcknowledgedAsync_FromNew_ReturnsTrueForPullMode()
+    {
+        // PULL mode: batch stays New until ACK, so New→Acknowledged must be valid
+        var (sm, db) = Create();
+        var batch    = await AddBatch(db, BatchStatus.New);
+
+        var result = await sm.MoveToAcknowledgedAsync(batch.BatchId, DateTimeOffset.UtcNow);
+
+        result.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task MoveToErrorAsync_FromSending_Transitions()
+    {
+        var (sm, db) = Create();
+        var batch    = await AddBatch(db, BatchStatus.Sending);
+
+        var result = await sm.MoveToErrorAsync(batch.BatchId);
+
+        result.Should().BeTrue();
+        db.ChangeTracker.Clear();
+        var updated = await db.OutgoingBatches.FindAsync(batch.BatchId);
+        updated!.Status.Should().Be((byte)BatchStatus.Error);
+    }
+
+    [Fact]
+    public async Task MoveToErrorAsync_FromNew_ReturnsTrueForPullMode()
+    {
+        // PULL mode: negative ACK → New→Error
+        var (sm, db) = Create();
+        var batch    = await AddBatch(db, BatchStatus.New);
+
+        var result = await sm.MoveToErrorAsync(batch.BatchId);
+
+        result.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task MoveToRetryAsync_FromError_Transitions()
+    {
+        var (sm, db) = Create();
+        var batch    = await AddBatch(db, BatchStatus.Error);
+
+        var result = await sm.MoveToRetryAsync(batch.BatchId);
+
+        result.Should().BeTrue();
+        db.ChangeTracker.Clear();
+        var updated = await db.OutgoingBatches.FindAsync(batch.BatchId);
+        updated!.Status.Should().Be((byte)BatchStatus.Retry);
+    }
+
+    [Fact]
+    public async Task MoveToRetryAsync_FromAcknowledged_ReturnsFalse()
+    {
+        var (sm, db) = Create();
+        var batch    = await AddBatch(db, BatchStatus.Acknowledged);
+
+        var result = await sm.MoveToRetryAsync(batch.BatchId);
 
         result.Should().BeFalse();
     }

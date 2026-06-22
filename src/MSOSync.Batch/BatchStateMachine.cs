@@ -1,33 +1,79 @@
 using Microsoft.EntityFrameworkCore;
+using MSOSync.Common;
 using MSOSync.Persistence;
 
 namespace MSOSync.Batch;
 
-public sealed class BatchStateMachine(AppDbContext db) : IBatchStateMachine
+public sealed class BatchStateMachine(AppDbContext db, IClock clock) : IBatchStateMachine
 {
+    // Valid (from, to) transitions
     private static readonly HashSet<(BatchStatus From, BatchStatus To)> ValidTransitions =
     [
-        (BatchStatus.New,   BatchStatus.Sent),
-        (BatchStatus.New,   BatchStatus.Retry),
-        (BatchStatus.Sent,  BatchStatus.Ok),
-        (BatchStatus.Sent,  BatchStatus.Error),
-        (BatchStatus.Error, BatchStatus.Retry),
-        (BatchStatus.Retry, BatchStatus.Sent),
-        (BatchStatus.Retry, BatchStatus.Error),
+        (BatchStatus.New,          BatchStatus.Sending),      // PUSH: start sending
+        (BatchStatus.New,          BatchStatus.Acknowledged),  // PULL: ACK success (batch was never moved)
+        (BatchStatus.New,          BatchStatus.Error),         // PULL: negative ACK
+        (BatchStatus.Sending,      BatchStatus.Acknowledged),  // PUSH: success
+        (BatchStatus.Sending,      BatchStatus.Error),         // PUSH: failure / timeout
+        (BatchStatus.Error,        BatchStatus.Retry),
+        (BatchStatus.Retry,        BatchStatus.Sending),       // PUSH retry
+        (BatchStatus.Retry,        BatchStatus.Acknowledged),  // PULL retry → ack
+        (BatchStatus.Retry,        BatchStatus.Error),
     ];
 
-    public bool CanTransition(BatchStatus from, BatchStatus to) =>
-        ValidTransitions.Contains((from, to));
-
-    public async Task<bool> TransitionAsync(
-        long batchId, BatchStatus from, BatchStatus to, CancellationToken ct = default)
+    public async Task<bool> MoveToSendingAsync(long batchId, CancellationToken ct = default)
     {
-        if (!CanTransition(from, to)) return false;
+        if (!IsValidFrom(BatchStatus.Sending)) return false;
+        var sentTime = clock.UtcNow;
 
         var rows = await db.OutgoingBatches
-            .Where(b => b.BatchId == batchId && b.Status == (byte)from)
-            .ExecuteUpdateAsync(s => s.SetProperty(b => b.Status, (byte)to), ct);
+            .Where(b => b.BatchId == batchId
+                     && (b.Status == (byte)BatchStatus.New || b.Status == (byte)BatchStatus.Retry))
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(b => b.Status,   (byte)BatchStatus.Sending)
+                .SetProperty(b => b.SentTime, sentTime), ct);
 
         return rows == 1;
     }
+
+    public async Task<bool> MoveToAcknowledgedAsync(
+        long batchId, DateTimeOffset ackTime, CancellationToken ct = default)
+    {
+        var ackUtc = ackTime.UtcDateTime;
+
+        var rows = await db.OutgoingBatches
+            .Where(b => b.BatchId == batchId
+                     && (b.Status == (byte)BatchStatus.New
+                      || b.Status == (byte)BatchStatus.Sending
+                      || b.Status == (byte)BatchStatus.Retry))
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(b => b.Status,  (byte)BatchStatus.Acknowledged)
+                .SetProperty(b => b.AckTime, ackUtc), ct);
+
+        return rows == 1;
+    }
+
+    public async Task<bool> MoveToErrorAsync(long batchId, CancellationToken ct = default)
+    {
+        var rows = await db.OutgoingBatches
+            .Where(b => b.BatchId == batchId
+                     && (b.Status == (byte)BatchStatus.New
+                      || b.Status == (byte)BatchStatus.Sending
+                      || b.Status == (byte)BatchStatus.Retry))
+            .ExecuteUpdateAsync(s => s.SetProperty(b => b.Status, (byte)BatchStatus.Error), ct);
+
+        return rows == 1;
+    }
+
+    public async Task<bool> MoveToRetryAsync(long batchId, CancellationToken ct = default)
+    {
+        var rows = await db.OutgoingBatches
+            .Where(b => b.BatchId == batchId && b.Status == (byte)BatchStatus.Error)
+            .ExecuteUpdateAsync(s => s.SetProperty(b => b.Status, (byte)BatchStatus.Retry), ct);
+
+        return rows == 1;
+    }
+
+    // Helper: checks if any existing status can transition TO the given target
+    private static bool IsValidFrom(BatchStatus to) =>
+        ValidTransitions.Any(t => t.To == to);
 }

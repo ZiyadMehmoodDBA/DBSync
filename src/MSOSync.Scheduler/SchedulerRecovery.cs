@@ -22,23 +22,23 @@ public sealed class SchedulerRecovery(
         var mediator     = scope.ServiceProvider.GetRequiredService<IMediator>();
         var now          = clock.UtcNow;
 
-        // 1. SENT → RETRY (restart scenario — never ACKed)
-        var sentBatches = await db.OutgoingBatches
-            .Where(b => b.Status == (byte)BatchStatus.Sent)
+        // 1. Sending → Error (crash during PUSH send — will gain sent_time filter in Task 13)
+        var sendingBatches = await db.OutgoingBatches
+            .Where(b => b.Status == (byte)BatchStatus.Sending)
             .ToListAsync(ct);
 
-        var sentRecovered = 0;
-        foreach (var b in sentBatches)
+        var sendingRecovered = 0;
+        foreach (var b in sendingBatches)
         {
-            if (await stateMachine.TransitionAsync(b.BatchId, BatchStatus.Sent, BatchStatus.Retry, ct))
+            if (await stateMachine.MoveToErrorAsync(b.BatchId, ct))
             {
-                sentRecovered++;
-                logger.LogInformation("Recovery {Reason}: Batch {BatchId} SENT→RETRY",
+                sendingRecovered++;
+                logger.LogInformation("Recovery {Reason}: Batch {BatchId} Sending→Error",
                     RecoveryReason.Restart, b.BatchId);
             }
         }
 
-        // 2. RETRY with overdue next_retry_time → requeue (reset to Retry so RetryJob picks up)
+        // 2. RETRY with overdue next_retry_time → requeue
         var overdueBatches = await db.OutgoingBatches
             .Where(b => b.Status == (byte)BatchStatus.Retry
                      && b.NextRetryTime != null
@@ -48,7 +48,6 @@ public sealed class SchedulerRecovery(
         var retryRequeued = 0;
         foreach (var b in overdueBatches)
         {
-            // Already Retry status — just clear NextRetryTime so RetryJob re-schedules it
             b.NextRetryTime = null;
             retryRequeued++;
             logger.LogInformation("Recovery {Reason}: Batch {BatchId} overdue retry requeued",
@@ -66,18 +65,20 @@ public sealed class SchedulerRecovery(
         var newRecovered = 0;
         foreach (var b in newBatches)
         {
-            if (await stateMachine.TransitionAsync(b.BatchId, BatchStatus.New, BatchStatus.Retry, ct))
+            if (await stateMachine.MoveToRetryAsync(b.BatchId, ct))
             {
                 newRecovered++;
-                logger.LogInformation("Recovery {Reason}: Batch {BatchId} NEW→RETRY",
+                logger.LogInformation("Recovery {Reason}: Batch {BatchId} New→Retry",
                     RecoveryReason.Restart, b.BatchId);
             }
         }
 
-        logger.LogInformation("SchedulerRecovery complete: sentRecovered={S} retryRequeued={R} newRecovered={N}",
-            sentRecovered, retryRequeued, newRecovered);
+        logger.LogInformation(
+            "SchedulerRecovery complete: sendingRecovered={S} retryRequeued={R} newRecovered={N}",
+            sendingRecovered, retryRequeued, newRecovered);
 
-        await mediator.Publish(new SchedulerRecoveryEvent(sentRecovered, retryRequeued, newRecovered), ct);
+        await mediator.Publish(
+            new SchedulerRecoveryEvent(sendingRecovered, retryRequeued, newRecovered), ct);
     }
 
     public Task StopAsync(CancellationToken ct) => Task.CompletedTask;
