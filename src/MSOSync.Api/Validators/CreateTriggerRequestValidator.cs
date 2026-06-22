@@ -14,10 +14,12 @@ public sealed class CreateTriggerRequestValidator : AbstractValidator<CreateTrig
 
         RuleFor(x => x.SourceTable)
             .NotEmpty().WithMessage("SourceTable is required")
-            .MaximumLength(128).WithMessage("SourceTable must be at most 128 characters");
+            .MaximumLength(128).WithMessage("SourceTable must be at most 128 characters")
+            .Matches(@"^[\w\.\[\]]+$").WithMessage("SourceTable must contain only word characters, dots, and brackets");
 
         RuleFor(x => x.ChannelId)
             .NotEmpty().WithMessage("ChannelId is required")
-            .MaximumLength(50).WithMessage("ChannelId must be at most 50 characters");
+            .MaximumLength(50).WithMessage("ChannelId must be at most 50 characters")
+            .Matches(@"^[\w\.\[\]]+$").WithMessage("ChannelId must contain only word characters, dots, and brackets");
     }
 }

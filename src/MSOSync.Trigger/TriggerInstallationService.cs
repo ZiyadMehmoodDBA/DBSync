@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using MSOSync.Common;
 using MSOSync.Common.Exceptions;
 using MSOSync.Persistence;
 using MSOSync.Persistence.Entities;
@@ -12,6 +13,7 @@ public sealed class TriggerInstallationService(
     AppDbContext db,
     SqlServerTriggerBuilder builder,
     IConfiguration config,
+    IClock clock,
     ILogger<TriggerInstallationService> logger) : ITriggerInstallationService
 {
     private string NodeId => config["Node:Id"] ?? Environment.MachineName;
@@ -23,13 +25,13 @@ public sealed class TriggerInstallationService(
         await db.Database.ExecuteSqlRawAsync(ddl, ct);
 
         trigger.TriggerVersion++;
-        trigger.LastVerifiedTime = DateTime.UtcNow;
+        trigger.LastVerifiedTime = clock.UtcNow;
         db.TriggerHists.Add(new SyncTriggerHist
         {
             TriggerId = trigger.TriggerId,
             DdlText = ddl,
             TriggerVersion = trigger.TriggerVersion,
-            CreateTime = DateTime.UtcNow
+            CreateTime = clock.UtcNow
         });
         await db.SaveChangesAsync(ct);
 

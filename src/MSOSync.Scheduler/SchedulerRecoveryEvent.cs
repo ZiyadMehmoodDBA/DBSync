@@ -4,4 +4,5 @@ namespace MSOSync.Scheduler;
 
 public sealed record SchedulerRecoveryEvent(
     int SentRecovered,
-    int RetryRequeued) : INotification;
+    int RetryRequeued,
+    int NewRecovered) : INotification;

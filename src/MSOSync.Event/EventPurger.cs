@@ -18,6 +18,19 @@ public sealed class EventPurger(AppDbContext db, IClock clock, ILogger<EventPurg
         var retentionDays = int.TryParse(param?.ParameterValue, out var d) ? d : DefaultRetentionDays;
         var cutoff = clock.UtcNow.AddDays(-retentionDays);
 
+        // Delete junction rows for events that will be purged
+        var eventIdsToPurge = await db.DataEvents
+            .Where(e => e.IsProcessed && e.CreateTime < cutoff)
+            .Select(e => e.EventId)
+            .ToListAsync(ct);
+
+        if (eventIdsToPurge.Count > 0)
+        {
+            await db.DataEventBatches
+                .Where(l => eventIdsToPurge.Contains(l.EventId))
+                .ExecuteDeleteAsync(ct);
+        }
+
         var deleted = await db.DataEvents
             .Where(e => e.IsProcessed && e.CreateTime < cutoff)
             .ExecuteDeleteAsync(ct);

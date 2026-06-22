@@ -8,6 +8,7 @@ public sealed class BatchStateMachine(AppDbContext db) : IBatchStateMachine
     private static readonly HashSet<(BatchStatus From, BatchStatus To)> ValidTransitions =
     [
         (BatchStatus.New,   BatchStatus.Sent),
+        (BatchStatus.New,   BatchStatus.Retry),
         (BatchStatus.Sent,  BatchStatus.Ok),
         (BatchStatus.Sent,  BatchStatus.Error),
         (BatchStatus.Error, BatchStatus.Retry),

@@ -57,10 +57,27 @@ public sealed class SchedulerRecovery(
 
         if (retryRequeued > 0) await db.SaveChangesAsync(ct);
 
-        logger.LogInformation("SchedulerRecovery complete: sentRecovered={S} retryRequeued={R}",
-            sentRecovered, retryRequeued);
+        // 3. NEW batches older than 10 min — never sent (restart scenario)
+        var staleTime = now.AddMinutes(-10);
+        var newBatches = await db.OutgoingBatches
+            .Where(b => b.Status == (byte)BatchStatus.New && b.CreateTime < staleTime)
+            .ToListAsync(ct);
 
-        await mediator.Publish(new SchedulerRecoveryEvent(sentRecovered, retryRequeued), ct);
+        var newRecovered = 0;
+        foreach (var b in newBatches)
+        {
+            if (await stateMachine.TransitionAsync(b.BatchId, BatchStatus.New, BatchStatus.Retry, ct))
+            {
+                newRecovered++;
+                logger.LogInformation("Recovery {Reason}: Batch {BatchId} NEW→RETRY",
+                    RecoveryReason.Restart, b.BatchId);
+            }
+        }
+
+        logger.LogInformation("SchedulerRecovery complete: sentRecovered={S} retryRequeued={R} newRecovered={N}",
+            sentRecovered, retryRequeued, newRecovered);
+
+        await mediator.Publish(new SchedulerRecoveryEvent(sentRecovered, retryRequeued, newRecovered), ct);
     }
 
     public Task StopAsync(CancellationToken ct) => Task.CompletedTask;

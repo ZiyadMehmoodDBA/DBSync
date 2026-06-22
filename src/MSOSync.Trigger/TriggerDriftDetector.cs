@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using MSOSync.Common;
 using MSOSync.Common.Exceptions;
 using MSOSync.Persistence;
 
@@ -11,6 +12,7 @@ public sealed class TriggerDriftDetector(
     AppDbContext db,
     SqlServerTriggerBuilder builder,
     IConfiguration config,
+    IClock clock,
     ILogger<TriggerDriftDetector> logger) : ITriggerDriftDetector
 {
     private string NodeId => config["Node:Id"] ?? Environment.MachineName;
@@ -74,7 +76,7 @@ public sealed class TriggerDriftDetector(
 
     private async Task UpdateLastVerified(Persistence.Entities.SyncTrigger trigger, CancellationToken ct)
     {
-        trigger.LastVerifiedTime = DateTime.UtcNow;
+        trigger.LastVerifiedTime = clock.UtcNow;
         await db.SaveChangesAsync(ct);
     }
 

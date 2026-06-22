@@ -5,6 +5,7 @@ using MSOSync.Api.Dtos.Batches;
 using MSOSync.Batch;
 using MSOSync.Common;
 using MSOSync.Persistence;
+using MSOSync.Persistence.Lock;
 
 namespace MSOSync.Api.Controllers;
 
@@ -14,7 +15,8 @@ public sealed class BatchController(
     AppDbContext db,
     IBatchStateMachine stateMachine,
     RetryProcessor retryProcessor,
-    ICurrentUserService currentUser) : ControllerBase
+    ICurrentUserService currentUser,
+    IDatabaseLockProvider lockProvider) : ControllerBase
 {
     [HttpGet]
     [Authorize]
@@ -95,7 +97,14 @@ public sealed class BatchController(
     [Authorize(Policy = "OperatorOrAbove")]
     public async Task<IActionResult> RetryAll(CancellationToken ct)
     {
-        var count = await retryProcessor.ProcessAsync(ct);
-        return Ok(new RetryAllResponse(count, DateTime.UtcNow, currentUser.GetCurrentUsername()));
+        var lease = await lockProvider.TryAcquireAsync(LockNames.RetryEngine, ct);
+        if (lease == null)
+            return Conflict(new { code = "LOCK_UNAVAILABLE", message = "Retry engine is currently running. Try again shortly." });
+
+        await using (lease)
+        {
+            var count = await retryProcessor.ProcessAsync(ct);
+            return Ok(new RetryAllResponse(count, DateTime.UtcNow, currentUser.GetCurrentUsername()));
+        }
     }
 }

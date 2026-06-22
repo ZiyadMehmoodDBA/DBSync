@@ -8,8 +8,19 @@ public sealed class SqlServerTriggerBuilder
     private static readonly string Schema =
         Environment.GetEnvironmentVariable("MSOSYNC_SCHEMA") ?? "msosync";
 
+    private static void ValidateName(string value, string fieldName)
+    {
+        // Allows schema.table or bare identifier: letters, digits, underscore, brackets
+        if (!System.Text.RegularExpressions.Regex.IsMatch(value, @"^[\[\]a-zA-Z_][a-zA-Z0-9_\.\[\]]*$"))
+            throw new ArgumentException($"Invalid characters in {fieldName}: {value}");
+        if (value.Contains('\''))
+            throw new ArgumentException($"Single quote not allowed in {fieldName}");
+    }
+
     public string BuildDdl(SyncTrigger trigger, string nodeId)
     {
+        ValidateName(trigger.SourceTable, nameof(trigger.SourceTable));
+        ValidateName(trigger.ChannelId, nameof(trigger.ChannelId));
         var triggerName = $"msosync__{trigger.TriggerId}";
         var parts = trigger.SourceTable.Split('.', 2);
         var tableSchema = parts.Length == 2 ? parts[0] : "dbo";
