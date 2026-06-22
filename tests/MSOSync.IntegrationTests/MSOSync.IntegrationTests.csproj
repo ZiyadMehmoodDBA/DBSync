@@ -23,5 +23,8 @@
     <ProjectReference Include="..\..\src\MSOSync.Routing\MSOSync.Routing.csproj" />
     <ProjectReference Include="..\..\src\MSOSync.Batch\MSOSync.Batch.csproj" />
     <ProjectReference Include="..\..\src\MSOSync.Engine\MSOSync.Engine.csproj" />
+    <ProjectReference Include="..\..\src\MSOSync.Transport\MSOSync.Transport.csproj" />
+    <ProjectReference Include="..\..\src\MSOSync.Topology\MSOSync.Topology.csproj" />
+    <ProjectReference Include="..\..\src\MSOSync.Scheduler\MSOSync.Scheduler.csproj" />
   </ItemGroup>
 </Project>

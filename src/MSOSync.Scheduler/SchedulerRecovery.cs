@@ -22,9 +22,12 @@ public sealed class SchedulerRecovery(
         var mediator     = scope.ServiceProvider.GetRequiredService<IMediator>();
         var now          = clock.UtcNow;
 
-        // 1. Sending → Error (crash during PUSH send — will gain sent_time filter in Task 13)
+        // 1. Sending → Error (crash during PUSH — only batches stuck > 5 min)
+        var staleThreshold = now.AddMinutes(-5);
         var sendingBatches = await db.OutgoingBatches
-            .Where(b => b.Status == (byte)BatchStatus.Sending)
+            .Where(b => b.Status == (byte)BatchStatus.Sending
+                     && b.SentTime != null
+                     && b.SentTime < staleThreshold)
             .ToListAsync(ct);
 
         var sendingRecovered = 0;
@@ -33,8 +36,8 @@ public sealed class SchedulerRecovery(
             if (await stateMachine.MoveToErrorAsync(b.BatchId, ct))
             {
                 sendingRecovered++;
-                logger.LogInformation("Recovery {Reason}: Batch {BatchId} Sending→Error",
-                    RecoveryReason.Restart, b.BatchId);
+                logger.LogInformation("Recovery {Reason}: Batch {BatchId} Sending→Error (stale {SentTime})",
+                    RecoveryReason.Restart, b.BatchId, b.SentTime);
             }
         }
 
