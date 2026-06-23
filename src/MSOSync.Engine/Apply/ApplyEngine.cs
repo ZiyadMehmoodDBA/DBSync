@@ -1,6 +1,7 @@
 // src/MSOSync.Engine/Apply/ApplyEngine.cs
 using System.Text.Json;
 using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using MSOSync.Common;
 using MSOSync.Persistence;
@@ -22,6 +23,10 @@ public sealed class ApplyEngine(
         BatchPayload      payload,
         CancellationToken ct = default)
     {
+        // Attach entity if not already tracked so SaveChangesAsync persists status updates.
+        if (db.Entry(incoming).State == EntityState.Detached)
+            db.Attach(incoming);
+
         incoming.Status = IncomingBatchStatus.Applying;
         await db.SaveChangesAsync(ct);
 
