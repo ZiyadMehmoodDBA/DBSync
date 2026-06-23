@@ -4,9 +4,11 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="MediatR" />
+    <PackageReference Include="Microsoft.Data.SqlClient" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MSOSync.Common\MSOSync.Common.csproj" />
+    <ProjectReference Include="..\MSOSync.Persistence\MSOSync.Persistence.csproj" />
     <ProjectReference Include="..\MSOSync.Trigger\MSOSync.Trigger.csproj" />
     <ProjectReference Include="..\MSOSync.Event\MSOSync.Event.csproj" />
     <ProjectReference Include="..\MSOSync.Routing\MSOSync.Routing.csproj" />

@@ -11,4 +11,5 @@ public sealed class SyncTrigger
     public bool Enabled { get; set; } = true;
     public int TriggerVersion { get; set; } = 0;
     public DateTime? LastVerifiedTime { get; set; }
+    public string? PkColumnsJson { get; set; }
 }

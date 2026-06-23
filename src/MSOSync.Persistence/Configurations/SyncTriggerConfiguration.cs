@@ -23,5 +23,6 @@ public sealed class SyncTriggerConfiguration : IEntityTypeConfiguration<SyncTrig
         builder.Property(e => e.Enabled).HasColumnName("enabled").HasDefaultValue(true);
         builder.Property(e => e.TriggerVersion).HasColumnName("trigger_version").HasDefaultValue(0);
         builder.Property(e => e.LastVerifiedTime).HasColumnName("last_verified_time").HasColumnType("datetime2(7)");
+        builder.Property(e => e.PkColumnsJson).HasColumnName("pk_columns_json").HasColumnType("nvarchar(max)");
     }
 }
