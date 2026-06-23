@@ -43,9 +43,11 @@ public sealed class ApplyEngine(
 
         try
         {
+            var context = new ApplyContext(connection, transaction, metadata);
+            int idx = 0;
             foreach (var evt in payload.Events)
             {
-                var (ok, err) = await ApplyEventAsync(evt, new ApplyContext(connection, transaction, metadata), ct);
+                var (ok, err) = await ApplyEventAsync(evt, context, idx++, ct);
                 if (ok) appliedRows++;
                 else { errorRows++; lastError = err; }
             }
@@ -80,7 +82,7 @@ public sealed class ApplyEngine(
     }
 
     private async Task<(bool ok, string? error)> ApplyEventAsync(
-        EventPayload evt, ApplyContext ctx, CancellationToken ct)
+        EventPayload evt, ApplyContext ctx, int eventIndex, CancellationToken ct)
     {
         if (!ctx.Metadata.TryGetValue(evt.TriggerId, out var meta))
         {
@@ -105,7 +107,7 @@ public sealed class ApplyEngine(
             return (false, ApplyFailureCategory.SerializationError.ToString());
         }
 
-        var sp = $"sp_{evt.EventId}";
+        var sp = $"sp_{eventIndex}";
         ctx.Transaction.Save(sp);
 
         try
@@ -144,8 +146,19 @@ public sealed class ApplyEngine(
 
     private SqlStatement BuildStatement(EventPayload evt, TriggerApplyMetadata meta)
     {
-        var pkData  = evt.PkData  != null ? JsonDocument.Parse(evt.PkData).RootElement  : (JsonElement?)null;
-        var rowData = evt.RowData != null ? JsonDocument.Parse(evt.RowData).RootElement : (JsonElement?)null;
+        JsonElement? pkData = null;
+        JsonElement? rowData = null;
+
+        if (evt.PkData != null)
+        {
+            using var pkDoc = JsonDocument.Parse(evt.PkData);
+            pkData = pkDoc.RootElement.Clone();
+        }
+        if (evt.RowData != null)
+        {
+            using var rowDoc = JsonDocument.Parse(evt.RowData);
+            rowData = rowDoc.RootElement.Clone();
+        }
 
         return evt.EventType switch
         {
