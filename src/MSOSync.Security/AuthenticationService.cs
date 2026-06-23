@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using System.Text;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using MSOSync.Persistence;
@@ -12,7 +13,8 @@ public sealed class AuthenticationService(
     JwtService jwtService,
     BCryptPasswordHasher hasher,
     AppDbContext db,
-    IMediator mediator)
+    IMediator mediator,
+    AuthMetrics metrics)
 {
     private static readonly TimeSpan RefreshTokenLifetime = TimeSpan.FromDays(7);
     private static readonly int[] LoginDelaysMs = [0, 1000, 2000, 4000];
@@ -21,25 +23,27 @@ public sealed class AuthenticationService(
         string username, string password, string correlationId,
         CancellationToken ct = default)
     {
+        metrics.LoginAttempts.Add(1);
+
         var user = await userService.FindByUsernameAsync(username, ct);
 
         if (user == null || !user.Enabled)
         {
+            metrics.LoginFailures.Add(1);
             await ApplyLoginDelayAsync(0, ct);
             await mediator.Publish(new LoginFailureEvent(username, correlationId), ct);
             return new LoginResult(false, null, null, null, "Invalid credentials");
         }
 
         if (user.LockedUntil.HasValue && user.LockedUntil > DateTime.UtcNow)
-        {
             return new LoginResult(false, null, null, null,
                 $"Account locked until {user.LockedUntil:u}");
-        }
 
         await ApplyLoginDelayAsync(user.FailedAttempts, ct);
 
         if (!hasher.Verify(password, user.PasswordHash))
         {
+            metrics.LoginFailures.Add(1);
             var newAttempts = user.FailedAttempts + 1;
             if (newAttempts >= 5)
             {
@@ -48,7 +52,6 @@ public sealed class AuthenticationService(
                 return new LoginResult(false, null, null, null,
                     "Account locked due to too many failed attempts");
             }
-
             await userService.IncrementFailedAttemptsAsync(user, ct);
             await mediator.Publish(new LoginFailureEvent(username, correlationId), ct);
             return new LoginResult(false, null, null, null, "Invalid credentials");
@@ -57,8 +60,8 @@ public sealed class AuthenticationService(
         await userService.ResetFailedAttemptsAsync(user, ct);
         await userService.UpdateLastLoginAsync(user, ct);
 
-        var roles = await userService.GetRolesAsync(user.UserId, ct);
-        var accessToken = jwtService.CreateAccessToken(user.UserId, user.Username, roles);
+        var roles        = await userService.GetRolesAsync(user.UserId, ct);
+        var accessToken  = jwtService.CreateAccessToken(user.UserId, user.Username, roles);
         var (rawRefreshToken, refreshEntity) = CreateRefreshToken(user.UserId, familyId: null);
 
         db.UserRefreshTokens.Add(refreshEntity);
@@ -73,13 +76,13 @@ public sealed class AuthenticationService(
         string rawRefreshToken, string correlationId,
         CancellationToken ct = default)
     {
-        var all = await db.UserRefreshTokens
-            .AsNoTracking()
-            .Where(t => t.ExpiresAt > DateTime.UtcNow)
-            .ToListAsync(ct);
+        metrics.RefreshTotal.Add(1);
 
-        var existing = all.FirstOrDefault(t =>
-            hasher.Verify(rawRefreshToken, t.TokenHash));
+        var lookupHash = ComputeLookupHash(rawRefreshToken);
+
+        var existing = await db.UserRefreshTokens
+            .AsNoTracking()
+            .FirstOrDefaultAsync(t => t.TokenLookupHash == lookupHash && t.ExpiresAt > DateTime.UtcNow, ct);
 
         if (existing == null)
             return new RefreshResult(false, null, null, null, "Invalid refresh token");
@@ -108,7 +111,7 @@ public sealed class AuthenticationService(
         if (user == null || !user.Enabled)
             return new RefreshResult(false, null, null, null, "User not found or disabled");
 
-        var roles = await userService.GetRolesAsync(user.UserId, ct);
+        var roles       = await userService.GetRolesAsync(user.UserId, ct);
         var accessToken = jwtService.CreateAccessToken(user.UserId, user.Username, roles);
 
         var childFamilyId = existing.FamilyId ?? existing.TokenId;
@@ -122,12 +125,12 @@ public sealed class AuthenticationService(
 
     public async Task LogoutAsync(string rawRefreshToken, long callerUserId, CancellationToken ct = default)
     {
-        var tokens = await db.UserRefreshTokens
-            .AsNoTracking()
-            .Where(t => t.RevokedAt == null)
-            .ToListAsync(ct);
+        var lookupHash = ComputeLookupHash(rawRefreshToken);
 
-        var match = tokens.FirstOrDefault(t => hasher.Verify(rawRefreshToken, t.TokenHash));
+        var match = await db.UserRefreshTokens
+            .AsNoTracking()
+            .FirstOrDefaultAsync(t => t.TokenLookupHash == lookupHash && t.RevokedAt == null, ct);
+
         if (match == null || match.UserId != callerUserId) return;
 
         await db.UserRefreshTokens
@@ -135,17 +138,21 @@ public sealed class AuthenticationService(
             .ExecuteUpdateAsync(s => s.SetProperty(t => t.RevokedAt, DateTime.UtcNow), ct);
     }
 
+    internal static string ComputeLookupHash(string raw) =>
+        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(raw))).ToLower();
+
     private (string RawToken, SyncUserRefreshToken Entity) CreateRefreshToken(long userId, long? familyId)
     {
-        var raw = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
+        var raw       = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
         var expiresAt = DateTime.UtcNow.Add(RefreshTokenLifetime);
         return (raw, new SyncUserRefreshToken
         {
-            UserId = userId,
-            TokenHash = hasher.Hash(raw),
-            IssuedAt = DateTime.UtcNow,
-            ExpiresAt = expiresAt,
-            FamilyId = familyId
+            UserId          = userId,
+            TokenHash       = hasher.Hash(raw),
+            TokenLookupHash = ComputeLookupHash(raw),
+            IssuedAt        = DateTime.UtcNow,
+            ExpiresAt       = expiresAt,
+            FamilyId        = familyId
         });
     }
 

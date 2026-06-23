@@ -33,6 +33,7 @@ public static class SecurityServiceExtensions
         services.AddSingleton<JwtService>();
         services.AddSingleton<BCryptPasswordHasher>();
         services.AddSingleton<PasswordPolicy>();
+        services.AddSingleton<AuthMetrics>();
         services.AddScoped<IUserService, UserService>();
         services.AddScoped<AuthenticationService>();
         services.AddScoped<NodeSecurityService>();

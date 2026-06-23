@@ -56,7 +56,7 @@ public sealed class AuthenticationServiceTests
         userMock.Setup(u => u.GetRolesAsync(It.IsAny<long>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(roles ?? ["ADMIN"]);
 
-        return (new AuthenticationService(userMock.Object, jwt, hasher, db, mediator), userMock);
+        return (new AuthenticationService(userMock.Object, jwt, hasher, db, mediator, new AuthMetrics()), userMock);
     }
 
     private static SyncUser MakeUser(string username = "alice", string password = "Password1!",
@@ -253,5 +253,58 @@ public sealed class AuthenticationServiceTests
 
         result.Success.Should().BeFalse();
         result.Error.Should().NotBeNullOrEmpty();
+    }
+
+    [Fact]
+    public async Task RefreshAsync_ValidToken_UsesHashLookup_HashWrittenOnLogin()
+    {
+        var db       = MakeDb();
+        var (svc, _) = MakeService(db,
+            seedUser: new SyncUser
+            {
+                UserId       = 1,
+                Username     = "alice",
+                PasswordHash = new BCryptPasswordHasher().Hash("P@ss1234!"),
+                Enabled      = true
+            });
+
+        var loginResult = await svc.LoginAsync("alice", "P@ss1234!", "cid");
+        loginResult.Success.Should().BeTrue();
+
+        // Verify token_lookup_hash was written
+        var token = await db.UserRefreshTokens.SingleAsync();
+        token.TokenLookupHash.Should().NotBeNullOrEmpty();
+        token.TokenLookupHash.Should().HaveLength(64);
+        var expectedHash = Convert.ToHexString(
+            System.Security.Cryptography.SHA256.HashData(
+                System.Text.Encoding.UTF8.GetBytes(loginResult.RefreshToken!))).ToLower();
+        token.TokenLookupHash.Should().Be(expectedHash);
+    }
+
+    [Fact(Skip = "ExecuteUpdateAsync not supported by InMemory provider — covered in Task 8 integration tests")]
+    public async Task RefreshAsync_ValidToken_UsesHashLookup_ReturnsNewTokens()
+    {
+        var db       = MakeDb();
+        var (svc, _) = MakeService(db,
+            seedUser: new SyncUser
+            {
+                UserId       = 1,
+                Username     = "alice",
+                PasswordHash = new BCryptPasswordHasher().Hash("P@ss1234!"),
+                Enabled      = true
+            });
+
+        var loginResult = await svc.LoginAsync("alice", "P@ss1234!", "cid");
+        loginResult.Success.Should().BeTrue();
+
+        // Verify token_lookup_hash was written
+        var token = await db.UserRefreshTokens.SingleAsync();
+        token.TokenLookupHash.Should().NotBeNullOrEmpty();
+        token.TokenLookupHash.Should().HaveLength(64);
+
+        // Refresh using the raw token
+        var refreshResult = await svc.RefreshAsync(loginResult.RefreshToken!, "cid");
+        refreshResult.Success.Should().BeTrue();
+        refreshResult.RefreshToken.Should().NotBe(loginResult.RefreshToken);
     }
 }
