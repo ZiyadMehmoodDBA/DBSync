@@ -11,4 +11,8 @@ public sealed class SyncNode
     public int HeartbeatInterval { get; set; } = 60;
     public bool SyncEnabled { get; set; } = true;
     public TransportMode TransportMode { get; set; } = TransportMode.Pull;
+    public string? UpstreamNodeId { get; set; }
+    public DateTime? LastProbeTime { get; set; }
+    public int? LastProbeLatencyMs { get; set; }
+    public ConnectivityStatus ConnectivityStatus { get; set; } = ConnectivityStatus.Unknown;
 }

@@ -30,5 +30,17 @@ public sealed class SyncUserRefreshTokenConfiguration : IEntityTypeConfiguration
 
         builder.HasIndex(e => e.TokenHash).HasDatabaseName("IX_sync_user_refresh_token_hash");
         builder.HasIndex(e => e.UserId).HasDatabaseName("IX_sync_user_refresh_token_user_id");
+
+        builder.Property(e => e.TokenLookupHash)
+            .HasColumnName("token_lookup_hash")
+            .HasColumnType("char(64)")
+            .HasMaxLength(64)
+            .IsUnicode(false)
+            .IsRequired();
+
+        builder.HasIndex(e => e.TokenLookupHash)
+            .HasDatabaseName("IX_sync_user_refresh_token_lookup_hash")
+            .IsUnique()
+            .HasFilter("[revoked_at] IS NULL");
     }
 }

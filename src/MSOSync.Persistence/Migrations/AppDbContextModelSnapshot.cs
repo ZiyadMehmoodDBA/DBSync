@@ -436,10 +436,26 @@ namespace MSOSync.Persistence.Migrations
                         .HasDefaultValue((byte)1)
                         .HasColumnName("transport_mode");
 
+                    b.Property<string>("upstream_node_id")
+                        .HasColumnType("nvarchar(100)")
+                        .HasMaxLength(100);
+
+                    b.Property<DateTime?>("last_probe_time")
+                        .HasColumnType("datetime2(7)");
+
+                    b.Property<int?>("last_probe_latency_ms");
+
+                    b.Property<byte>("connectivity_status")
+                        .HasDefaultValue((byte)0)
+                        .HasColumnType("tinyint");
+
                     b.HasKey("NodeId");
 
                     b.HasIndex("LastHeartbeat")
                         .HasDatabaseName("IX_sync_node_last_heartbeat");
+
+                    b.HasIndex("upstream_node_id")
+                        .HasDatabaseName("IX_sync_node_upstream");
 
                     b.ToTable("sync_node", "msosync");
                 });
@@ -1019,6 +1035,13 @@ namespace MSOSync.Persistence.Migrations
                         .HasColumnType("varchar(255)")
                         .HasColumnName("token_hash");
 
+                    b.Property<string>("TokenLookupHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .IsUnicode(false)
+                        .HasColumnType("char(64)")
+                        .HasColumnName("token_lookup_hash");
+
                     b.Property<long>("UserId")
                         .HasColumnType("bigint")
                         .HasColumnName("user_id");
@@ -1027,6 +1050,11 @@ namespace MSOSync.Persistence.Migrations
 
                     b.HasIndex("TokenHash")
                         .HasDatabaseName("IX_sync_user_refresh_token_hash");
+
+                    b.HasIndex("TokenLookupHash")
+                        .IsUnique()
+                        .HasDatabaseName("IX_sync_user_refresh_token_lookup_hash")
+                        .HasFilter("[revoked_at] IS NULL");
 
                     b.HasIndex("UserId")
                         .HasDatabaseName("IX_sync_user_refresh_token_user_id");
@@ -1047,6 +1075,16 @@ namespace MSOSync.Persistence.Migrations
                     b.HasKey("UserId", "RoleId");
 
                     b.ToTable("sync_user_role", "msosync");
+                });
+
+            modelBuilder.Entity("MSOSync.Persistence.Entities.SyncNode", b =>
+                {
+                    b.HasOne("MSOSync.Persistence.Entities.SyncNode", null)
+                        .WithMany()
+                        .HasForeignKey("upstream_node_id")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired(false)
+                        .HasConstraintName("FK_sync_node_upstream_node_id");
                 });
 
             modelBuilder.Entity("MSOSync.Persistence.Entities.SyncBatchError", b =>

@@ -31,5 +31,34 @@ public sealed class SyncNodeConfiguration : IEntityTypeConfiguration<SyncNode>
             .IsRequired();
 
         builder.HasIndex(e => e.LastHeartbeat).HasDatabaseName("IX_sync_node_last_heartbeat");
+
+        builder.Property(e => e.UpstreamNodeId)
+            .HasColumnName("upstream_node_id")
+            .HasColumnType("nvarchar(100)")
+            .HasMaxLength(100);
+
+        builder.Property(e => e.LastProbeTime)
+            .HasColumnName("last_probe_time")
+            .HasColumnType("datetime2(7)");
+
+        builder.Property(e => e.LastProbeLatencyMs)
+            .HasColumnName("last_probe_latency_ms");
+
+        builder.Property(e => e.ConnectivityStatus)
+            .HasColumnName("connectivity_status")
+            .HasColumnType("tinyint")
+            .HasConversion<byte>()
+            .HasDefaultValue(ConnectivityStatus.Unknown)
+            .ValueGeneratedNever();
+
+        builder.HasOne<SyncNode>()
+            .WithMany()
+            .HasForeignKey(e => e.UpstreamNodeId)
+            .HasConstraintName("FK_sync_node_upstream_node_id")
+            .OnDelete(DeleteBehavior.NoAction)
+            .IsRequired(false);
+
+        builder.HasIndex(e => e.UpstreamNodeId)
+            .HasDatabaseName("IX_sync_node_upstream");
     }
 }
