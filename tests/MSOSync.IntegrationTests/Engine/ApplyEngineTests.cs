@@ -3,6 +3,9 @@ using FluentAssertions;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Moq;
+using MSOSync.Common;
 using MSOSync.Engine;
 using MSOSync.Persistence;
 using MSOSync.Persistence.Entities;
@@ -376,5 +379,171 @@ public sealed class ApplyEngineTests(ApplyEngineFixture fx) : IAsyncLifetime
         var act      = () => svc.ApplyAsync(incoming, MakeBatch([InsertEvent(800)]), cts.Token);
 
         await act.Should().ThrowAsync<OperationCanceledException>();
+    }
+
+    [Fact]
+    public async Task FatalError_RollsBackBatch()
+    {
+        // Pre-insert order 900 so that a duplicate-key SqlException is triggered for the
+        // first event, which causes the (real) classifier to be invoked.  We replace the
+        // classifier with a mock that throws InvalidOperationException, so the exception
+        // escapes ApplyEventAsync entirely and is caught by the outer catch in ApplyAsync
+        // (fatalError = true, transaction rolled back).
+        await using var setupConn = new SqlConnection(fx.ConnectionString);
+        await setupConn.OpenAsync();
+        await using (var cmd = setupConn.CreateCommand())
+        {
+            cmd.CommandText = "INSERT INTO [dbo].[test_orders] VALUES (900, NULL, 'existing')";
+            await cmd.ExecuteNonQueryAsync();
+        }
+
+        await using var scope = fx.Services.CreateAsyncScope();
+        var db          = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var connFactory = scope.ServiceProvider.GetRequiredService<ISqlConnectionFactory>();
+        var applicator  = scope.ServiceProvider.GetRequiredService<ISqlEventApplicator>();
+        var metadata    = scope.ServiceProvider.GetRequiredService<ITriggerApplyMetadataService>();
+        var clock       = scope.ServiceProvider.GetRequiredService<IClock>();
+        var logger      = scope.ServiceProvider.GetRequiredService<ILogger<ApplyEngine>>();
+
+        // Mock classifier throws on Classify — causing the SqlException handler inside
+        // ApplyEventAsync to itself throw, which escapes to the outer fatal-error catch.
+        var mockClassifier = new Mock<IApplyFailureClassifier>();
+        mockClassifier
+            .Setup(c => c.Classify(It.IsAny<int>()))
+            .Throws(new InvalidOperationException("simulated fatal classifier error"));
+
+        var engine = new ApplyEngine(db, connFactory, applicator, mockClassifier.Object, metadata, clock, logger);
+
+        // Seed an additional incoming batch row for this test
+        var fatalBatchId = System.Threading.Interlocked.Increment(ref _batchIdSeed);
+        var fatalIncoming = new SyncIncomingBatch
+        {
+            BatchId       = fatalBatchId,
+            NodeId        = "local",
+            ChannelId     = "default",
+            SourceNodeId  = "src",
+            BatchSequence = fatalBatchId,
+            ReceivedTime  = DateTime.UtcNow,
+            RowCount      = 2,
+            Status        = IncomingBatchStatus.New,
+        };
+        db.IncomingBatches.Add(fatalIncoming);
+        await db.SaveChangesAsync();
+
+        // Two events: first triggers duplicate key SqlException → classifier mock throws → fatal
+        var events = new EventPayload[]
+        {
+            InsertEvent(900, "dup"),    // duplicate key → SqlException → classifier throws → fatal
+            InsertEvent(901, "ok"),
+        };
+        var result = await engine.ApplyAsync(fatalIncoming, MakeBatch(events));
+
+        result.Success.Should().BeFalse();
+        result.AppliedRows.Should().Be(0);
+
+        // Batch status must be Error (fatalError path in ApplyAsync)
+        await db.Entry(fatalIncoming).ReloadAsync();
+        fatalIncoming.Status.Should().Be(IncomingBatchStatus.Error);
+
+        // Row 901 must NOT exist — transaction was rolled back
+        (await RowExistsAsync(901)).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task CompositePk_Update_Works()
+    {
+        await fx.ClearTestCompositeAsync();
+
+        await using var scope = fx.Services.CreateAsyncScope();
+        var db  = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var svc = scope.ServiceProvider.GetRequiredService<IApplyService>();
+
+        // Seed a separate incoming batch for this test
+        var batchId = System.Threading.Interlocked.Increment(ref _batchIdSeed);
+        var incoming = new SyncIncomingBatch
+        {
+            BatchId       = batchId,
+            NodeId        = "local",
+            ChannelId     = "default",
+            SourceNodeId  = "src",
+            BatchSequence = batchId,
+            ReceivedTime  = DateTime.UtcNow,
+            RowCount      = 2,
+            Status        = IncomingBatchStatus.New,
+        };
+        db.IncomingBatches.Add(incoming);
+        await db.SaveChangesAsync();
+
+        var insertEvt = new EventPayload(
+            1, "trig-composite", "INSERT", "dbo.test_composite", null, null,
+            """{"tenant_id":1,"order_id":100,"status":"new"}""");
+
+        var updateEvt = new EventPayload(
+            2, "trig-composite", "UPDATE", "dbo.test_composite", null,
+            """{"tenant_id":1,"order_id":100}""",
+            """{"tenant_id":1,"order_id":100,"status":"updated"}""");
+
+        var batch  = new BatchPayload(1, 1, "default", "src", "local", 2, [insertEvt, updateEvt]);
+        var result = await svc.ApplyAsync(incoming, batch);
+
+        result.Success.Should().BeTrue();
+        result.AppliedRows.Should().Be(2);
+        result.ErrorRows.Should().Be(0);
+
+        // Verify row has the updated status
+        await using var conn = new SqlConnection(fx.ConnectionString);
+        await conn.OpenAsync();
+        await using var cmd = conn.CreateCommand();
+        cmd.CommandText = "SELECT [status] FROM [dbo].[test_composite] WHERE [tenant_id]=1 AND [order_id]=100";
+        var status = (string?)await cmd.ExecuteScalarAsync();
+        status.Should().Be("updated");
+    }
+
+    [Fact]
+    public async Task LargeBatch_Applies()
+    {
+        await using var scope = fx.Services.CreateAsyncScope();
+        var db  = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var svc = scope.ServiceProvider.GetRequiredService<IApplyService>();
+
+        const int count    = 500;
+        const int startId  = 5001;
+
+        // Seed an incoming batch for this test
+        var batchId = System.Threading.Interlocked.Increment(ref _batchIdSeed);
+        var incoming = new SyncIncomingBatch
+        {
+            BatchId       = batchId,
+            NodeId        = "local",
+            ChannelId     = "default",
+            SourceNodeId  = "src",
+            BatchSequence = batchId,
+            ReceivedTime  = DateTime.UtcNow,
+            RowCount      = count,
+            Status        = IncomingBatchStatus.New,
+        };
+        db.IncomingBatches.Add(incoming);
+        await db.SaveChangesAsync();
+
+        var events = Enumerable.Range(startId, count)
+            .Select(id => new EventPayload(
+                id, "t-orders", "INSERT", "dbo.test_orders", null, null,
+                $$"""{"order_id":{{id}},"status":"bulk"}"""))
+            .ToList();
+
+        var batch  = new BatchPayload(1, 1, "default", "src", "local", count, events);
+        var result = await svc.ApplyAsync(incoming, batch);
+
+        result.AppliedRows.Should().Be(count);
+        result.ErrorRows.Should().Be(0);
+        result.Success.Should().BeTrue();
+
+        // Verify row count in DB for this range
+        await using var conn = new SqlConnection(fx.ConnectionString);
+        await conn.OpenAsync();
+        await using var cmd = conn.CreateCommand();
+        cmd.CommandText = $"SELECT COUNT(1) FROM [dbo].[test_orders] WHERE [order_id] BETWEEN {startId} AND {startId + count - 1}";
+        var rowCount = (int)(await cmd.ExecuteScalarAsync())!;
+        rowCount.Should().Be(count);
     }
 }

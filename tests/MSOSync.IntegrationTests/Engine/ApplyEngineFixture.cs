@@ -96,6 +96,13 @@ public sealed class ApplyEngineFixture : IAsyncLifetime
                 [tenant_id] int          NULL,
                 [status]    nvarchar(50) NULL,
                 CONSTRAINT PK_test_orders PRIMARY KEY ([order_id])
+            );
+            IF OBJECT_ID('dbo.test_composite','U') IS NULL
+            CREATE TABLE [dbo].[test_composite] (
+                [tenant_id] int          NOT NULL,
+                [order_id]  int          NOT NULL,
+                [status]    nvarchar(50) NULL,
+                CONSTRAINT PK_test_composite PRIMARY KEY ([tenant_id],[order_id])
             )
             """;
         await cmd.ExecuteNonQueryAsync();
@@ -142,6 +149,18 @@ public sealed class ApplyEngineFixture : IAsyncLifetime
                 PkColumnsJson  = """["order_id"]""",
             });
         await db.SaveChangesAsync();
+
+        // Composite PK trigger for CompositePk tests
+        if (!await db.Triggers.AnyAsync(t => t.TriggerId == "trig-composite"))
+            db.Triggers.Add(new SyncTrigger
+            {
+                TriggerId      = "trig-composite",
+                SourceTable    = "dbo.test_composite",
+                ChannelId      = "default",
+                TriggerVersion = 2,
+                PkColumnsJson  = """["tenant_id","order_id"]""",
+            });
+        await db.SaveChangesAsync();
     }
 
     /// <summary>Truncate test_orders between tests.</summary>
@@ -151,6 +170,16 @@ public sealed class ApplyEngineFixture : IAsyncLifetime
         await conn.OpenAsync();
         await using var cmd = conn.CreateCommand();
         cmd.CommandText = "DELETE FROM [dbo].[test_orders]";
+        await cmd.ExecuteNonQueryAsync();
+    }
+
+    /// <summary>Truncate test_composite between tests.</summary>
+    public async Task ClearTestCompositeAsync()
+    {
+        await using var conn = new SqlConnection(ConnectionString);
+        await conn.OpenAsync();
+        await using var cmd = conn.CreateCommand();
+        cmd.CommandText = "DELETE FROM [dbo].[test_composite]";
         await cmd.ExecuteNonQueryAsync();
     }
 }

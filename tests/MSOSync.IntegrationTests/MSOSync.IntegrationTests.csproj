@@ -11,6 +11,7 @@
     </PackageReference>
     <PackageReference Include="FluentAssertions" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+    <PackageReference Include="Moq" />
     <PackageReference Include="Testcontainers.MsSql" />
   </ItemGroup>
   <ItemGroup>
