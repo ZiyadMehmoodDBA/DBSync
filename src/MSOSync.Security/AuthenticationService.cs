@@ -36,8 +36,11 @@ public sealed class AuthenticationService(
         }
 
         if (user.LockedUntil.HasValue && user.LockedUntil > DateTime.UtcNow)
+        {
+            metrics.LoginFailures.Add(1);
             return new LoginResult(false, null, null, null,
                 $"Account locked until {user.LockedUntil:u}");
+        }
 
         await ApplyLoginDelayAsync(user.FailedAttempts, ct);
 
