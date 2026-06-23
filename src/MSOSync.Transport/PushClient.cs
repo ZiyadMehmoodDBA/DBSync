@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Options;
 using MSOSync.Common;
+using MSOSync.Engine;
 using MSOSync.Persistence.Entities;
 using MSOSync.Transport.Payloads;
 

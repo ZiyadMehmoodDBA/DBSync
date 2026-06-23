@@ -1,6 +1,5 @@
-namespace MSOSync.Transport.Payloads;
+namespace MSOSync.Engine;
 
-// EventType: char 'I'/'U'/'D' from SyncDataEvent mapped to "INSERT"/"UPDATE"/"DELETE"
 public sealed record EventPayload(
     long    EventId,
     string  TriggerId,

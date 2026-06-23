@@ -10,6 +10,7 @@ using MSOSync.Batch;
 using MSOSync.Persistence;
 using MSOSync.Persistence.Entities;
 using MSOSync.Scheduler;
+using MSOSync.Engine;
 using MSOSync.Transport;
 using MSOSync.Transport.Payloads;
 using Xunit;

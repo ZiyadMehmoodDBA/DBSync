@@ -1,4 +1,4 @@
-namespace MSOSync.Transport;
+namespace MSOSync.Engine;
 
 public sealed record ApplyResult(
     bool    Success,

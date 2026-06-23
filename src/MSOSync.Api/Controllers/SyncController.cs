@@ -7,6 +7,7 @@ using MSOSync.Common;
 using MSOSync.Metadata.Interfaces;
 using MSOSync.Persistence;
 using MSOSync.Persistence.Entities;
+using MSOSync.Engine;
 using MSOSync.Transport;
 using MSOSync.Transport.Payloads;
 

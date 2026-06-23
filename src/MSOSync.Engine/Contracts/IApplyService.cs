@@ -1,7 +1,6 @@
 using MSOSync.Persistence.Entities;
-using MSOSync.Transport.Payloads;
 
-namespace MSOSync.Transport;
+namespace MSOSync.Engine;
 
 public interface IApplyService
 {

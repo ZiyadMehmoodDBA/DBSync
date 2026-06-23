@@ -1,6 +1,5 @@
-namespace MSOSync.Transport.Payloads;
+namespace MSOSync.Engine;
 
-// Entire HTTP body is gzip-compressed; Events is the uncompressed list
 public sealed record BatchPayload(
     long                        BatchId,
     long                        BatchSequence,

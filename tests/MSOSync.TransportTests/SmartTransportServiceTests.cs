@@ -6,6 +6,7 @@ using MSOSync.Metadata.Dtos;
 using MSOSync.Metadata.Interfaces;
 using MSOSync.Persistence;
 using MSOSync.Persistence.Entities;
+using MSOSync.Engine;
 using MSOSync.Transport;
 using Xunit;
 
@@ -96,8 +97,8 @@ public sealed class SmartTransportServiceTests
         var httpClient  = new Mock<INodeHttpClient>();
         var pushResponse = new MSOSync.Transport.Payloads.PushResponse(1L, true, 5, 0, null);
         httpClient
-            .Setup(h => h.PostAsync<MSOSync.Transport.Payloads.BatchPayload, MSOSync.Transport.Payloads.PushResponse>(
-                It.IsAny<string>(), It.IsAny<MSOSync.Transport.Payloads.BatchPayload>(), It.IsAny<string>(), It.IsAny<string>(), default))
+            .Setup(h => h.PostAsync<MSOSync.Engine.BatchPayload, MSOSync.Transport.Payloads.PushResponse>(
+                It.IsAny<string>(), It.IsAny<MSOSync.Engine.BatchPayload>(), It.IsAny<string>(), It.IsAny<string>(), default))
             .ReturnsAsync(pushResponse);
 
         var nodeProps = Microsoft.Extensions.Options.Options.Create(
