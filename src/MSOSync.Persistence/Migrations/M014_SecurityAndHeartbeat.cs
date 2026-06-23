@@ -13,8 +13,8 @@ namespace MSOSync.Persistence.Migrations
                 name: "upstream_node_id",
                 schema: "msosync",
                 table: "sync_node",
-                type: "nvarchar(100)",
-                maxLength: 100,
+                type: "nvarchar(50)",
+                maxLength: 50,
                 nullable: true);
 
             migrationBuilder.AddColumn<DateTime>(

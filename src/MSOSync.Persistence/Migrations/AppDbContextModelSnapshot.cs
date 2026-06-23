@@ -436,25 +436,29 @@ namespace MSOSync.Persistence.Migrations
                         .HasDefaultValue((byte)1)
                         .HasColumnName("transport_mode");
 
-                    b.Property<string>("upstream_node_id")
-                        .HasColumnType("nvarchar(100)")
-                        .HasMaxLength(100);
+                    b.Property<string>("UpstreamNodeId")
+                        .HasColumnType("nvarchar(50)")
+                        .HasMaxLength(50)
+                        .HasColumnName("upstream_node_id");
 
-                    b.Property<DateTime?>("last_probe_time")
-                        .HasColumnType("datetime2(7)");
+                    b.Property<DateTime?>("LastProbeTime")
+                        .HasColumnType("datetime2(7)")
+                        .HasColumnName("last_probe_time");
 
-                    b.Property<int?>("last_probe_latency_ms");
+                    b.Property<int?>("LastProbeLatencyMs")
+                        .HasColumnName("last_probe_latency_ms");
 
-                    b.Property<byte>("connectivity_status")
+                    b.Property<byte>("ConnectivityStatus")
                         .HasDefaultValue((byte)0)
-                        .HasColumnType("tinyint");
+                        .HasColumnType("tinyint")
+                        .HasColumnName("connectivity_status");
 
                     b.HasKey("NodeId");
 
                     b.HasIndex("LastHeartbeat")
                         .HasDatabaseName("IX_sync_node_last_heartbeat");
 
-                    b.HasIndex("upstream_node_id")
+                    b.HasIndex("UpstreamNodeId")
                         .HasDatabaseName("IX_sync_node_upstream");
 
                     b.ToTable("sync_node", "msosync");
@@ -1081,7 +1085,7 @@ namespace MSOSync.Persistence.Migrations
                 {
                     b.HasOne("MSOSync.Persistence.Entities.SyncNode", null)
                         .WithMany()
-                        .HasForeignKey("upstream_node_id")
+                        .HasForeignKey("UpstreamNodeId")
                         .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired(false)
                         .HasConstraintName("FK_sync_node_upstream_node_id");
