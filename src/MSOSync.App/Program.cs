@@ -70,6 +70,7 @@ try
     builder.Services.AddRoutingServices();
     builder.Services.AddBatchPipeline(builder.Configuration);
     builder.Services.AddSyncEngine(builder.Configuration);
+    builder.Services.AddApplyEngine();
     builder.Services.AddSyncScheduler(builder.Configuration);
     builder.Services.Configure<NodeProperties>(builder.Configuration.GetSection("Node"));
     builder.Services.AddTransportServices(builder.Configuration);

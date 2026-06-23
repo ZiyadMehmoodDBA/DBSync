@@ -30,8 +30,6 @@ public static class TransportServiceExtensions
         services.AddScoped<PushClient>();
         services.AddScoped<PullClient>();
         services.AddScoped<AcknowledgementService>();
-        services.AddScoped<IApplyService, NoOpApplyService>();
-
         // SmartTransportService registered as the ITransportService implementation
         // (replaces NoOpTransportService removed from AddSyncEngine in Task 8)
         services.AddScoped<ITransportService, SmartTransportService>();
