@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using MSOSync.Api.Dtos.Auth;
 using MSOSync.Security;
 
@@ -11,6 +12,7 @@ namespace MSOSync.Api.Controllers.Auth;
 public sealed class AuthController(AuthenticationService authService) : ControllerBase
 {
     [HttpPost("login")]
+    [EnableRateLimiting("LoginPolicy")]
     public async Task<IActionResult> Login(
         [FromBody] LoginRequest request,
         CancellationToken ct)
@@ -26,6 +28,7 @@ public sealed class AuthController(AuthenticationService authService) : Controll
     }
 
     [HttpPost("refresh")]
+    [EnableRateLimiting("RefreshPolicy")]
     public async Task<IActionResult> Refresh(
         [FromBody] RefreshRequest request,
         CancellationToken ct)

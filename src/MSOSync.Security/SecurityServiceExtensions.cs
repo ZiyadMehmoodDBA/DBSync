@@ -1,7 +1,10 @@
 using System.Text;
+using System.Threading.RateLimiting;
 using MediatR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
@@ -24,6 +27,9 @@ public static class SecurityServiceExtensions
             throw new InvalidOperationException(
                 "MSOSYNC_JWT_SECRET must be at least 32 characters");
 
+        var jwtIssuer   = configuration["Jwt:Issuer"]   ?? "msosync";
+        var jwtAudience = configuration["Jwt:Audience"] ?? "msosync-dashboard";
+
         services.AddSingleton<JwtService>();
         services.AddSingleton<BCryptPasswordHasher>();
         services.AddSingleton<PasswordPolicy>();
@@ -41,19 +47,49 @@ public static class SecurityServiceExtensions
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
                     ValidateIssuerSigningKey = true,
-                    IssuerSigningKey = new SymmetricSecurityKey(
+                    IssuerSigningKey         = new SymmetricSecurityKey(
                         Encoding.UTF8.GetBytes(jwtSecret)),
-                    ValidateIssuer = false,
-                    ValidateAudience = false,
-                    ClockSkew = TimeSpan.FromSeconds(30)
+                    ValidateIssuer   = true,
+                    ValidIssuer      = jwtIssuer,
+                    ValidateAudience = true,
+                    ValidAudience    = jwtAudience,
+                    ClockSkew        = TimeSpan.FromSeconds(30)
                 };
             });
 
         services.AddAuthorization(options =>
         {
-            options.AddPolicy("AdminOnly", p => p.RequireRole("ADMIN"));
-            options.AddPolicy("OperatorOrAbove", p => p.RequireRole("ADMIN", "OPERATOR"));
-            options.AddPolicy("ViewerOrAbove", p => p.RequireRole("ADMIN", "OPERATOR", "VIEWER"));
+            options.AddPolicy("AdminOnly",         p => p.RequireRole("ADMIN"));
+            options.AddPolicy("OperatorOrAbove",   p => p.RequireRole("ADMIN", "OPERATOR"));
+            options.AddPolicy("ViewerOrAbove",     p => p.RequireRole("ADMIN", "OPERATOR", "VIEWER"));
+        });
+
+        var loginLimit   = configuration.GetValue<int>("RateLimit:LoginPermitLimit",   10);
+        var refreshLimit = configuration.GetValue<int>("RateLimit:RefreshPermitLimit", 30);
+
+        services.AddRateLimiter(options =>
+        {
+            options.AddPolicy("LoginPolicy", httpContext =>
+                RateLimitPartition.GetSlidingWindowLimiter(
+                    partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                    factory: _ => new SlidingWindowRateLimiterOptions
+                    {
+                        PermitLimit       = loginLimit,
+                        Window            = TimeSpan.FromMinutes(1),
+                        SegmentsPerWindow = 6
+                    }));
+
+            options.AddPolicy("RefreshPolicy", httpContext =>
+                RateLimitPartition.GetSlidingWindowLimiter(
+                    partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                    factory: _ => new SlidingWindowRateLimiterOptions
+                    {
+                        PermitLimit       = refreshLimit,
+                        Window            = TimeSpan.FromMinutes(1),
+                        SegmentsPerWindow = 6
+                    }));
+
+            options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
         });
 
         return services;

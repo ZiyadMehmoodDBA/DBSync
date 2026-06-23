@@ -8,10 +8,10 @@ namespace MSOSync.Security;
 
 public sealed class JwtService
 {
-    private static readonly TimeSpan AccessTokenLifetime = TimeSpan.FromMinutes(60);
-    private static readonly TimeSpan ClockSkew = TimeSpan.FromSeconds(30);
-
     private readonly SymmetricSecurityKey _key;
+    private readonly string _issuer;
+    private readonly string _audience;
+    private readonly TimeSpan _accessTokenLifetime;
 
     public JwtService(IConfiguration configuration)
     {
@@ -24,16 +24,21 @@ public sealed class JwtService
             throw new InvalidOperationException(
                 "MSOSYNC_JWT_SECRET must be at least 32 characters");
 
-        _key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret));
+        _key      = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret));
+        _issuer   = configuration["Jwt:Issuer"]   ?? "msosync";
+        _audience = configuration["Jwt:Audience"] ?? "msosync-dashboard";
+
+        var expiryMinutes = configuration.GetValue<int>("Jwt:AccessExpiryMinutes", 60);
+        _accessTokenLifetime = TimeSpan.FromMinutes(expiryMinutes);
     }
 
     public string CreateAccessToken(long userId, string username, IEnumerable<string> roles)
     {
-        var now = DateTime.UtcNow;
+        var now    = DateTime.UtcNow;
         var claims = new List<Claim>
         {
             new(JwtRegisteredClaimNames.Sub, username),
-            new Claim(ClaimTypes.Name, username),
+            new(ClaimTypes.Name, username),
             new("userId", userId.ToString()),
             new(JwtRegisteredClaimNames.Iat,
                 DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(),
@@ -42,9 +47,11 @@ public sealed class JwtService
         claims.AddRange(roles.Select(r => new Claim(ClaimTypes.Role, r)));
 
         var token = new JwtSecurityToken(
-            claims: claims,
-            notBefore: now,
-            expires: now.Add(AccessTokenLifetime),
+            issuer:             _issuer,
+            audience:           _audience,
+            claims:             claims,
+            notBefore:          now,
+            expires:            now.Add(_accessTokenLifetime),
             signingCredentials: new SigningCredentials(_key, SecurityAlgorithms.HmacSha256));
 
         return new JwtSecurityTokenHandler().WriteToken(token);
@@ -61,10 +68,12 @@ public sealed class JwtService
                 new TokenValidationParameters
                 {
                     ValidateIssuerSigningKey = true,
-                    IssuerSigningKey = _key,
-                    ValidateIssuer = false,
-                    ValidateAudience = false,
-                    ClockSkew = ClockSkew
+                    IssuerSigningKey         = _key,
+                    ValidateIssuer           = true,
+                    ValidIssuer              = _issuer,
+                    ValidateAudience         = true,
+                    ValidAudience            = _audience,
+                    ClockSkew                = TimeSpan.FromSeconds(30)
                 },
                 out _);
         }

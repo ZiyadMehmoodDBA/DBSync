@@ -86,4 +86,26 @@ public sealed class JwtServiceTests
             Environment.SetEnvironmentVariable("MSOSYNC_JWT_SECRET", saved);
         }
     }
+
+    [Fact]
+    public void CreateAccessToken_SetsIssuerAndAudience()
+    {
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Jwt:Secret"]   = "test-secret-that-is-at-least-32-chars!!",
+                ["Jwt:Issuer"]   = "msosync",
+                ["Jwt:Audience"] = "msosync-dashboard"
+            })
+            .Build();
+
+        var svc   = new JwtService(config);
+        var token = svc.CreateAccessToken(1, "alice", ["ADMIN"]);
+
+        var handler = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler();
+        var parsed  = handler.ReadJwtToken(token);
+
+        parsed.Issuer.Should().Be("msosync");
+        parsed.Audiences.Should().Contain("msosync-dashboard");
+    }
 }

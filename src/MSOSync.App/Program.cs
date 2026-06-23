@@ -79,7 +79,11 @@ try
 
     var app = builder.Build();
 
+    if (!app.Environment.IsDevelopment())
+        app.UseHsts();
+
     app.UseExceptionHandler();
+    app.UseRateLimiter();
     app.UseSecurityHeaders();
     app.UseAuthentication();
     app.UseNodeTokenAuth();
