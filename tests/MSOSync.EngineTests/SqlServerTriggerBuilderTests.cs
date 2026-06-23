@@ -79,4 +79,58 @@ public sealed class SqlServerTriggerBuilderTests
     {
         _builder.GetTriggerName("t-orders").Should().Be("msosync__t-orders");
     }
+
+    private static SyncTrigger MakeV2Trigger(string pkColumnsJson = """["order_id"]""") =>
+        new()
+        {
+            TriggerId      = "t-orders",
+            SourceTable    = "dbo.Orders",
+            ChannelId      = "default",
+            SyncOnInsert   = true,
+            SyncOnUpdate   = true,
+            SyncOnDelete   = true,
+            PkColumnsJson  = pkColumnsJson
+        };
+
+    [Fact]
+    public void BuildDdl_WithPkColumnsJson_ContainsPkDataDeclaration()
+    {
+        var ddl = _builder.BuildDdl(MakeV2Trigger(), "hub");
+        ddl.Should().Contain("@pk_data");
+    }
+
+    [Fact]
+    public void BuildDdl_WithPkColumnsJson_CapturesFromInserted()
+    {
+        var ddl = _builder.BuildDdl(MakeV2Trigger(), "hub");
+        ddl.Should().Contain("[order_id] FROM inserted");
+    }
+
+    [Fact]
+    public void BuildDdl_WithPkColumnsJson_CapturesFromDeletedForUpdate()
+    {
+        var ddl = _builder.BuildDdl(MakeV2Trigger(), "hub");
+        ddl.Should().Contain("[order_id] FROM deleted");
+    }
+
+    [Fact]
+    public void BuildDdl_WithCompositePkColumnsJson_CapturesBothColumns()
+    {
+        var ddl = _builder.BuildDdl(MakeV2Trigger("""["tenant_id","order_id"]"""), "hub");
+        ddl.Should().Contain("[tenant_id],[order_id]");
+    }
+
+    [Fact]
+    public void BuildDdl_WithNullPkColumnsJson_DoesNotContainPkData()
+    {
+        var ddl = _builder.BuildDdl(MakeTrigger(), "hub");  // PkColumnsJson = null
+        ddl.Should().NotContain("@pk_data");
+    }
+
+    [Fact]
+    public void BuildDdl_WithPkColumnsJson_IncludesPkDataInInsert()
+    {
+        var ddl = _builder.BuildDdl(MakeV2Trigger(), "hub");
+        ddl.Should().Contain("pk_data");
+    }
 }
