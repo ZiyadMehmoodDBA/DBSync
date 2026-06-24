@@ -22,6 +22,8 @@
 
 Create `tests/MSOSync.IntegrationTests/OperationalRead/OperationalReadFixture.cs`:
 
+**Important:** The `[CollectionDefinition]` marker class must live in the same file (or any file in the same assembly) — it is the glue that lets all three test classes share one fixture instance. Without it, `[Collection("OperationalRead")]` on the test classes has no effect and each class spins up its own fixture.
+
 ```csharp
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -215,6 +217,11 @@ public sealed class OperationalReadFixture : WebApplicationFactory<Program>, IAs
         await db.Database.EnsureDeletedAsync();
     }
 }
+
+// Registers the fixture for sharing across all [Collection("OperationalRead")] test classes.
+// ICollectionFixture<T> (not IClassFixture<T>) — one instance shared, not one per class.
+[CollectionDefinition("OperationalRead")]
+public sealed class OperationalReadCollection : ICollectionFixture<OperationalReadFixture> { }
 ```
 
 **Note:** `using System.Text.Json;` is needed for `JsonElement`. Add at top of file.
@@ -260,7 +267,7 @@ using Xunit;
 namespace MSOSync.IntegrationTests.OperationalRead;
 
 [Collection("OperationalRead")]
-public sealed class EventsTests(OperationalReadFixture fixture) : IClassFixture<OperationalReadFixture>
+public sealed class EventsTests(OperationalReadFixture fixture)
 {
     private async Task<HttpClient> AuthenticatedClientAsync()
     {
@@ -369,7 +376,7 @@ using Xunit;
 namespace MSOSync.IntegrationTests.OperationalRead;
 
 [Collection("OperationalRead")]
-public sealed class IncomingBatchesTests(OperationalReadFixture fixture) : IClassFixture<OperationalReadFixture>
+public sealed class IncomingBatchesTests(OperationalReadFixture fixture)
 {
     private async Task<HttpClient> AuthenticatedClientAsync()
     {
@@ -449,7 +456,7 @@ using Xunit;
 namespace MSOSync.IntegrationTests.OperationalRead;
 
 [Collection("OperationalRead")]
-public sealed class BatchErrorsTests(OperationalReadFixture fixture) : IClassFixture<OperationalReadFixture>
+public sealed class BatchErrorsTests(OperationalReadFixture fixture)
 {
     private async Task<HttpClient> AuthenticatedClientAsync()
     {
