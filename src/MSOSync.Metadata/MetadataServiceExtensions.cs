@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using MSOSync.Metadata.Interfaces;
 using MSOSync.Metadata.Nodes;
 using MSOSync.Metadata.Services;
+using MSOSync.Metadata.Users;
 
 namespace MSOSync.Metadata;
 
@@ -22,6 +23,7 @@ public static class MetadataServiceExtensions
         services.AddScoped<IRouterMetadataService, RouterMetadataService>();
         services.AddScoped<IChannelMetadataService, ChannelMetadataService>();
         services.AddScoped<INodeStateMachine, NodeStateMachine>();
+        services.AddScoped<IUsersManagementService, UsersManagementService>();
         return services;
     }
 }
