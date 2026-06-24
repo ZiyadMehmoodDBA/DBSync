@@ -29,7 +29,7 @@ public sealed class UsersManagementService(
 
         var total = await query.CountAsync(ct);
         var items = await query
-            .OrderBy(u => u.Username)
+            .OrderBy(u => u.UserId)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .Select(u => new UserSummaryDto(
@@ -52,7 +52,7 @@ public sealed class UsersManagementService(
         var exists = await db.Users.AnyAsync(u => u.Username == request.Username, ct);
         if (exists)
             throw new InvalidOperationException(
-                $"Username '{request.Username}' is already taken.");
+                "Username already taken");
 
         var user = new SyncUser
         {
@@ -117,6 +117,8 @@ public sealed class UsersManagementService(
             .Where(t => t.UserId == userId && t.RevokedAt == null)
             .ExecuteUpdateAsync(
                 s => s.SetProperty(t => t.RevokedAt, DateTime.UtcNow), ct);
+
+        db.ChangeTracker.Clear();
     }
 
     private static UserDetailDto MapDetail(SyncUser u) =>

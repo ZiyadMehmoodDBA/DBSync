@@ -39,7 +39,7 @@ public sealed class UsersManagementServiceTests
         await svc.CreateUserAsync(new CreateUserRequest("bob", "P@ss1234!", true));
 
         var act = async () => await svc.CreateUserAsync(new CreateUserRequest("bob", "P@ss1234!", true));
-        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*bob*");
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("Username already taken");
     }
 
     [Fact]
