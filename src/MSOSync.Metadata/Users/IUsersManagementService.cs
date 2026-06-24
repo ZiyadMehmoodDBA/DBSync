@@ -1,3 +1,5 @@
+using MSOSync.Metadata.Common;
+
 namespace MSOSync.Metadata.Users;
 
 public interface IUsersManagementService

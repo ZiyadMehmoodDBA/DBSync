@@ -5,6 +5,7 @@ using System.Net.Http.Json;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using MSOSync.Metadata.Common;
 using MSOSync.Metadata.Users;
 using MSOSync.Persistence;
 using Xunit;

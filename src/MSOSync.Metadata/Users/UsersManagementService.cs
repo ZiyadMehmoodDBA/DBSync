@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using MSOSync.Common.Exceptions;
+using MSOSync.Metadata.Common;
 using MSOSync.Persistence;
 using MSOSync.Persistence.Entities;
 using MSOSync.Security;

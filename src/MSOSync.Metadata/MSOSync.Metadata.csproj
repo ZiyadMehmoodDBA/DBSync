@@ -3,6 +3,7 @@
     <Description>NodeMetadata, TriggerMetadata, RouterMetadata, ChannelMetadata, ParameterMetadata</Description>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="FluentValidation" />
     <PackageReference Include="MediatR" />
     <PackageReference Include="Microsoft.Extensions.Caching.Memory" />
   </ItemGroup>

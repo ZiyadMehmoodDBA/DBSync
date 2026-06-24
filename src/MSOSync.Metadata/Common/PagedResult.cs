@@ -1,4 +1,4 @@
-namespace MSOSync.Metadata.Users;
+namespace MSOSync.Metadata.Common;
 
 public sealed record PagedResult<T>(
     IReadOnlyList<T> Items,
