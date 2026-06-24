@@ -13,8 +13,9 @@ namespace MSOSync.Persistence.Migrations
                 name: "upstream_node_id",
                 schema: "msosync",
                 table: "sync_node",
-                type: "nvarchar(50)",
+                type: "varchar(50)",
                 maxLength: 50,
+                unicode: false,
                 nullable: true);
 
             migrationBuilder.AddColumn<DateTime>(
@@ -70,10 +71,15 @@ namespace MSOSync.Persistence.Migrations
                 "SET token_lookup_hash = LOWER(CONVERT(CHAR(64), HASHBYTES('SHA2_256', CONVERT(NVARCHAR(20), token_id)), 2)) " +
                 "WHERE token_lookup_hash IS NULL");
 
+            // Drop the index before altering the column nullability (SQL Server requires this)
             migrationBuilder.Sql(
                 "CREATE UNIQUE INDEX IX_sync_user_refresh_token_lookup_hash " +
                 "ON msosync.sync_user_refresh_token(token_lookup_hash) " +
                 "WHERE revoked_at IS NULL");
+
+            migrationBuilder.Sql(
+                "DROP INDEX IX_sync_user_refresh_token_lookup_hash " +
+                "ON msosync.sync_user_refresh_token");
 
             migrationBuilder.AlterColumn<string>(
                 name: "token_lookup_hash",
@@ -88,6 +94,12 @@ namespace MSOSync.Persistence.Migrations
                 oldMaxLength: 64,
                 oldUnicode: false,
                 oldNullable: true);
+
+            // Recreate the index after the column is now NOT NULL
+            migrationBuilder.Sql(
+                "CREATE UNIQUE INDEX IX_sync_user_refresh_token_lookup_hash " +
+                "ON msosync.sync_user_refresh_token(token_lookup_hash) " +
+                "WHERE revoked_at IS NULL");
         }
 
         protected override void Down(MigrationBuilder migrationBuilder)

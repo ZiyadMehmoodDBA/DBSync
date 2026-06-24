@@ -1,4 +1,4 @@
-// tests/MSOSync.IntegrationTests/Security/SecurityFixture.cs
+// tests/MSOSync.IntegrationTests/Heartbeat/HeartbeatFixture.cs
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Builder;
@@ -10,51 +10,54 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using MSOSync.Api.Controllers.Auth;
+using MSOSync.Api.Exceptions;
 using MSOSync.App;
+using MSOSync.Common;
+using MSOSync.Metadata;
 using MSOSync.Persistence;
 using MSOSync.Persistence.Entities;
 using MSOSync.Security;
+using MSOSync.Topology;
 using Xunit;
 
-namespace MSOSync.IntegrationTests.Security;
+namespace MSOSync.IntegrationTests.Heartbeat;
 
-public sealed class SecurityFixture : WebApplicationFactory<Program>, IAsyncLifetime
+public sealed class HeartbeatFixture : WebApplicationFactory<Program>, IAsyncLifetime
 {
     private const string ConnStr =
-        "Server=(localdb)\\mssqllocaldb;Database=MSOSyncSecurity_Test;" +
+        "Server=(localdb)\\mssqllocaldb;Database=MSOSyncHeartbeat_Test;" +
         "Trusted_Connection=True;TrustServerCertificate=True;";
 
-    private const string JwtSecret = "test-jwt-secret-value-at-least-32-chars!";
-
-    public string AdminUsername { get; } = "testadmin";
-    public string AdminPassword { get; } = "TestP@ss1!";
+    public string NodeId    { get; } = "hb-node";
+    public string NodeToken { get; } = "test-node-token-value-12345";
 
     protected override IHost CreateHost(IHostBuilder builder)
     {
-        // Build the app directly from the same DI setup as Program.cs,
-        // bypassing HostFactoryResolver to avoid issues with the return-exitCode pattern.
         var testBuilder = WebApplication.CreateBuilder();
-
         testBuilder.WebHost.UseTestServer();
 
-        // Inject test configuration
         testBuilder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
         {
             ["ConnectionStrings:DefaultConnection"] = ConnStr,
-            ["Jwt:Secret"]                          = JwtSecret,
+            ["Jwt:Secret"]                          = "test-jwt-secret-value-at-least-32-chars!",
             ["Jwt:Issuer"]                          = "msosync",
             ["Jwt:Audience"]                        = "msosync-dashboard",
             ["Jwt:AccessExpiryMinutes"]             = "60",
-            ["RateLimit:LoginPermitLimit"]          = "50",
+            ["RateLimit:LoginPermitLimit"]          = "100",
             ["RateLimit:RefreshPermitLimit"]        = "100",
+            ["Node:NodeId"]                         = NodeId,
+            ["Node:SyncUrl"]                        = "http://localhost",
         });
 
-        testBuilder.Environment.EnvironmentName = "Test";
-
-        testBuilder.Services.AddEndpointsApiExplorer();
-        testBuilder.Services.AddSwaggerGen();
         testBuilder.Services.AddPersistence(testBuilder.Configuration);
         testBuilder.Services.AddSecurity(testBuilder.Configuration);
+        testBuilder.Services.AddMetadata(testBuilder.Configuration);
+        testBuilder.Services.AddSingleton<IClock, SystemClock>();
+        testBuilder.Services.AddTopologyServices();
+        testBuilder.Services.AddHttpContextAccessor();
+        testBuilder.Services.AddScoped<ICurrentUserService, HttpContextCurrentUserService>();
+        testBuilder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+        testBuilder.Services.AddProblemDetails();
 
         testBuilder.Services.AddControllers()
             .AddApplicationPart(typeof(AuthController).Assembly);
@@ -62,79 +65,74 @@ public sealed class SecurityFixture : WebApplicationFactory<Program>, IAsyncLife
         testBuilder.Services.AddFluentValidationAutoValidation();
         testBuilder.Services.AddValidatorsFromAssemblyContaining<AuthController>();
 
-        testBuilder.Services.AddHostedService<AdminBootstrapper>();
-
         var app = testBuilder.Build();
 
+        app.UseExceptionHandler();
         app.UseRateLimiter();
         app.UseSecurityHeaders();
         app.UseAuthentication();
         app.UseNodeTokenAuth();
         app.UseAuthorization();
-
         app.MapControllers();
 
-        app.MapGet("/health", () => Results.Ok(new { status = "UP", version = "0.1.0" }))
-           .WithName("Health")
-           .WithTags("System");
+        app.MapGet("/health", () => Results.Ok(new { status = "UP" }));
 
         app.Start();
-
         return app;
     }
 
     public async Task InitializeAsync()
     {
-        // Migrate and seed outside the app pipeline so AdminBootstrapper is a no-op.
         var opts = new DbContextOptionsBuilder<AppDbContext>()
-            .UseSqlServer(ConnStr)
-            .Options;
-
+            .UseSqlServer(ConnStr).Options;
         await using var db = new AppDbContext(opts);
         await db.Database.MigrateAsync();
 
         if (!await db.Roles.AnyAsync(r => r.RoleName == "ADMIN"))
             db.Roles.Add(new SyncRole { RoleName = "ADMIN" });
-
-        if (!await db.Roles.AnyAsync(r => r.RoleName == "OPERATOR"))
-            db.Roles.Add(new SyncRole { RoleName = "OPERATOR" });
-
-        if (!await db.Roles.AnyAsync(r => r.RoleName == "VIEWER"))
-            db.Roles.Add(new SyncRole { RoleName = "VIEWER" });
-
         await db.SaveChangesAsync();
 
-        if (!await db.Users.AnyAsync(u => u.Username == AdminUsername))
+        if (!await db.NodeGroups.AnyAsync(g => g.GroupId == "hb-group"))
+            db.NodeGroups.Add(new SyncNodeGroup { GroupId = "hb-group", GroupName = "HB Test" });
+        await db.SaveChangesAsync();
+
+        if (!await db.Nodes.AnyAsync(n => n.NodeId == NodeId))
+        {
+            db.Nodes.Add(new SyncNode
+            {
+                NodeId   = NodeId,
+                GroupId  = "hb-group",
+                SyncUrl  = "http://localhost",
+                Status   = "REGISTERED",
+            });
+        }
+        await db.SaveChangesAsync();
+
+        // Seed node security with BCrypt hash of the known raw token
+        if (!await db.NodeSecurities.AnyAsync(s => s.NodeId == NodeId))
         {
             var hasher = new BCryptPasswordHasher();
-            var user = new SyncUser
+            db.NodeSecurities.Add(new SyncNodeSecurity
             {
-                Username = AdminUsername,
-                PasswordHash = hasher.Hash(AdminPassword),
-                Enabled = true,
-                CreatedTime = DateTime.UtcNow
-            };
-            db.Users.Add(user);
-            await db.SaveChangesAsync();
-
-            var adminRole = await db.Roles.FirstAsync(r => r.RoleName == "ADMIN");
-            db.UserRoles.Add(new SyncUserRole { UserId = user.UserId, RoleId = adminRole.RoleId });
-            await db.SaveChangesAsync();
+                NodeId           = NodeId,
+                CurrentTokenHash = hasher.Hash(NodeToken),
+                CreatedTime      = DateTime.UtcNow,
+            });
         }
+        await db.SaveChangesAsync();
     }
 
     public new async Task DisposeAsync()
     {
         var opts = new DbContextOptionsBuilder<AppDbContext>()
-            .UseSqlServer(ConnStr)
-            .Options;
+            .UseSqlServer(ConnStr).Options;
         await using var db = new AppDbContext(opts);
         await db.Database.ExecuteSqlRawAsync(
-            "ALTER DATABASE [MSOSyncSecurity_Test] SET SINGLE_USER WITH ROLLBACK IMMEDIATE");
+            "ALTER DATABASE [MSOSyncHeartbeat_Test] SET SINGLE_USER WITH ROLLBACK IMMEDIATE");
         await db.Database.EnsureDeletedAsync();
         await base.DisposeAsync();
     }
 }
 
-[CollectionDefinition("Security")]
-public sealed class SecurityCollection : ICollectionFixture<SecurityFixture> { }
+[CollectionDefinition("Heartbeat")]
+public sealed class HeartbeatCollection : ICollectionFixture<HeartbeatFixture> { }

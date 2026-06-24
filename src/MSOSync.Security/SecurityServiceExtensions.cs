@@ -63,6 +63,8 @@ public static class SecurityServiceExtensions
             options.AddPolicy("AdminOnly",         p => p.RequireRole("ADMIN"));
             options.AddPolicy("OperatorOrAbove",   p => p.RequireRole("ADMIN", "OPERATOR"));
             options.AddPolicy("ViewerOrAbove",     p => p.RequireRole("ADMIN", "OPERATOR", "VIEWER"));
+            options.AddPolicy("NodeToken",         p => p.RequireAssertion(
+                ctx => ctx.User.HasClaim(c => c.Type == "nodeId")));
         });
 
         var loginLimit   = configuration.GetValue<int>("RateLimit:LoginPermitLimit",   10);
@@ -72,7 +74,9 @@ public static class SecurityServiceExtensions
         {
             options.AddPolicy("LoginPolicy", httpContext =>
                 RateLimitPartition.GetSlidingWindowLimiter(
-                    partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                    partitionKey: httpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault()
+                        ?? httpContext.Connection.RemoteIpAddress?.ToString()
+                        ?? "unknown",
                     factory: _ => new SlidingWindowRateLimiterOptions
                     {
                         PermitLimit       = loginLimit,
@@ -82,7 +86,9 @@ public static class SecurityServiceExtensions
 
             options.AddPolicy("RefreshPolicy", httpContext =>
                 RateLimitPartition.GetSlidingWindowLimiter(
-                    partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                    partitionKey: httpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault()
+                        ?? httpContext.Connection.RemoteIpAddress?.ToString()
+                        ?? "unknown",
                     factory: _ => new SlidingWindowRateLimiterOptions
                     {
                         PermitLimit       = refreshLimit,

@@ -2,6 +2,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using FluentAssertions;
+using System.IdentityModel.Tokens.Jwt;
 using Xunit;
 
 namespace MSOSync.IntegrationTests.Security;
@@ -217,8 +218,57 @@ public sealed class SecurityTests(SecurityFixture factory)
         resp.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
+    // ── rate limiting ──────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task Login_RateLimit_Returns429()
+    {
+        // Use a unique X-Forwarded-For header so this test uses its own isolated rate-limit
+        // bucket, independent of the shared "unknown" bucket used by other tests.
+        // LoginPermitLimit = 50; send 51 requests with this specific IP to trigger 429.
+        // The user "ratelimit-x" does not exist so each lookup is fast (no BCrypt).
+        var client = Client();
+        client.DefaultRequestHeaders.Add("X-Forwarded-For", "10.0.255.1");
+
+        HttpStatusCode lastStatus = HttpStatusCode.Unauthorized;
+        for (var i = 0; i < 60; i++)
+        {
+            var r = await client.PostAsJsonAsync("/api/v1/auth/login", new { Username = "ratelimit-x", Password = "y" });
+            lastStatus = r.StatusCode;
+            if (lastStatus == HttpStatusCode.TooManyRequests) break;
+        }
+
+        lastStatus.Should().Be(HttpStatusCode.TooManyRequests);
+    }
+
+    [Fact]
+    public async Task Login_TokenHasIssuerAndAudience()
+    {
+        var (token, _) = await LoginAdminAsync();
+
+        var handler = new JwtSecurityTokenHandler();
+        var parsed  = handler.ReadJwtToken(token);
+
+        parsed.Issuer.Should().Be("msosync");
+        parsed.Audiences.Should().Contain("msosync-dashboard");
+    }
+
+    [Fact]
+    public async Task Refresh_UsesHashLookup_ReturnsNewToken()
+    {
+        var (_, refreshToken) = await LoginAdminAsync();
+
+        var resp = await Client().PostAsJsonAsync("/api/v1/auth/refresh",
+            new { RefreshToken = refreshToken });
+
+        resp.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await resp.Content.ReadFromJsonAsync<RefreshResponseBody>();
+        body!.RefreshToken.Should().NotBe(refreshToken);
+    }
+
     // ── DTO helpers ───────────────────────────────────────────────────────
 
     private sealed record LoginResponseBody(string Token, string RefreshToken, DateTime ExpiresAt);
+    private sealed record RefreshResponseBody(string Token, string RefreshToken, DateTime ExpiresAt);
     private sealed record MeResponseBody(string Username, List<string> Roles);
 }
