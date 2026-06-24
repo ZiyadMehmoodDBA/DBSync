@@ -40,6 +40,10 @@ public sealed class NodeTokenAuthMiddleware(RequestDelegate next)
 
     private static bool IsNodeTokenProtectedPath(PathString path)
     {
+        // Ping is a liveness check — no auth required so hubs can probe children
+        if (path.Equals("/api/v1/sync/ping", StringComparison.OrdinalIgnoreCase))
+            return false;
+
         if (path.StartsWithSegments("/api/v1/sync", StringComparison.OrdinalIgnoreCase))
             return true;
 

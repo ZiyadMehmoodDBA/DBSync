@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using MSOSync.Persistence;
 using MSOSync.Persistence.Entities;
 using MSOSync.Security.Events;
@@ -14,9 +15,11 @@ public sealed class AuthenticationService(
     BCryptPasswordHasher hasher,
     AppDbContext db,
     IMediator mediator,
-    AuthMetrics metrics)
+    AuthMetrics metrics,
+    IConfiguration configuration)
 {
-    private static readonly TimeSpan RefreshTokenLifetime = TimeSpan.FromDays(7);
+    private readonly TimeSpan _refreshTokenLifetime =
+        TimeSpan.FromDays(configuration.GetValue<int>("Jwt:RefreshExpiryDays", 7));
     private static readonly int[] LoginDelaysMs = [0, 1000, 2000, 4000];
 
     public async Task<LoginResult> LoginAsync(
@@ -147,7 +150,7 @@ public sealed class AuthenticationService(
     private (string RawToken, SyncUserRefreshToken Entity) CreateRefreshToken(long userId, long? familyId)
     {
         var raw       = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
-        var expiresAt = DateTime.UtcNow.Add(RefreshTokenLifetime);
+        var expiresAt = DateTime.UtcNow.Add(_refreshTokenLifetime);
         return (raw, new SyncUserRefreshToken
         {
             UserId          = userId,

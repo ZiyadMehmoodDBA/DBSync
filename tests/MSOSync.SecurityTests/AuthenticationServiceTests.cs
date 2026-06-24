@@ -56,7 +56,8 @@ public sealed class AuthenticationServiceTests
         userMock.Setup(u => u.GetRolesAsync(It.IsAny<long>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(roles ?? ["ADMIN"]);
 
-        return (new AuthenticationService(userMock.Object, jwt, hasher, db, mediator, new AuthMetrics()), userMock);
+        var config = new ConfigurationBuilder().Build();
+        return (new AuthenticationService(userMock.Object, jwt, hasher, db, mediator, new AuthMetrics(), config), userMock);
     }
 
     private static SyncUser MakeUser(string username = "alice", string password = "Password1!",

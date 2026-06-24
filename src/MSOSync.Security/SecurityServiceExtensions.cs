@@ -45,6 +45,7 @@ public static class SecurityServiceExtensions
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(options =>
             {
+                options.MapInboundClaims = false;
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
                     ValidateIssuerSigningKey = true,
@@ -96,7 +97,13 @@ public static class SecurityServiceExtensions
                         SegmentsPerWindow = 6
                     }));
 
-            options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+            options.OnRejected = async (ctx, ct) =>
+            {
+                var metrics = ctx.HttpContext.RequestServices.GetRequiredService<AuthMetrics>();
+                metrics.RateLimitHits.Add(1);
+                ctx.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+                await ctx.HttpContext.Response.WriteAsync("Rate limit exceeded", ct);
+            };
         });
 
         return services;

@@ -73,7 +73,7 @@ public sealed class ProbeWorker(
                 {
                     < 500  => ConnectivityStatus.Reachable,
                     < 2000 => ConnectivityStatus.Degraded,
-                    _      => ConnectivityStatus.Degraded
+                    _      => ConnectivityStatus.Unreachable
                 };
                 Success.Add(1);
             }

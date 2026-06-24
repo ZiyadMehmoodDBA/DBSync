@@ -9,34 +9,48 @@ using MSOSync.Transport;
 
 namespace MSOSync.Scheduler.Workers;
 
-public sealed class HeartbeatWorker(
-    IServiceScopeFactory     scopeFactory,
-    IOptions<NodeProperties> nodeProps,
-    IConfiguration           config,
-    ILogger<HeartbeatWorker> logger) : BackgroundService
+public sealed class HeartbeatWorker : BackgroundService
 {
     private static readonly Meter          Meter = new("MSOSync.Heartbeat", "1.0.0");
     private static readonly Counter<long>  Sent  = Meter.CreateCounter<long>(
         "msosync_heartbeat_sent_total", description: "Total heartbeat POST requests sent");
 
+    private readonly IServiceScopeFactory     _scopeFactory;
+    private readonly IOptions<NodeProperties> _nodeProps;
+    private readonly IConfiguration           _config;
+    private readonly ILogger<HeartbeatWorker> _logger;
+    private readonly DateTime                 _startTime = DateTime.UtcNow;
+
+    public HeartbeatWorker(
+        IServiceScopeFactory     scopeFactory,
+        IOptions<NodeProperties> nodeProps,
+        IConfiguration           config,
+        ILogger<HeartbeatWorker> logger)
+    {
+        _scopeFactory = scopeFactory;
+        _nodeProps    = nodeProps;
+        _config       = config;
+        _logger       = logger;
+    }
+
     protected override async Task ExecuteAsync(CancellationToken ct)
     {
-        var props    = nodeProps.Value;
+        var props    = _nodeProps.Value;
         var interval = TimeSpan.FromSeconds(
-            config.GetValue<int>("Heartbeat:IntervalSeconds", 30));
+            _config.GetValue<int>("Heartbeat:IntervalSeconds", 30));
 
         using var timer = new PeriodicTimer(interval);
         while (await timer.WaitForNextTickAsync(ct))
         {
             try
             {
-                await using var scope      = scopeFactory.CreateAsyncScope();
+                await using var scope      = _scopeFactory.CreateAsyncScope();
                 var httpClient = scope.ServiceProvider.GetRequiredService<INodeHttpClient>();
 
                 var request = new MSOSync.Metadata.Dtos.HeartbeatRequest(
                     NodeId:        props.NodeId,
                     NodeVersion:   typeof(HeartbeatWorker).Assembly.GetName().Version?.ToString(),
-                    UptimeSeconds: (long)Environment.TickCount64 / 1000,
+                    UptimeSeconds: (long)(DateTime.UtcNow - _startTime).TotalSeconds,
                     DatabaseType:  "SqlServer",
                     TransportMode: null);
 
@@ -51,7 +65,7 @@ public sealed class HeartbeatWorker(
             }
             catch (Exception ex) when (!ct.IsCancellationRequested)
             {
-                logger.LogWarning(ex, "HeartbeatWorker: heartbeat send failed");
+                _logger.LogWarning(ex, "HeartbeatWorker: heartbeat send failed");
             }
         }
     }
