@@ -148,6 +148,7 @@ public sealed class NodeMetadataService(
         await db.Nodes
             .Where(n => n.NodeId == nodeId)
             .ExecuteUpdateAsync(s => s.SetProperty(n => n.LastHeartbeat, heartbeatTime), ct);
+        cache.Remove($"metadata:node:{nodeId}");
     }
 
     private static NodeDto MapNode(SyncNode n) =>
