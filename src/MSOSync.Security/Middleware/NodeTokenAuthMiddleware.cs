@@ -8,13 +8,13 @@ public sealed class NodeTokenAuthMiddleware(RequestDelegate next)
 {
     public async Task InvokeAsync(HttpContext context, NodeSecurityService nodeSecurityService)
     {
-        if (!context.Request.Path.StartsWithSegments("/api/v1/sync", StringComparison.OrdinalIgnoreCase))
+        if (!IsNodeTokenProtectedPath(context.Request.Path))
         {
             await next(context);
             return;
         }
 
-        var nodeId = context.Request.Headers["X-Node-Id"].FirstOrDefault();
+        var nodeId    = context.Request.Headers["X-Node-Id"].FirstOrDefault();
         var nodeToken = context.Request.Headers["X-Node-Token"].FirstOrDefault();
 
         if (string.IsNullOrEmpty(nodeId) || string.IsNullOrEmpty(nodeToken))
@@ -38,11 +38,25 @@ public sealed class NodeTokenAuthMiddleware(RequestDelegate next)
         await next(context);
     }
 
+    private static bool IsNodeTokenProtectedPath(PathString path)
+    {
+        if (path.StartsWithSegments("/api/v1/sync", StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        // /api/v1/nodes/{nodeId}/heartbeat
+        var val = path.Value;
+        if (val != null
+            && val.StartsWith("/api/v1/nodes/", StringComparison.OrdinalIgnoreCase)
+            && val.EndsWith("/heartbeat", StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        return false;
+    }
+
     private static async Task WriteUnauthorizedAsync(HttpContext context, string error)
     {
         context.Response.StatusCode = StatusCodes.Status401Unauthorized;
         context.Response.ContentType = "application/json";
-        await context.Response.WriteAsync(
-            JsonSerializer.Serialize(new { error }));
+        await context.Response.WriteAsync(JsonSerializer.Serialize(new { error }));
     }
 }

@@ -143,6 +143,13 @@ public sealed class NodeMetadataService(
             sec.CreatedTime);
     }
 
+    public async Task RecordHeartbeatAsync(string nodeId, DateTime heartbeatTime, CancellationToken ct = default)
+    {
+        await db.Nodes
+            .Where(n => n.NodeId == nodeId)
+            .ExecuteUpdateAsync(s => s.SetProperty(n => n.LastHeartbeat, heartbeatTime), ct);
+    }
+
     private static NodeDto MapNode(SyncNode n) =>
         new(n.NodeId, n.GroupId, n.SyncUrl, n.Status,
             n.RegistrationTime, n.LastHeartbeat, n.HeartbeatInterval, n.SyncEnabled,
