@@ -17,4 +17,7 @@ public sealed class TopologyService(AppDbContext db) : ITopologyService
 
         return nodes.AsReadOnly();
     }
+
+    public Task<bool> IsHubAsync(string nodeId, CancellationToken ct = default) =>
+        db.Nodes.AnyAsync(n => n.UpstreamNodeId == nodeId, ct);
 }

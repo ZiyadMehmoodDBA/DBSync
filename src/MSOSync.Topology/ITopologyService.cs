@@ -8,4 +8,6 @@ public interface ITopologyService
     /// </summary>
     Task<IReadOnlyList<SourceNodeInfo>> GetSourceNodesAsync(
         string localNodeId, CancellationToken ct = default);
+
+    Task<bool> IsHubAsync(string nodeId, CancellationToken ct = default);
 }
