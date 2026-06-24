@@ -1,3 +1,4 @@
+using FluentValidation;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
@@ -15,13 +16,16 @@ public sealed class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logge
     {
         var (status, error, code, message) = exception switch
         {
-            NotFoundException ex           => (404, "Not Found",            ex.Code, ex.Message),
-            DuplicateEntityException ex    => (409, "Conflict",             ex.Code, ex.Message),
-            ValidationException ex         => (400, "Bad Request",          ex.Code, ex.Message),
-            ForbiddenOperationException ex => (403, "Forbidden",            ex.Code, ex.Message),
-            ConcurrencyException ex        => (409, "Conflict",             ex.Code, ex.Message),
-            UnauthorizedException ex       => (401, "Unauthorized",         ex.Code, ex.Message),
-            _                              => (500, "Internal Server Error", "INTERNAL_SERVER_ERROR", "An unexpected error occurred")
+            NotFoundException ex                   => (404, "Not Found",             ex.Code,            ex.Message),
+            DuplicateEntityException ex            => (409, "Conflict",              ex.Code,            ex.Message),
+            MSOSync.Common.Exceptions.ValidationException ex => (400, "Bad Request",    ex.Code,            ex.Message),
+            ForbiddenOperationException ex         => (403, "Forbidden",             ex.Code,            ex.Message),
+            ConcurrencyException ex                => (409, "Conflict",              ex.Code,            ex.Message),
+            UnauthorizedException ex               => (401, "Unauthorized",          ex.Code,            ex.Message),
+            FluentValidation.ValidationException e => (400, "Bad Request",           "VALIDATION_ERROR",
+                string.Join("; ", e.Errors.Select(x => x.ErrorMessage))),
+            _                                      => (500, "Internal Server Error", "INTERNAL_SERVER_ERROR",
+                "An unexpected error occurred")
         };
 
         if (status == 500)
