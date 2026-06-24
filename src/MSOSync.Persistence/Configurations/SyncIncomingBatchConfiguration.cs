@@ -30,6 +30,15 @@ public sealed class SyncIncomingBatchConfiguration : IEntityTypeConfiguration<Sy
         builder.HasIndex(e => new { e.NodeId, e.Status }).HasDatabaseName("IX_sync_incoming_batch_node_status");
         builder.HasIndex(e => new { e.SourceNodeId, e.ChannelId, e.BatchSequence })
             .HasDatabaseName("IX_sync_incoming_batch_source_channel_sequence");
+        builder.HasIndex(e => e.ReceivedTime)
+            .IsDescending(true)
+            .HasDatabaseName("IX_sync_incoming_batch_received_time");
+        builder.HasIndex(e => new { e.SourceNodeId, e.ReceivedTime })
+            .IsDescending(false, true)
+            .HasDatabaseName("IX_sync_incoming_batch_source_node_time");
+        builder.HasIndex(e => new { e.Status, e.ReceivedTime })
+            .IsDescending(false, true)
+            .HasDatabaseName("IX_sync_incoming_batch_status_time");
 
         builder.HasOne<SyncNode>()
             .WithMany()

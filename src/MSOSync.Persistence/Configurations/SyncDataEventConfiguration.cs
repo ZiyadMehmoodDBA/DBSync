@@ -33,5 +33,10 @@ public sealed class SyncDataEventConfiguration : IEntityTypeConfiguration<SyncDa
         builder.HasIndex(e => new { e.ChannelId, e.IsProcessed }).HasDatabaseName("IX_sync_data_event_channel_processed");
         builder.HasIndex(e => e.TransactionId).HasDatabaseName("IX_sync_data_event_transaction_id");
         builder.HasIndex(e => e.CreateTime).HasDatabaseName("IX_sync_data_event_create_time");
+        builder.HasIndex(e => e.SourceNodeId).HasDatabaseName("IX_sync_data_event_source_node_id");
+        builder.HasIndex(e => e.TriggerId).HasDatabaseName("IX_sync_data_event_trigger_id");
+        builder.HasIndex(e => new { e.ChannelId, e.CreateTime })
+            .IsDescending(false, true)
+            .HasDatabaseName("IX_sync_data_event_channel_time");
     }
 }

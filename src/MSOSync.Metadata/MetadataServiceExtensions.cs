@@ -1,6 +1,10 @@
+using FluentValidation;
 using MediatR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using MSOSync.Metadata.BatchErrors;
+using MSOSync.Metadata.Events;
+using MSOSync.Metadata.IncomingBatches;
 using MSOSync.Metadata.Interfaces;
 using MSOSync.Metadata.Nodes;
 using MSOSync.Metadata.Services;
@@ -17,6 +21,8 @@ public static class MetadataServiceExtensions
         services.AddMemoryCache();
         services.AddMediatR(cfg =>
             cfg.RegisterServicesFromAssemblyContaining<ParameterMetadataService>());
+
+        // Existing services
         services.AddScoped<IParameterMetadataService, ParameterMetadataService>();
         services.AddScoped<INodeMetadataService, NodeMetadataService>();
         services.AddScoped<ITriggerMetadataService, TriggerMetadataService>();
@@ -24,6 +30,16 @@ public static class MetadataServiceExtensions
         services.AddScoped<IChannelMetadataService, ChannelMetadataService>();
         services.AddScoped<INodeStateMachine, NodeStateMachine>();
         services.AddScoped<IUsersManagementService, UsersManagementService>();
+
+        // Epic 9A — Operational Read APIs
+        services.AddSingleton<IErrorSeverityClassifier, ErrorSeverityClassifier>();
+        services.AddScoped<IEventQueryService, EventQueryService>();
+        services.AddScoped<IIncomingBatchQueryService, IncomingBatchQueryService>();
+        services.AddScoped<IBatchErrorQueryService, BatchErrorQueryService>();
+        services.AddScoped<IValidator<EventFilter>, EventFilterValidator>();
+        services.AddScoped<IValidator<IncomingBatchFilter>, IncomingBatchFilterValidator>();
+        services.AddScoped<IValidator<BatchErrorFilter>, BatchErrorFilterValidator>();
+
         return services;
     }
 }
