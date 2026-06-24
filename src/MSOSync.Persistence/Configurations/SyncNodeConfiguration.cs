@@ -34,8 +34,9 @@ public sealed class SyncNodeConfiguration : IEntityTypeConfiguration<SyncNode>
 
         builder.Property(e => e.UpstreamNodeId)
             .HasColumnName("upstream_node_id")
-            .HasColumnType("nvarchar(50)")
-            .HasMaxLength(50);
+            .HasColumnType("varchar(50)")
+            .HasMaxLength(50)
+            .IsUnicode(false);
 
         builder.Property(e => e.LastProbeTime)
             .HasColumnName("last_probe_time")

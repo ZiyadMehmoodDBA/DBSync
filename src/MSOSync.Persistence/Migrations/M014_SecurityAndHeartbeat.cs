@@ -71,15 +71,10 @@ namespace MSOSync.Persistence.Migrations
                 "SET token_lookup_hash = LOWER(CONVERT(CHAR(64), HASHBYTES('SHA2_256', CONVERT(NVARCHAR(20), token_id)), 2)) " +
                 "WHERE token_lookup_hash IS NULL");
 
-            // Drop the index before altering the column nullability (SQL Server requires this)
+            // Drop the index IF EXISTS before altering the column nullability (SQL Server requires this)
             migrationBuilder.Sql(
-                "CREATE UNIQUE INDEX IX_sync_user_refresh_token_lookup_hash " +
-                "ON msosync.sync_user_refresh_token(token_lookup_hash) " +
-                "WHERE revoked_at IS NULL");
-
-            migrationBuilder.Sql(
-                "DROP INDEX IX_sync_user_refresh_token_lookup_hash " +
-                "ON msosync.sync_user_refresh_token");
+                "IF EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_sync_user_refresh_token_lookup_hash' AND object_id = OBJECT_ID('msosync.sync_user_refresh_token')) " +
+                "DROP INDEX IX_sync_user_refresh_token_lookup_hash ON msosync.sync_user_refresh_token");
 
             migrationBuilder.AlterColumn<string>(
                 name: "token_lookup_hash",

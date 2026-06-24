@@ -32,6 +32,8 @@ public sealed class UsersTests(UsersFixture fx)
             new { Username = "newuser1", Password = "P@ss1234!", Enabled = true });
 
         resp.StatusCode.Should().Be(HttpStatusCode.Created);
+        resp.Headers.Location.Should().NotBeNull();
+        resp.Headers.Location!.ToString().Should().Contain("/api/v1/users/");
         var body = await resp.Content.ReadFromJsonAsync<UserDetailDto>();
         body!.Username.Should().Be("newuser1");
         body.Enabled.Should().BeTrue();

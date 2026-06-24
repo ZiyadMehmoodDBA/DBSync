@@ -437,8 +437,9 @@ namespace MSOSync.Persistence.Migrations
                         .HasColumnName("transport_mode");
 
                     b.Property<string>("UpstreamNodeId")
-                        .HasColumnType("nvarchar(50)")
+                        .HasColumnType("varchar(50)")
                         .HasMaxLength(50)
+                        .IsUnicode(false)
                         .HasColumnName("upstream_node_id");
 
                     b.Property<DateTime?>("LastProbeTime")
