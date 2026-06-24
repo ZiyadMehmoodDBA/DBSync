@@ -50,17 +50,15 @@ namespace MSOSync.Persistence.Migrations
                     ON [msosync].[sync_incoming_batch] ([received_time] DESC);
                 """);
 
-            migrationBuilder.CreateIndex(
-                name:    "IX_sync_incoming_batch_source_node_time",
-                schema:  "msosync",
-                table:   "sync_incoming_batch",
-                columns: new[] { "source_node_id", "received_time" });
+            migrationBuilder.Sql("""
+                CREATE INDEX [IX_sync_incoming_batch_source_node_time]
+                    ON [msosync].[sync_incoming_batch] ([source_node_id] ASC, [received_time] DESC);
+                """);
 
-            migrationBuilder.CreateIndex(
-                name:    "IX_sync_incoming_batch_status_time",
-                schema:  "msosync",
-                table:   "sync_incoming_batch",
-                columns: new[] { "status", "received_time" });
+            migrationBuilder.Sql("""
+                CREATE INDEX [IX_sync_incoming_batch_status_time]
+                    ON [msosync].[sync_incoming_batch] ([status] ASC, [received_time] DESC);
+                """);
 
             // Index on sync_batch_error
             // IX_sync_batch_error_batch_id already exists from M005 — skip
