@@ -21,8 +21,16 @@ public sealed class SyncBatchErrorConfiguration : IEntityTypeConfiguration<SyncB
         builder.Property(e => e.ErrorMessage).HasColumnName("error_message").HasColumnType("nvarchar(max)");
         builder.Property(e => e.RetryCount).HasColumnName("retry_count").HasDefaultValue(0);
         builder.Property(e => e.LastRetryTime).HasColumnName("last_retry_time").HasColumnType("datetime2(7)");
+        builder.Property(e => e.CreateTime)
+            .HasColumnName("create_time")
+            .HasColumnType("datetime2(7)")
+            .HasDefaultValueSql("SYSUTCDATETIME()");
 
         builder.HasIndex(e => e.BatchId).HasDatabaseName("IX_sync_batch_error_batch_id");
+
+        builder.HasIndex(e => new { e.ConflictType, e.CreateTime })
+            .IsDescending(false, true)
+            .HasDatabaseName("IX_sync_batch_error_conflict_create");
 
         builder.HasOne<SyncOutgoingBatch>()
             .WithMany()
