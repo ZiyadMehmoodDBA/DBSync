@@ -8,6 +8,7 @@ using MSOSync.Metadata.IncomingBatches;
 using MSOSync.Metadata.Interfaces;
 using MSOSync.Metadata.Nodes;
 using MSOSync.Metadata.Services;
+using MSOSync.Metadata.Topology;
 using MSOSync.Metadata.Users;
 
 namespace MSOSync.Metadata;
@@ -39,6 +40,9 @@ public static class MetadataServiceExtensions
         services.AddScoped<IValidator<EventFilter>, EventFilterValidator>();
         services.AddScoped<IValidator<IncomingBatchFilter>, IncomingBatchFilterValidator>();
         services.AddScoped<IValidator<BatchErrorFilter>, BatchErrorFilterValidator>();
+
+        // Epic 9B — Topology APIs
+        services.AddScoped<ITopologyQueryService, TopologyQueryService>();
 
         return services;
     }
