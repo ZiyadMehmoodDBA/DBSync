@@ -42,7 +42,6 @@ zustand
 ```
 tailwindcss@^4
 @tailwindcss/vite
-shadcn (CLI tool — install with `npm install -D shadcn`; components are generated as TypeScript files committed to the repo)
 lucide-react
 zod
 react-hook-form
@@ -51,6 +50,8 @@ react-hook-form
 apexcharts
 react-apexcharts
 ```
+
+**shadcn/ui:** Use the CLI (`npx shadcn@latest init`, then `npx shadcn@latest add <component>`) to generate component files. Do NOT add `shadcn` as an application dependency. Generated component files are committed to the repo and imported as regular TypeScript modules. The only runtime additions are the generated component files themselves plus `lucide-react` and `class-variance-authority` / `clsx` / `tailwind-merge` (installed automatically by the shadcn CLI).
 
 ### Add to `devDependencies`
 
@@ -176,6 +177,18 @@ export async function apiLogout(refreshToken: string): Promise<void>
 ```
 
 `LoginResponse = { token: string; refreshToken: string; expiresAt: string }` (camelCase — .NET System.Text.Json defaults).
+
+### Axios module augmentation
+
+TypeScript strict mode rejects `error.config._retry` without a declaration. Add to `shared/api/client.ts` (or a separate `shared/types/axios.d.ts`):
+
+```ts
+declare module 'axios' {
+  interface AxiosRequestConfig {
+    _retry?: boolean;
+  }
+}
+```
 
 ### Axios client (`shared/api/client.ts`)
 
