@@ -79,6 +79,10 @@ try
 
     var app = builder.Build();
 
+    // Serve React SPA from wwwroot/ — must be before auth middleware
+    app.UseDefaultFiles();
+    app.UseStaticFiles();
+
     if (!app.Environment.IsDevelopment())
         app.UseHsts();
 
@@ -100,6 +104,9 @@ try
         app.UseSwagger();
         app.UseSwaggerUI();
     }
+
+    // SPA fallback — must be last: serves index.html for all non-API routes
+    app.MapFallbackToFile("index.html");
 
     Log.Information("MSOSync starting on {Env}", app.Environment.EnvironmentName);
     await app.RunAsync();

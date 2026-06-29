@@ -29,4 +29,26 @@
     <ProjectReference Include="..\MSOSync.Metadata\MSOSync.Metadata.csproj" />
     <ProjectReference Include="..\MSOSync.Topology\MSOSync.Topology.csproj" />
   </ItemGroup>
+
+  <PropertyGroup>
+    <!-- Resolve frontend root relative to this .csproj; works with both sln-level and direct publish -->
+    <FrontendRoot>$([MSBuild]::NormalizeDirectory('$(MSBuildProjectDirectory)\..\MSOSync.Frontend'))</FrontendRoot>
+  </PropertyGroup>
+
+  <Target Name="PublishFrontend" AfterTargets="Publish">
+    <!--
+      Builds the React frontend and copies dist/ → wwwroot/ during dotnet publish.
+      Future improvement: add Inputs/Outputs for incremental build (skip if sources unchanged).
+      For now, npm run build always runs to keep correctness simple.
+    -->
+    <Exec
+      Command="npm run build"
+      WorkingDirectory="$(FrontendRoot)" />
+    <ItemGroup>
+      <FrontendFiles Include="$(FrontendRoot)dist/**/*" />
+    </ItemGroup>
+    <Copy
+      SourceFiles="@(FrontendFiles)"
+      DestinationFolder="$(PublishDir)wwwroot/%(RecursiveDir)" />
+  </Target>
 </Project>
