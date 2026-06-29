@@ -196,7 +196,6 @@ public sealed record ChannelMetricsDto(
 namespace MSOSync.Metadata.Metrics;
 
 public sealed record RuntimeMetricsDto(
-    string?  NodeId,
     long?    HeapUsed,
     long?    HeapMax,
     int?     ThreadCount,
@@ -237,7 +236,7 @@ public interface IMetricsQueryService
     Task<MetricsSummaryDto>                 GetSummaryAsync(CancellationToken ct);
     Task<IReadOnlyList<NodeMetricsDto>>     GetNodeMetricsAsync(CancellationToken ct);
     Task<IReadOnlyList<ChannelMetricsDto>>  GetChannelMetricsAsync(CancellationToken ct);
-    Task<IReadOnlyList<RuntimeMetricsDto>>  GetRuntimeMetricsAsync(string? nodeId, CancellationToken ct);
+    Task<IReadOnlyList<RuntimeMetricsDto>>  GetRuntimeMetricsAsync(CancellationToken ct);
     Task<IReadOnlyList<MonitorMetricDto>>   GetMonitorMetricsAsync(string? nodeId, string? metricName, CancellationToken ct);
 }
 ```
@@ -390,14 +389,12 @@ Three aggregated queries (IncomingBatches, OutgoingBatches, DataEvents) grouped 
 ### GetRuntimeMetricsAsync — not cached
 
 ```csharp
-public async Task<IReadOnlyList<RuntimeMetricsDto>> GetRuntimeMetricsAsync(string? nodeId, CancellationToken ct)
+public async Task<IReadOnlyList<RuntimeMetricsDto>> GetRuntimeMetricsAsync(CancellationToken ct)
 {
-    var q = db.RuntimeStats.AsNoTracking();
-    if (nodeId is not null) q = q.Where(r => r.NodeId == nodeId);
-
-    return await q.OrderByDescending(r => r.CreateTime)
+    return await db.RuntimeStats.AsNoTracking()
+        .OrderByDescending(r => r.CreateTime)
         .Select(r => new RuntimeMetricsDto(
-            r.NodeId, r.HeapUsed, r.HeapMax, r.ThreadCount,
+            r.HeapUsed, r.HeapMax, r.ThreadCount,
             r.CpuPercent, r.GcCount, r.GcTimeMs, r.UptimeMs,
             r.CreateTime!.Value))
         .ToListAsync(ct);
@@ -455,9 +452,8 @@ public sealed class MetricsController(IMetricsQueryService metrics) : Controller
 
     [HttpGet("runtime")]
     [ProducesResponseType(200)]
-    public async Task<IActionResult> GetRuntime(
-        [FromQuery] string? nodeId, CancellationToken ct)
-        => Ok(await metrics.GetRuntimeMetricsAsync(nodeId, ct));
+    public async Task<IActionResult> GetRuntime(CancellationToken ct)
+        => Ok(await metrics.GetRuntimeMetricsAsync(ct));
 
     [HttpGet("monitors")]
     [ProducesResponseType(200)]
@@ -502,7 +498,7 @@ Required tests:
 8. `GetNodeMetrics_AvgApplyTimeMs_Nullable` — node with no applied batches → null
 9. `GetChannelMetrics_PendingEvents` — IsProcessed == false counted correctly
 10. `GetChannelMetrics_ActiveNodes` — distinct NodeIds in 24h window
-11. `GetRuntimeMetrics_FiltersOnNodeId` — only rows for requested node returned
+11. `GetRuntimeMetrics_ReturnsAllRows` — all RuntimeStats rows returned, ordered by CreateTime descending
 12. `GetMonitorMetrics_FiltersOnMetricName` — only matching metricName rows returned
 
 ### Integration Tests (LocalDB) — MetricsTests.cs (~8 tests)
@@ -512,11 +508,10 @@ Required tests:
 1. `GET /metrics/summary` — 200, non-null GeneratedAt
 2. `GET /metrics/nodes` — 200, seeded node appears with correct ConnectivityStatus
 3. `GET /metrics/channels` — 200, channel with seeded events appears
-4. `GET /metrics/runtime` — 200, returns seeded RuntimeStats rows
-5. `GET /metrics/runtime?nodeId=hub` — filtered to single node
-6. `GET /metrics/monitors` — 200, returns seeded Monitor rows
-7. `GET /metrics/monitors?nodeId=hub&metricName=cpu` — filtered correctly
-8. Unauthorized request → 401
+4. `GET /metrics/runtime` — 200, returns seeded RuntimeStats rows ordered by CreateTime descending
+5. `GET /metrics/monitors` — 200, returns seeded Monitor rows
+6. `GET /metrics/monitors?nodeId=hub-1&metricName=cpu` — filtered correctly
+7. Unauthorized request → 401
 
 ---
 
