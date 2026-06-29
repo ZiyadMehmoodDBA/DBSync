@@ -2,10 +2,12 @@ using FluentValidation;
 using MediatR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using MSOSync.Metadata.Audit;
 using MSOSync.Metadata.BatchErrors;
 using MSOSync.Metadata.Events;
 using MSOSync.Metadata.IncomingBatches;
 using MSOSync.Metadata.Interfaces;
+using MSOSync.Metadata.Locks;
 using MSOSync.Metadata.Metrics;
 using MSOSync.Metadata.Nodes;
 using MSOSync.Metadata.Services;
@@ -47,6 +49,11 @@ public static class MetadataServiceExtensions
 
         // Epic 9C — Metrics APIs
         services.AddScoped<IMetricsQueryService, MetricsQueryService>();
+
+        // Epic 9D — Audit & Administration APIs
+        services.AddScoped<IAuditQueryService, AuditQueryService>();
+        services.AddScoped<ILockAdminService, LockAdminService>();
+        services.AddScoped<IValidator<AuditFilter>, AuditFilterValidator>();
 
         return services;
     }
