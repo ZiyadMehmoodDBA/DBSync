@@ -6,6 +6,7 @@ using MSOSync.Metadata.BatchErrors;
 using MSOSync.Metadata.Events;
 using MSOSync.Metadata.IncomingBatches;
 using MSOSync.Metadata.Interfaces;
+using MSOSync.Metadata.Metrics;
 using MSOSync.Metadata.Nodes;
 using MSOSync.Metadata.Services;
 using MSOSync.Metadata.Topology;
@@ -43,6 +44,9 @@ public static class MetadataServiceExtensions
 
         // Epic 9B — Topology APIs
         services.AddScoped<ITopologyQueryService, TopologyQueryService>();
+
+        // Epic 9C — Metrics APIs
+        services.AddScoped<IMetricsQueryService, MetricsQueryService>();
 
         return services;
     }
