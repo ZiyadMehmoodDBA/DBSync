@@ -1,5 +1,5 @@
 import { createContext, useState, useCallback, useEffect, type ReactNode } from 'react';
-import { setClientToken, registerLogoutHandler } from '../../shared/api/client';
+import { setClientToken, getClientToken, registerLogoutHandler } from '../../shared/api/client';
 import { apiLogin, apiLogout } from '../../shared/api/auth';
 import type { AuthState, UserProfile } from '../../shared/types/auth';
 
@@ -38,11 +38,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const logout = useCallback(async () => {
-    const storedRefresh = localStorage.getItem(REFRESH_KEY);
+    const currentRefresh = localStorage.getItem(REFRESH_KEY);
+    const currentToken = getClientToken(); // capture BEFORE clearing
     clearTokens();
-    if (storedRefresh) {
-      apiLogout(storedRefresh).catch(() => undefined); // fire and forget
-    }
+    // fire-and-forget — don't block UI on server response
+    apiLogout(currentRefresh, currentToken).catch(() => undefined);
   }, [clearTokens]);
 
   const login = useCallback(

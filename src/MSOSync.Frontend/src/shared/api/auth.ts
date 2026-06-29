@@ -13,6 +13,13 @@ export async function apiRefresh(refreshToken: string): Promise<LoginResponse> {
   return data;
 }
 
-export async function apiLogout(refreshToken: string): Promise<void> {
-  await axios.post(`${BASE}/logout`, { refreshToken });
+export async function apiLogout(
+  refreshToken: string | null,
+  accessToken: string | null,
+): Promise<void> {
+  await axios.post(
+    `${BASE}/logout`,
+    { refreshToken },
+    accessToken ? { headers: { Authorization: `Bearer ${accessToken}` } } : undefined,
+  );
 }

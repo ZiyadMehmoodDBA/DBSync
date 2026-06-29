@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -92,22 +93,25 @@ function NavGroup({ heading, items }: { heading: string; items: NavItem[] }) {
   );
 }
 
-function toggleTheme() {
-  const next = document.documentElement.classList.contains('dark') ? 'light' : 'dark';
-  document.documentElement.classList.toggle('dark', next === 'dark');
-  localStorage.setItem('msosync.theme', next);
-}
-
 export function AppLayout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+
+  const [isDark, setIsDark] = useState(() =>
+    document.documentElement.classList.contains('dark')
+  );
+
+  function handleThemeToggle() {
+    const next = !isDark;
+    document.documentElement.classList.toggle('dark', next);
+    localStorage.setItem('msosync.theme', next ? 'dark' : 'light');
+    setIsDark(next);
+  }
 
   const handleLogout = async () => {
     await logout();
     navigate('/login', { replace: true });
   };
-
-  const isDark = document.documentElement.classList.contains('dark');
 
   return (
     <div className="flex h-screen overflow-hidden bg-white dark:bg-neutral-950">
@@ -133,7 +137,7 @@ export function AppLayout() {
             MSOSync Operations Console
           </span>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Toggle theme">
+            <Button variant="ghost" size="icon" onClick={handleThemeToggle} aria-label="Toggle theme">
               {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </Button>
             <Avatar className="h-8 w-8">

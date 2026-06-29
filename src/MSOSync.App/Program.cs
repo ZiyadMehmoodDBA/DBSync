@@ -79,16 +79,18 @@ try
 
     var app = builder.Build();
 
-    // Serve React SPA from wwwroot/ — must be before auth middleware
+    app.UseExceptionHandler();        // must be first to catch exceptions
+
+    // Security headers for ALL responses (including static assets)
+    if (!app.Environment.IsDevelopment())
+        app.UseHsts();
+    app.UseSecurityHeaders();
+
+    // Static files — now get security headers attached
     app.UseDefaultFiles();
     app.UseStaticFiles();
 
-    if (!app.Environment.IsDevelopment())
-        app.UseHsts();
-
-    app.UseExceptionHandler();
     app.UseRateLimiter();
-    app.UseSecurityHeaders();
     app.UseAuthentication();
     app.UseNodeTokenAuth();
     app.UseAuthorization();
