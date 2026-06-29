@@ -111,17 +111,24 @@ public sealed class TopologyQueryService(AppDbContext db, IMemoryCache cache)
     {
         int totalGroups = await db.NodeGroups.AsNoTracking().CountAsync(ct);
 
-        var statuses = await db.Nodes.AsNoTracking()
-            .Select(n => n.ConnectivityStatus)
-            .ToListAsync(ct);
+        var counts = await db.Nodes.AsNoTracking()
+            .GroupBy(n => n.ConnectivityStatus)
+            .Select(g => new { Status = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.Status, x => x.Count, ct);
+
+        int totalNodes  = counts.Values.Sum();
+        int reachable   = counts.GetValueOrDefault(ConnectivityStatus.Reachable);
+        int degraded    = counts.GetValueOrDefault(ConnectivityStatus.Degraded);
+        int unreachable = counts.GetValueOrDefault(ConnectivityStatus.Unreachable);
+        int unknown     = counts.GetValueOrDefault(ConnectivityStatus.Unknown);
 
         return new TopologySummaryDto(
             totalGroups,
-            statuses.Count,
-            statuses.Count(s => s == ConnectivityStatus.Reachable),
-            statuses.Count(s => s == ConnectivityStatus.Degraded),
-            statuses.Count(s => s == ConnectivityStatus.Unreachable),
-            statuses.Count(s => s == ConnectivityStatus.Unknown),
+            totalNodes,
+            reachable,
+            degraded,
+            unreachable,
+            unknown,
             DateTime.UtcNow);
     }
 
@@ -192,13 +199,20 @@ public sealed class TopologyQueryService(AppDbContext db, IMemoryCache cache)
             })
             .ToListAsync(ct);
 
-        return rows.Select(n => new TopologyGroupNodeDto(
+        var nodes = rows.Select(n =>
+        {
+            if (!Enum.TryParse<NodeStatus>(n.Status, ignoreCase: true, out var status))
+                throw new InvalidOperationException(
+                    $"Unknown node status '{n.Status}' for node '{n.NodeId}'.");
+            return new TopologyGroupNodeDto(
                 n.NodeId,
-                Enum.Parse<NodeStatus>(n.Status, ignoreCase: true),
+                status,
                 n.ConnectivityStatus,
                 n.LastHeartbeat,
                 n.LastProbeLatencyMs,
-                n.SyncEnabled))
-            .ToList();
+                n.SyncEnabled);
+        }).ToList();
+
+        return nodes;
     }
 }
