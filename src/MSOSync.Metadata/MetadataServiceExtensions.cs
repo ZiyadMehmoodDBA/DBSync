@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using MSOSync.Metadata.Audit;
 using MSOSync.Metadata.BatchErrors;
+using MSOSync.Metadata.Dashboard;
 using MSOSync.Metadata.Events;
 using MSOSync.Metadata.IncomingBatches;
 using MSOSync.Metadata.Interfaces;
@@ -54,6 +55,10 @@ public static class MetadataServiceExtensions
         services.AddScoped<IAuditQueryService, AuditQueryService>();
         services.AddScoped<ILockAdminService, LockAdminService>();
         services.AddScoped<IValidator<AuditFilter>, AuditFilterValidator>();
+
+        // Epic 9E — Dashboard Query Optimization
+        services.AddScoped<IDashboardQueryService, DashboardQueryService>();
+        services.AddScoped<IValidator<ActivityFilter>, ActivityFilterValidator>();
 
         return services;
     }
