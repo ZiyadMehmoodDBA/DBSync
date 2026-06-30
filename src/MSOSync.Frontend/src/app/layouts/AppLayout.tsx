@@ -15,6 +15,7 @@ import {
   Users,
   Settings,
   FileText,
+  Lock,
   User,
   Sun,
   Moon,
@@ -56,6 +57,7 @@ const NAV_GROUPS: { heading: string; items: NavItem[] }[] = [
       { label: 'Users',      path: '/users',      icon: Users },
       { label: 'Parameters', path: '/parameters', icon: Settings },
       { label: 'Audit',      path: '/audit',      icon: FileText },
+      { label: 'Locks',      path: '/locks',      icon: Lock },
     ],
   },
   {

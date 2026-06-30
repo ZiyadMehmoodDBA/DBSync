@@ -1,0 +1,27 @@
+import type { ColDef } from 'ag-grid-community';
+import type { LockDto } from '../../shared/types';
+import { formatRelativeTime } from '../../shared/utils/date';
+
+export const lockColumns: ColDef<LockDto>[] = [
+  { field: 'lockName', headerName: 'Lock Name', flex: 1, minWidth: 180 },
+  { field: 'lockOwner', headerName: 'Owner', width: 200 },
+  {
+    field: 'lockTime',
+    headerName: 'Held Since',
+    width: 160,
+    valueFormatter: (p) => formatRelativeTime(p.value as string),
+  },
+  {
+    headerName: 'Duration',
+    width: 140,
+    valueGetter: (p) => {
+      if (!p.data?.lockTime) return '';
+      const diffMs = Date.now() - new Date(p.data.lockTime).getTime();
+      const diffSec = Math.round(diffMs / 1000);
+      if (diffSec < 60) return `${diffSec}s`;
+      const diffMin = Math.round(diffSec / 60);
+      if (diffMin < 60) return `${diffMin}m`;
+      return `${Math.round(diffMin / 60)}h`;
+    },
+  },
+];

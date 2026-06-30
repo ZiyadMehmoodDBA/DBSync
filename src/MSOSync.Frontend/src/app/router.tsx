@@ -19,6 +19,7 @@ import { UsersPage } from '../features/users/UsersPage';
 import { ParametersPage } from '../features/parameters/ParametersPage';
 import { AuditPage } from '../features/audit/AuditPage';
 import { ProfilePage } from '../features/profile/ProfilePage';
+import { LocksPage } from '../features/locks/LocksPage';
 
 export const router = createBrowserRouter([
   {
@@ -52,6 +53,7 @@ export const router = createBrowserRouter([
               { path: 'users',            element: <UsersPage /> },
               { path: 'parameters',       element: <ParametersPage /> },
               { path: 'audit',            element: <AuditPage /> },
+              { path: 'locks',            element: <LocksPage /> },
               { path: 'profile',          element: <ProfilePage /> },
             ],
           },
