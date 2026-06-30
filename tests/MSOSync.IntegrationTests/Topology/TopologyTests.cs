@@ -29,9 +29,12 @@ public sealed class TopologyTests(TopologyFixture fixture)
         var result = await client.GetFromJsonAsync<TopologyGraphDto>("api/v1/topology/graph");
 
         result!.Edges.Should().HaveCount(1);
-        result.Edges.Single().RouterId.Should().Be("router-hub-store");
-        result.Edges.Single().ChannelIds.Should().BeEquivalentTo(
-            new[] { "ch-default", "ch-config" });
+        var edge = result.Edges.Single();
+        edge.Id.Should().Be("router:router-hub-store");
+        edge.Source.Should().Be("group:group-hub");
+        edge.Target.Should().Be("group:group-store");
+        edge.IsEnabled.Should().BeTrue();
+        edge.ChannelIds.Should().BeEquivalentTo(new[] { "ch-default", "ch-config" });
     }
 
     [Fact]
@@ -41,16 +44,31 @@ public sealed class TopologyTests(TopologyFixture fixture)
 
         var result = await client.GetFromJsonAsync<TopologyGraphDto>("api/v1/topology/graph");
 
+        // hub: 2 nodes (1 Reachable + 1 Degraded) → Degraded; is source of the router
         var hub = result!.Nodes.Single(n => n.GroupId == "group-hub");
-        hub.TotalNodes.Should().Be(2);
-        hub.ReachableNodes.Should().Be(1);
-        hub.DegradedNodes.Should().Be(1);
-        // Worst-of-members: Degraded (no Unreachable)
-        hub.ConnectivityStatus.Should().Be(ConnectivityStatus.Degraded);
+        hub.Id.Should().Be("group:group-hub");
+        hub.Label.Should().Be("Hub");
+        hub.MemberCount.Should().Be(2);
+        hub.Status.Should().Be(ConnectivityStatus.Degraded);
+        hub.TriggerCount.Should().Be(2);
+        hub.ChannelCount.Should().Be(2);
 
+        // store: 1 Reachable node; target-only → no triggers/channels from source perspective
+        var store = result.Nodes.Single(n => n.GroupId == "group-store");
+        store.MemberCount.Should().Be(1);
+        store.Status.Should().Be(ConnectivityStatus.Reachable);
+        store.TriggerCount.Should().Be(0);
+        store.ChannelCount.Should().Be(0);
+
+        // empty: no nodes
         var empty = result.Nodes.Single(n => n.GroupId == "group-empty");
-        empty.TotalNodes.Should().Be(0);
-        empty.ConnectivityStatus.Should().Be(ConnectivityStatus.Unknown);
+        empty.MemberCount.Should().Be(0);
+        empty.Status.Should().Be(ConnectivityStatus.Unknown);
+
+        // meta
+        result.Meta.TotalGroups.Should().Be(3);
+        result.Meta.TotalNodes.Should().Be(3);   // hub-1 + hub-2 + store-1
+        result.Meta.OnlineNodes.Should().Be(1);  // only group-store is Reachable
     }
 
     [Fact]

@@ -39,10 +39,10 @@ public sealed class TopologyQueryService(AppDbContext db, IMemoryCache cache)
     }
 
     // ── GetTopologyGraphAsync ─────────────────────────────────────────────────
-    // 4 DB round-trips; result cached for 60 seconds under "topology:graph:v1"
+    // 4 DB round-trips; result cached for 60 seconds under "topology:graph"
     public async Task<TopologyGraphDto> GetTopologyGraphAsync(CancellationToken ct)
     {
-        if (cache.TryGetValue("topology:graph:v1", out TopologyGraphDto? cached))
+        if (cache.TryGetValue("topology:graph", out TopologyGraphDto? cached))
             return cached!;
 
         // Round-trip 1: all node groups
@@ -52,7 +52,7 @@ public sealed class TopologyQueryService(AppDbContext db, IMemoryCache cache)
 
         // Round-trip 2: all nodes — connectivity status and group membership
         var nodes = await db.Nodes.AsNoTracking()
-            .Select(n => new { n.NodeId, n.GroupId, n.ConnectivityStatus })
+            .Select(n => new { n.GroupId, n.ConnectivityStatus })
             .ToListAsync(ct);
 
         // Round-trip 3: all routers
@@ -60,20 +60,30 @@ public sealed class TopologyQueryService(AppDbContext db, IMemoryCache cache)
             .Select(r => new { r.RouterId, r.SourceNodeGroup, r.TargetNodeGroup, r.Enabled })
             .ToListAsync(ct);
 
-        // Round-trip 4: TriggerRouter JOIN Trigger → RouterId + ChannelId pairs
-        // Grouped in C# (not SQL) to avoid complex EF GroupBy translation issues
+        // Round-trip 4: TriggerRouter JOIN Trigger → (TriggerId, RouterId, ChannelId)
         var joinRows = await db.TriggerRouters.AsNoTracking()
             .Join(db.Triggers,
                   tr => tr.TriggerId,
                   t  => t.TriggerId,
-                  (tr, t) => new { tr.RouterId, t.ChannelId })
+                  (tr, t) => new { tr.TriggerId, tr.RouterId, t.ChannelId })
             .ToListAsync(ct);
 
+        // Per-router channel lists for edge ChannelIds
         var channelsByRouter = joinRows
             .GroupBy(x => x.RouterId)
             .ToDictionary(
                 g => g.Key,
                 g => (IReadOnlyList<string>)g.Select(x => x.ChannelId).Distinct().ToList());
+
+        // Per-group (source) trigger+channel counts
+        var routerSourceByRouterId = routers.ToDictionary(r => r.RouterId, r => r.SourceNodeGroup);
+        var statsByGroup = joinRows
+            .Where(x => routerSourceByRouterId.ContainsKey(x.RouterId))
+            .GroupBy(x => routerSourceByRouterId[x.RouterId])
+            .ToDictionary(
+                g => g.Key,
+                g => (TriggerCount: g.Select(x => x.TriggerId).Distinct().Count(),
+                      ChannelCount: g.Select(x => x.ChannelId).Distinct().Count()));
 
         var nodesByGroup = nodes.GroupBy(n => n.GroupId)
             .ToDictionary(g => g.Key, g => g.Select(x => x.ConnectivityStatus).ToList());
@@ -83,26 +93,33 @@ public sealed class TopologyQueryService(AppDbContext db, IMemoryCache cache)
             var statuses = nodesByGroup.TryGetValue(g.GroupId, out var s)
                 ? (IReadOnlyList<ConnectivityStatus>)s
                 : [];
-            return new TopologyNodeDto(
-                g.GroupId, g.GroupName,
+            var (trigCount, chanCount) = statsByGroup.TryGetValue(g.GroupId, out var gs)
+                ? gs : (0, 0);
+            return new TopologyGraphNodeDto(
+                $"group:{g.GroupId}",
+                g.GroupId,
+                g.GroupName ?? g.GroupId,
+                AggregateConnectivity(statuses),
                 statuses.Count,
-                statuses.Count(cs => cs == ConnectivityStatus.Reachable),
-                statuses.Count(cs => cs == ConnectivityStatus.Degraded),
-                statuses.Count(cs => cs == ConnectivityStatus.Unreachable),
-                statuses.Count(cs => cs == ConnectivityStatus.Unknown),
-                AggregateConnectivity(statuses));
+                trigCount,
+                chanCount);
         }).ToList();
 
-        var edgeDtos = routers.Select(r => new TopologyEdgeDto(
-            r.RouterId, r.SourceNodeGroup, r.TargetNodeGroup,
+        var edgeDtos = routers.Select(r => new TopologyGraphEdgeDto(
+            $"router:{r.RouterId}",
+            $"group:{r.SourceNodeGroup}",
+            $"group:{r.TargetNodeGroup}",
             channelsByRouter.TryGetValue(r.RouterId, out var ch) ? ch : [],
             r.Enabled)).ToList();
 
+        int totalNodes  = nodeDtos.Sum(n => n.MemberCount);
+        int onlineNodes = nodeDtos.Count(n => n.Status == ConnectivityStatus.Reachable);
+
         var result = new TopologyGraphDto(
             nodeDtos, edgeDtos,
-            new TopologyMetadataDto("dagre", "TB", 1, DateTime.UtcNow));
+            new TopologyGraphMetaDto(groups.Count, totalNodes, onlineNodes, DateTimeOffset.UtcNow));
 
-        cache.Set("topology:graph:v1", result, CacheOptions);
+        cache.Set("topology:graph", result, CacheOptions);
         return result;
     }
 

@@ -3,29 +3,28 @@ using MSOSync.Persistence;
 namespace MSOSync.Metadata.Topology;
 
 public sealed record TopologyGraphDto(
-    IReadOnlyList<TopologyNodeDto> Nodes,
-    IReadOnlyList<TopologyEdgeDto> Edges,
-    TopologyMetadataDto            Metadata);
+    IReadOnlyList<TopologyGraphNodeDto> Nodes,
+    IReadOnlyList<TopologyGraphEdgeDto> Edges,
+    TopologyGraphMetaDto                Meta);
 
-public sealed record TopologyNodeDto(
+public sealed record TopologyGraphNodeDto(
+    string             Id,           // "group:{groupId}"
     string             GroupId,
-    string?            Name,
-    int                TotalNodes,
-    int                ReachableNodes,
-    int                DegradedNodes,
-    int                UnreachableNodes,
-    int                UnknownNodes,
-    ConnectivityStatus ConnectivityStatus);
+    string             Label,
+    ConnectivityStatus Status,
+    int                MemberCount,
+    int                TriggerCount,
+    int                ChannelCount);
 
-public sealed record TopologyEdgeDto(
-    string                RouterId,
-    string                SourceGroupId,
-    string                TargetGroupId,
+public sealed record TopologyGraphEdgeDto(
+    string                Id,        // "router:{routerId}"
+    string                Source,    // "group:{sourceNodeGroup}"
+    string                Target,    // "group:{targetNodeGroup}"
     IReadOnlyList<string> ChannelIds,
-    bool                  Enabled);
+    bool                  IsEnabled);
 
-public sealed record TopologyMetadataDto(
-    string   LayoutHint,
-    string   Direction,
-    int      Version,
-    DateTime GeneratedAt);
+public sealed record TopologyGraphMetaDto(
+    int            TotalGroups,
+    int            TotalNodes,
+    int            OnlineNodes,
+    DateTimeOffset GeneratedAt);

@@ -55,7 +55,22 @@ public sealed class TopologyQueryServiceTests
     }
 
     [Fact]
-    public async Task GetTopologyGraph_AggregatesReachableCounts()
+    public async Task GetTopologyGraph_NodeIds_HaveGroupPrefix()
+    {
+        var svc = Make(out var db);
+        db.Set<SyncNodeGroup>().Add(Group("g1", "Hub"));
+        await db.SaveChangesAsync();
+
+        var result = await svc.GetTopologyGraphAsync(default);
+        var node   = result.Nodes.Single();
+
+        node.Id.Should().Be("group:g1");
+        node.GroupId.Should().Be("g1");
+        node.Label.Should().Be("Hub");
+    }
+
+    [Fact]
+    public async Task GetTopologyGraph_AggregatesStatus()
     {
         var svc = Make(out var db);
         db.Set<SyncNodeGroup>().Add(Group("g1"));
@@ -68,11 +83,10 @@ public sealed class TopologyQueryServiceTests
         var result = await svc.GetTopologyGraphAsync(default);
         var node   = result.Nodes.Single();
 
-        node.TotalNodes.Should().Be(3);
-        node.ReachableNodes.Should().Be(1);
-        node.UnreachableNodes.Should().Be(1);
-        node.DegradedNodes.Should().Be(1);
-        node.UnknownNodes.Should().Be(0);
+        node.MemberCount.Should().Be(3);
+        node.Status.Should().Be(ConnectivityStatus.Unreachable);  // worst-of-members
+        node.TriggerCount.Should().Be(0);
+        node.ChannelCount.Should().Be(0);
     }
 
     [Fact]
@@ -87,7 +101,7 @@ public sealed class TopologyQueryServiceTests
 
         var result = await svc.GetTopologyGraphAsync(default);
 
-        result.Nodes.Single().ConnectivityStatus.Should().Be(ConnectivityStatus.Unreachable);
+        result.Nodes.Single().Status.Should().Be(ConnectivityStatus.Unreachable);
     }
 
     [Fact]
@@ -102,7 +116,7 @@ public sealed class TopologyQueryServiceTests
 
         var result = await svc.GetTopologyGraphAsync(default);
 
-        result.Nodes.Single().ConnectivityStatus.Should().Be(ConnectivityStatus.Degraded);
+        result.Nodes.Single().Status.Should().Be(ConnectivityStatus.Degraded);
     }
 
     [Fact]
@@ -110,17 +124,16 @@ public sealed class TopologyQueryServiceTests
     {
         var svc = Make(out var db);
         db.Set<SyncNodeGroup>().Add(Group("g1"));
-        // No nodes
         await db.SaveChangesAsync();
 
         var result = await svc.GetTopologyGraphAsync(default);
 
-        result.Nodes.Single().ConnectivityStatus.Should().Be(ConnectivityStatus.Unknown);
-        result.Nodes.Single().TotalNodes.Should().Be(0);
+        result.Nodes.Single().Status.Should().Be(ConnectivityStatus.Unknown);
+        result.Nodes.Single().MemberCount.Should().Be(0);
     }
 
     [Fact]
-    public async Task GetTopologyGraph_EdgeChannelIds_ResolvedFromTriggers()
+    public async Task GetTopologyGraph_EdgeIds_HaveRouterPrefix()
     {
         var svc = Make(out var db);
         db.Set<SyncNodeGroup>().AddRange(Group("g1"), Group("g2"));
@@ -136,21 +149,54 @@ public sealed class TopologyQueryServiceTests
         var result = await svc.GetTopologyGraphAsync(default);
 
         var edge = result.Edges.Single();
-        edge.RouterId.Should().Be("r1");
+        edge.Id.Should().Be("router:r1");
+        edge.Source.Should().Be("group:g1");
+        edge.Target.Should().Be("group:g2");
+        edge.IsEnabled.Should().BeTrue();
         edge.ChannelIds.Should().BeEquivalentTo(new[] { "ch-default", "ch-config" });
     }
 
     [Fact]
-    public async Task GetTopologyGraph_MetadataHint_IsCorrect()
+    public async Task GetTopologyGraph_TriggerAndChannelCounts_PerSourceGroup()
     {
         var svc = Make(out var db);
+        db.Set<SyncNodeGroup>().AddRange(Group("g1"), Group("g2"));
+        db.Set<SyncRouter>().Add(Router("r1", "g1", "g2"));
+        db.Set<SyncTrigger>().AddRange(
+            Trigger("t1", "ch-default"),
+            Trigger("t2", "ch-config"));
+        db.Set<SyncTriggerRouter>().AddRange(
+            TriggerRouter("t1", "r1"),
+            TriggerRouter("t2", "r1"));
         await db.SaveChangesAsync();
 
         var result = await svc.GetTopologyGraphAsync(default);
 
-        result.Metadata.LayoutHint.Should().Be("dagre");
-        result.Metadata.Direction.Should().Be("TB");
-        result.Metadata.Version.Should().Be(1);
+        var g1 = result.Nodes.Single(n => n.GroupId == "g1");
+        g1.TriggerCount.Should().Be(2);
+        g1.ChannelCount.Should().Be(2);
+
+        var g2 = result.Nodes.Single(n => n.GroupId == "g2");
+        g2.TriggerCount.Should().Be(0);
+        g2.ChannelCount.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task GetTopologyGraph_Meta_HasCorrectCounts()
+    {
+        var svc = Make(out var db);
+        db.Set<SyncNodeGroup>().AddRange(Group("g1"), Group("g2"));
+        db.Set<SyncNode>().AddRange(
+            Node("n1", "g1", ConnectivityStatus.Reachable),
+            Node("n2", "g2", ConnectivityStatus.Degraded));
+        await db.SaveChangesAsync();
+
+        var result = await svc.GetTopologyGraphAsync(default);
+
+        result.Meta.TotalGroups.Should().Be(2);
+        result.Meta.TotalNodes.Should().Be(2);
+        result.Meta.OnlineNodes.Should().Be(1);  // only g1 is Reachable
+        result.Meta.GeneratedAt.Should().BeCloseTo(DateTimeOffset.UtcNow, TimeSpan.FromSeconds(5));
     }
 
     // ── GetGroupsAsync ───────────────────────────────────────────────────────
