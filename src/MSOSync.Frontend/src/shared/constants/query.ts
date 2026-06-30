@@ -1,0 +1,3 @@
+export const DASHBOARD_REFRESH_MS = 30_000;
+export const DEFAULT_PAGE_SIZE = 50;
+export const DEFAULT_BATCH_PAGE_SIZE = 20;
