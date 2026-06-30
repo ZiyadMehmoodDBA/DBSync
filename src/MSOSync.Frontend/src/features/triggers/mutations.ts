@@ -19,7 +19,7 @@ export function useEnableTriggerMutation() {
     mutationFn: (triggerId: string) => enableTrigger(triggerId),
     onSuccess: () => {
       toast.success('Trigger enabled');
-      void queryClient.invalidateQueries({ queryKey: queryKeys.triggers() });
+      invalidateTriggerRelated(queryClient);
     },
     onError: (error) => {
       toast.error(getErrorMessage(error));
@@ -33,7 +33,7 @@ export function useDisableTriggerMutation() {
     mutationFn: (triggerId: string) => disableTrigger(triggerId),
     onSuccess: () => {
       toast.success('Trigger disabled');
-      void queryClient.invalidateQueries({ queryKey: queryKeys.triggers() });
+      invalidateTriggerRelated(queryClient);
     },
     onError: (error) => {
       toast.error(getErrorMessage(error));
@@ -47,7 +47,7 @@ export function useRebuildTriggerMutation() {
     mutationFn: (triggerId: string) => rebuildTrigger(triggerId),
     onSuccess: () => {
       toast.success('Trigger rebuilt');
-      void queryClient.invalidateQueries({ queryKey: queryKeys.triggers() });
+      invalidateTriggerRelated(queryClient);
     },
     onError: (error) => {
       toast.error(getErrorMessage(error));
