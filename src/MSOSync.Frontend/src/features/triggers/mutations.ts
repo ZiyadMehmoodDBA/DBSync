@@ -71,6 +71,7 @@ function invalidateTriggerRelated(queryClient: ReturnType<typeof useQueryClient>
   void queryClient.invalidateQueries({ queryKey: queryKeys.triggers() });
   void queryClient.invalidateQueries({ queryKey: queryKeys.topologySummary() });
   void queryClient.invalidateQueries({ queryKey: queryKeys.topologyGroups() });
+  void queryClient.invalidateQueries({ queryKey: queryKeys.topologyGraph() });
 }
 
 export function useCreateTriggerMutation() {
