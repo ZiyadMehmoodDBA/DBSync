@@ -77,7 +77,6 @@ export function ServerGrid<T extends object>({
           <select
             value={pageSize}
             onChange={(e) => {
-              onPageChange(1);
               onPageSizeChange(Number(e.target.value));
             }}
             className="rounded border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 px-2 py-1 text-xs"
