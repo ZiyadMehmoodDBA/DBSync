@@ -35,3 +35,11 @@ export async function getBatchErrors(
   });
   return data;
 }
+
+export async function retryBatch(batchId: number): Promise<void> {
+  await client.post(`/outgoing-batches/${batchId}/retry`);
+}
+
+export async function retryAllBatches(): Promise<void> {
+  await client.post('/outgoing-batches/retry-all');
+}
