@@ -25,6 +25,7 @@ export const queryKeys = {
   topologySummary: () => ['topology-summary'] as const,
   topologyGroups: () => ['topology-groups'] as const,
   topologyGroupNodes: (groupId: string) => ['topology-group-nodes', groupId] as const,
+  topologyGraph: () => ['topology-graph'] as const,
 
   metricsSummary: () => ['metrics-summary'] as const,
   nodeMetrics: () => ['node-metrics'] as const,
