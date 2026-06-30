@@ -8,3 +8,26 @@ export async function getUsers(filter: UserFilter): Promise<PagedResult<UserSumm
   });
   return data;
 }
+
+export interface CreateUserRequest {
+  username: string;
+  password: string;
+  enabled: boolean;
+}
+
+export interface UpdateUserRequest {
+  enabled: boolean;
+  newPassword?: string;
+}
+
+export async function createUser(data: CreateUserRequest): Promise<void> {
+  await client.post('/users', data);
+}
+
+export async function updateUser(userId: number, data: UpdateUserRequest): Promise<void> {
+  await client.put(`/users/${userId}`, data);
+}
+
+export async function deactivateUser(userId: number): Promise<void> {
+  await client.delete(`/users/${userId}`);
+}
