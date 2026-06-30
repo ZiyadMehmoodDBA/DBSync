@@ -7,6 +7,7 @@ function invalidateRouterRelated(queryClient: ReturnType<typeof useQueryClient>)
   void queryClient.invalidateQueries({ queryKey: queryKeys.routers() });
   void queryClient.invalidateQueries({ queryKey: queryKeys.topologySummary() });
   void queryClient.invalidateQueries({ queryKey: queryKeys.topologyGroups() });
+  void queryClient.invalidateQueries({ queryKey: queryKeys.topologyGraph() });
 }
 
 export function useCreateRouterMutation() {

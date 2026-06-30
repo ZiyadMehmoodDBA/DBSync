@@ -7,6 +7,7 @@ function invalidateChannelRelated(queryClient: ReturnType<typeof useQueryClient>
   void queryClient.invalidateQueries({ queryKey: queryKeys.channels() });
   void queryClient.invalidateQueries({ queryKey: queryKeys.topologySummary() });
   void queryClient.invalidateQueries({ queryKey: queryKeys.topologyGroups() });
+  void queryClient.invalidateQueries({ queryKey: queryKeys.topologyGraph() });
 }
 
 export function useCreateChannelMutation() {
