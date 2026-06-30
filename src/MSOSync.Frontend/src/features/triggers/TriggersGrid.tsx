@@ -3,15 +3,18 @@ import { DataGrid } from '../../shared/components/data-display/DataGrid';
 import { makeTriggersColumns } from './columns';
 import { useTriggers } from './hooks';
 import { useVerifyTriggerMutation } from './mutations';
+import type { TriggerDto } from '../../shared/types';
 
 type ConfirmableAction = 'enable' | 'disable' | 'rebuild';
 
 interface Props {
   quickFilterText?: string;
   onAction: (triggerId: string, action: ConfirmableAction) => void;
+  onEdit: (trigger: TriggerDto) => void;
+  onDelete: (trigger: TriggerDto) => void;
 }
 
-export function TriggersGrid({ quickFilterText, onAction }: Props) {
+export function TriggersGrid({ quickFilterText, onAction, onEdit, onDelete }: Props) {
   const { data, isLoading, error, refetch } = useTriggers();
   const verifyMutation = useVerifyTriggerMutation();
 
@@ -23,8 +26,8 @@ export function TriggersGrid({ quickFilterText, onAction }: Props) {
   );
 
   const columns = useMemo(
-    () => makeTriggersColumns(onAction, onVerify),
-    [onAction, onVerify],
+    () => makeTriggersColumns(onAction, onVerify, onEdit, onDelete),
+    [onAction, onVerify, onEdit, onDelete],
   );
 
   return (

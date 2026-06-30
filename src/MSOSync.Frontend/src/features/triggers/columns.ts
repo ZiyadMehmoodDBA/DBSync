@@ -9,6 +9,8 @@ type ConfirmableAction = 'enable' | 'disable' | 'rebuild';
 export function makeTriggersColumns(
   onAction: (triggerId: string, action: ConfirmableAction) => void,
   onVerify: (triggerId: string) => void,
+  onEdit: (trigger: TriggerDto) => void,
+  onDelete: (trigger: TriggerDto) => void,
 ): ColDef<TriggerDto>[] {
   return [
     { field: 'triggerId', headerName: 'Trigger ID', width: 180 },
@@ -56,6 +58,7 @@ export function makeTriggersColumns(
       cellRenderer: (p: ICellRendererParams<TriggerDto>) => {
         if (!p.data) return null;
         const { triggerId } = p.data;
+        const trigger = p.data;
         return ActionMenu({
           items: [
             { label: 'Enable', onClick: () => onAction(triggerId, 'enable') },
@@ -70,6 +73,8 @@ export function makeTriggersColumns(
               variant: 'destructive',
             },
             { label: 'Verify', onClick: () => onVerify(triggerId) },
+            { label: 'Edit', onClick: () => onEdit(trigger) },
+            { label: 'Delete', onClick: () => onDelete(trigger), variant: 'destructive' },
           ],
         });
       },

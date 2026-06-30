@@ -5,7 +5,11 @@ import {
   disableTrigger,
   rebuildTrigger,
   verifyTrigger,
+  createTrigger,
+  updateTrigger,
+  deleteTrigger,
 } from '../../shared/api/triggers';
+import type { CreateTriggerRequest, UpdateTriggerRequest } from '../../shared/api/triggers';
 import { getErrorMessage } from '../../shared/utils/error';
 import { queryKeys } from '../../shared/queryKeys';
 
@@ -60,5 +64,39 @@ export function useVerifyTriggerMutation() {
     onError: (error) => {
       toast.error(getErrorMessage(error));
     },
+  });
+}
+
+function invalidateTriggerRelated(queryClient: ReturnType<typeof useQueryClient>) {
+  void queryClient.invalidateQueries({ queryKey: queryKeys.triggers() });
+  void queryClient.invalidateQueries({ queryKey: queryKeys.topologySummary() });
+  void queryClient.invalidateQueries({ queryKey: queryKeys.topologyGroups() });
+}
+
+export function useCreateTriggerMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: CreateTriggerRequest) => createTrigger(data),
+    onSuccess: () => { invalidateTriggerRelated(queryClient); },
+    // no onError — caller handles it
+  });
+}
+
+export function useUpdateTriggerMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ triggerId, data }: { triggerId: string; data: UpdateTriggerRequest }) =>
+      updateTrigger(triggerId, data),
+    onSuccess: () => { invalidateTriggerRelated(queryClient); },
+    // no onError — caller handles it
+  });
+}
+
+export function useDeleteTriggerMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (triggerId: string) => deleteTrigger(triggerId),
+    onSuccess: () => { invalidateTriggerRelated(queryClient); },
+    // no onError — caller handles it
   });
 }
