@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
+import type { Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
 import {
@@ -13,7 +14,7 @@ import {
 import { Input } from '../../components/ui/input';
 import { EntityDialog, FormActions, FormError } from '../../shared/components/forms';
 import { getErrorMessage } from '../../shared/utils/error';
-import { createChannelSchema, CHANNEL_FORM_DEFAULTS } from './schemas';
+import { createChannelSchema, updateChannelSchema, CHANNEL_FORM_DEFAULTS } from './schemas';
 import type { CreateChannelForm } from './schemas';
 import { useCreateChannelMutation, useUpdateChannelMutation } from './mutations';
 import type { ChannelDto } from '../../shared/types';
@@ -30,9 +31,9 @@ export function ChannelDialog({ open, mode, initialValues, onOpenChange }: Chann
   const createMutation = useCreateChannelMutation();
   const updateMutation = useUpdateChannelMutation();
 
+  const schema = mode === 'create' ? createChannelSchema : updateChannelSchema;
   const form = useForm<CreateChannelForm>({
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    resolver: zodResolver(createChannelSchema) as any,
+    resolver: zodResolver(schema) as unknown as Resolver<CreateChannelForm>,
     defaultValues: CHANNEL_FORM_DEFAULTS,
   });
 
