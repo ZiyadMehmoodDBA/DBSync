@@ -18,7 +18,12 @@ export const createTriggerSchema = z
 
 export type CreateTriggerForm = z.infer<typeof createTriggerSchema>;
 
-export const updateTriggerSchema = createTriggerSchema.omit({ triggerId: true });
+export const updateTriggerSchema = createTriggerSchema
+  .omit({ triggerId: true })
+  .refine((x) => x.syncOnInsert || x.syncOnUpdate || x.syncOnDelete, {
+    message: 'At least one sync operation must be enabled.',
+    path: ['syncOnInsert'],
+  });
 export type UpdateTriggerForm = z.infer<typeof updateTriggerSchema>;
 
 export function getDefaultValues(

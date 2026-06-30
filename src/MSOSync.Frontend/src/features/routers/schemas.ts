@@ -15,7 +15,12 @@ export const createRouterSchema = z.object({
 );
 export type CreateRouterForm = z.infer<typeof createRouterSchema>;
 
-export const updateRouterSchema = createRouterSchema.omit({ routerId: true });
+export const updateRouterSchema = createRouterSchema
+  .omit({ routerId: true })
+  .refine(
+    (x) => x.sourceNodeGroup !== x.targetNodeGroup,
+    { message: 'Source and target groups must differ.', path: ['targetNodeGroup'] },
+  );
 export type UpdateRouterForm = z.infer<typeof updateRouterSchema>;
 
 export function getDefaultValues(
