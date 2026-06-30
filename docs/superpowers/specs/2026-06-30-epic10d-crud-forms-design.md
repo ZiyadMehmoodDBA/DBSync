@@ -86,18 +86,46 @@ const onSubmit = async (values: FormValues) => {
 
 ### Dialog reset invariant
 
-Every dialog resets form state and API error when opened:
+Every dialog resets form state and API error on both open and close:
 
 ```tsx
 useEffect(() => {
   if (open) {
     form.reset(defaultValues);
     setApiError(null);
+  } else {
+    form.reset();
+    setApiError(null);
   }
 }, [open, defaultValues, form]);
 ```
 
 `defaultValues` is derived from `initialValues` prop (edit mode) or static defaults (create mode).
+
+### Default values convention
+
+All dialogs derive defaults via a feature-local `getDefaultValues` helper:
+
+```ts
+// features/users/schemas.ts
+export function getDefaultValues(initialValues?: UserSummaryDto, mode?: 'create' | 'edit') {
+  if (mode === 'edit' && initialValues) {
+    return { enabled: initialValues.enabled, newPassword: '' };
+  }
+  return { username: '', password: '', enabled: true };
+}
+```
+
+Used in the dialog as:
+
+```tsx
+const defaultValues = useMemo(
+  () => getDefaultValues(initialValues, mode),
+  [initialValues, mode],
+);
+```
+
+This prevents each dialog from reimplementing initialization logic inline.
 
 ### Mode pattern
 
@@ -246,6 +274,29 @@ export type UpdateChannelForm = z.infer<typeof updateChannelSchema>;
 
 ---
 
+### Trigger source-table helpers
+
+The backend `CreateTriggerRequest` / `UpdateTriggerRequest` use a single `sourceTable: string` (e.g. `"dbo.Orders"`). The form collects `schemaName` + `tableName` separately. Centralize the mapping in one place:
+
+```ts
+// features/triggers/utils.ts
+export function toSourceTable(schemaName: string, tableName: string): string {
+  return `${schemaName}.${tableName}`;
+}
+
+export function fromSourceTable(sourceTable: string): { schemaName: string; tableName: string } {
+  const dot = sourceTable.lastIndexOf('.');
+  if (dot === -1) return { schemaName: 'dbo', tableName: sourceTable };
+  return { schemaName: sourceTable.slice(0, dot), tableName: sourceTable.slice(dot + 1) };
+}
+```
+
+`TriggerDialog` uses `fromSourceTable(trigger.tableName)` — wait, the `TriggerDto` already has separate `schemaName` + `tableName` fields. `fromSourceTable` is only needed if the Dto ever returns a merged string. Since `TriggerDto` has both fields, `toSourceTable` is the only required helper for submit mapping.
+
+`fromSourceTable` is included for completeness and forward compatibility.
+
+---
+
 ### Triggers — create, edit, delete (extends 10C)
 
 **Operations:** Create, Edit, Delete. Enable/Disable/Rebuild/Verify from 10C are preserved unchanged.
@@ -300,8 +351,9 @@ export type UpdateTriggerForm = z.infer<typeof updateTriggerSchema>;
 - `DELETE /api/v1/routers/{routerId}`
 
 **Form fields:**
-- Create: `routerId` (text), `sourceNodeGroup` (text), `targetNodeGroup` (text), `routerType` (Select, options from `ROUTER_TYPES`)
+- Create: `routerId` (text), `sourceNodeGroup` (Select from `useNodeGroups()`), `targetNodeGroup` (Select from same list), `routerType` (Select, options from `ROUTER_TYPES`)
 - Edit: same minus `routerId` (shown read-only)
+- Using Select for group fields prevents typo-driven topology corruption and keeps UI consistent with the Nodes edit form.
 
 **Zod schemas:**
 ```ts
@@ -354,7 +406,7 @@ export type UpdateNodeForm = z.infer<typeof updateNodeSchema>;
 
 **Column change:** `makeNodeColumns(onAction)` → `makeNodeColumns(onAction, onEdit)`. Adds "Edit" to existing ActionMenu alongside Enable/Disable/Approve Registration.
 
-**Cache invalidation:** `queryKeys.nodes()` + `queryKeys.topologySummary()` + `queryKeys.topologyGroups()`
+**Cache invalidation:** `queryKeys.nodes()` + `queryKeys.topologySummary()` + `queryKeys.topologyGroups()` + `queryKeys.metricsSummary()` (consistent with 10C node operational actions)
 
 **Page changes:** No "Add" button. Manages `editState: NodeDto | null` alongside existing `confirmState`. NodesGrid gains `onEdit` prop.
 
@@ -400,7 +452,7 @@ export type UpdateNodeForm = z.infer<typeof updateNodeSchema>;
 
 | Task | Description |
 |---|---|
-| 1 | Shared form infrastructure: install deps, shadcn installs, EntityDialog + FormActions + FormError + FormSection + index.ts |
+| 1 | Shared form infrastructure: install deps, shadcn installs, EntityDialog + FormActions + FormError + FormSection + index.ts; establish `getDefaultValues` convention and document form reset pattern |
 | 2 | Parameters edit: API function, schema, mutation, ParameterDialog, columns factory, ParametersPage wire |
 | 3 | Users CRUD: 3 API functions, 2 schemas, 3 mutations, UserDialog, columns factory, UsersGrid + UsersPage |
 | 4 | Channels CRUD: 3 API functions, 2 schemas, 3 mutations, ChannelDialog, columns factory, ChannelsGrid + ChannelsPage |
