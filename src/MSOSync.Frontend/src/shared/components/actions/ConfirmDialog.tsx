@@ -8,7 +8,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '../../../components/ui/alert-dialog';
-import { cn } from '../../../lib/utils';
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -43,10 +42,7 @@ export function ConfirmDialog({
           <AlertDialogAction
             onClick={onConfirm}
             disabled={loading}
-            className={cn(
-              variant === 'destructive' &&
-                'bg-destructive text-destructive-foreground hover:bg-destructive/90',
-            )}
+            variant={variant === 'destructive' ? 'destructive' : 'default'}
           >
             {loading ? 'Working…' : confirmLabel}
           </AlertDialogAction>

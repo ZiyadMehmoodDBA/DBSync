@@ -31,7 +31,7 @@ export function ActionMenu({ items }: ActionMenuProps) {
             key={item.label}
             onClick={item.onClick}
             disabled={item.disabled}
-            className={item.variant === 'destructive' ? 'text-destructive' : undefined}
+            variant={item.variant === 'destructive' ? 'destructive' : 'default'}
           >
             {item.label}
           </DropdownMenuItem>

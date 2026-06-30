@@ -5,12 +5,20 @@ interface ApiErrorBody {
   message?: string;
 }
 
+function isAxiosError(error: unknown): error is AxiosError<ApiErrorBody> {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'response' in error &&
+    typeof (error as Record<string, unknown>).response === 'object'
+  );
+}
+
 export function getErrorMessage(error: unknown): string {
-  const axiosError = error as AxiosError<ApiErrorBody>;
-  if (axiosError?.response?.data) {
-    const { data } = axiosError.response;
-    if (data.detail) return data.detail;
-    if (data.message) return data.message;
+  if (isAxiosError(error)) {
+    const { data } = error.response ?? {};
+    if (data?.detail) return data.detail;
+    if (data?.message) return data.message;
   }
   if (error instanceof Error) return error.message;
   return 'An unexpected error occurred.';
