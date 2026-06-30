@@ -10,6 +10,7 @@ type NodeAction = 'enable' | 'disable' | 'approve';
 
 export function makeNodeColumns(
   onAction: (nodeId: string, action: NodeAction) => void,
+  onEdit: (node: NodeDto) => void,
 ): ColDef<NodeDto>[] {
   return [
     { field: 'nodeId', headerName: 'Node ID', width: 180 },
@@ -55,8 +56,10 @@ export function makeNodeColumns(
       cellRenderer: (p: ICellRendererParams<NodeDto>) => {
         if (!p.data) return null;
         const { nodeId } = p.data;
+        const node = p.data;
         return ActionMenu({
           items: [
+            { label: 'Edit', onClick: () => onEdit(node) },
             { label: 'Enable', onClick: () => onAction(nodeId, 'enable') },
             {
               label: 'Disable',

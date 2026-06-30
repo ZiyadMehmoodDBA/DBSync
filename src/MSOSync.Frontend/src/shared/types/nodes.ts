@@ -7,4 +7,6 @@ export interface NodeDto {
   lastHeartbeat?: string;
   probeLatencyMs?: number;
   createdTime: string;
+  syncUrl?: string;
+  heartbeatInterval?: number;
 }

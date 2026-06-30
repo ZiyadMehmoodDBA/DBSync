@@ -2,11 +2,13 @@ import { useState, useCallback } from 'react';
 import { Input } from '../../components/ui/input';
 import { ConfirmDialog } from '../../shared/components/actions';
 import { NodesGrid } from './NodesGrid';
+import { NodeDialog } from './NodeDialog';
 import {
   useEnableNodeMutation,
   useDisableNodeMutation,
   useApproveRegistrationMutation,
 } from './mutations';
+import type { NodeDto } from '../../shared/types';
 
 type NodeAction = 'enable' | 'disable' | 'approve';
 
@@ -47,6 +49,7 @@ const CONFIRM_CONFIG: Record<
 export function NodesPage() {
   const [search, setSearch] = useState('');
   const [confirmState, setConfirmState] = useState<ConfirmState | null>(null);
+  const [editState, setEditState] = useState<NodeDto | null>(null);
 
   const enableMutation = useEnableNodeMutation();
   const disableMutation = useDisableNodeMutation();
@@ -54,6 +57,10 @@ export function NodesPage() {
 
   const onAction = useCallback((nodeId: string, action: NodeAction) => {
     setConfirmState({ nodeId, action });
+  }, []);
+
+  const onEdit = useCallback((node: NodeDto) => {
+    setEditState(node);
   }, []);
 
   const isPending =
@@ -82,7 +89,16 @@ export function NodesPage() {
         placeholder="Search nodes…"
         className="max-w-xs"
       />
-      <NodesGrid quickFilterText={search} onAction={onAction} />
+      <NodesGrid quickFilterText={search} onAction={onAction} onEdit={onEdit} />
+      {editState && (
+        <NodeDialog
+          open={!!editState}
+          initialValues={editState}
+          onOpenChange={(open) => {
+            if (!open) setEditState(null);
+          }}
+        />
+      )}
       {config && confirmState && (
         <ConfirmDialog
           open

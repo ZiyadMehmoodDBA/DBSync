@@ -17,3 +17,13 @@ export async function disableNode(nodeId: string): Promise<void> {
 export async function approveRegistration(requestId: string): Promise<void> {
   await client.post(`/nodes/registrations/${encodeURIComponent(requestId)}/approve`);
 }
+
+export interface UpdateNodeRequest {
+  groupId: string;
+  syncUrl: string;
+  heartbeatInterval: number;
+}
+
+export async function updateNode(nodeId: string, data: UpdateNodeRequest): Promise<void> {
+  await client.put(`/nodes/${encodeURIComponent(nodeId)}`, data);
+}

@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { enableNode, disableNode, approveRegistration } from '../../shared/api/nodes';
+import { enableNode, disableNode, approveRegistration, updateNode } from '../../shared/api/nodes';
+import type { UpdateNodeRequest } from '../../shared/api/nodes';
 import { getErrorMessage } from '../../shared/utils/error';
 import { queryKeys } from '../../shared/queryKeys';
 
@@ -51,5 +52,17 @@ export function useApproveRegistrationMutation() {
     onError: (error) => {
       toast.error(getErrorMessage(error));
     },
+  });
+}
+
+export function useUpdateNodeMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ nodeId, data }: { nodeId: string; data: UpdateNodeRequest }) =>
+      updateNode(nodeId, data),
+    onSuccess: () => {
+      invalidateNodeRelated(queryClient);
+    },
+    // no onError — caller handles it
   });
 }
