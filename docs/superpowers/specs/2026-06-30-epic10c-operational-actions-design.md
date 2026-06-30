@@ -59,12 +59,11 @@ Add one-click operational actions to the read-only pages built in Epic 10B. No C
 ```bash
 npm install sonner
 
-npx shadcn@latest add dialog
 npx shadcn@latest add dropdown-menu
 npx shadcn@latest add alert-dialog
 ```
 
-No additional dependencies beyond these four.
+No additional dependencies beyond these three. `shadcn dialog` is deferred to Epic 10D where full CRUD forms are introduced.
 
 ---
 
@@ -197,9 +196,9 @@ No per-page toaster setup.
 
 | Action | UX | Confirmation | Variant | Cache invalidated |
 |---|---|---|---|---|
-| Enable node | `ActionMenu` item | Yes | default | `queryKeys.nodes()`, `queryKeys.dashboardSummary()`, `queryKeys.metricsSummary()` |
-| Disable node | `ActionMenu` item | Yes | destructive | `queryKeys.nodes()`, `queryKeys.dashboardSummary()`, `queryKeys.metricsSummary()` |
-| Approve registration | `ActionMenu` item | Yes | default | `queryKeys.nodes()`, `queryKeys.dashboardSummary()`, `queryKeys.metricsSummary()` |
+| Enable node | `ActionMenu` item | Yes | default | `queryKeys.nodes()`, `queryKeys.dashboardSummary()`, `queryKeys.metricsSummary()`, `queryKeys.topologySummary()`, `queryKeys.topologyGroups()` |
+| Disable node | `ActionMenu` item | Yes | destructive | `queryKeys.nodes()`, `queryKeys.dashboardSummary()`, `queryKeys.metricsSummary()`, `queryKeys.topologySummary()`, `queryKeys.topologyGroups()` |
+| Approve registration | `ActionMenu` item | Yes | default | `queryKeys.nodes()`, `queryKeys.dashboardSummary()`, `queryKeys.metricsSummary()`, `queryKeys.topologySummary()`, `queryKeys.topologyGroups()` |
 
 **New files:**
 - `features/nodes/mutations.ts` — `useEnableNodeMutation()`, `useDisableNodeMutation()`, `useApproveRegistrationMutation()`
@@ -244,7 +243,7 @@ Verify fires immediately on click and shows `toast.info("Trigger verified succes
 
 | Action | UX | Confirmation | Cache invalidated |
 |---|---|---|---|
-| Retry single batch | `ActionMenu` per row | No | `queryKeys.outgoingBatches(filter)` |
+| Retry single batch | `ActionMenu` per row | No | `queryKeys.outgoingBatches()` |
 | Retry all | Button in page header | No | `queryKeys.outgoingBatches()`, `queryKeys.dashboardSummary()`, `queryKeys.metricsSummary()` |
 
 **Loading state:** Retry All button is disabled while a retry-all mutation is in flight (`mutation.isPending`). Same pattern applies to per-row retry buttons — the row's action is disabled while the single-batch retry is in flight.
@@ -273,6 +272,8 @@ export function useDisableNodeMutation() {
       void queryClient.invalidateQueries({ queryKey: queryKeys.nodes() });
       void queryClient.invalidateQueries({ queryKey: queryKeys.dashboardSummary() });
       void queryClient.invalidateQueries({ queryKey: queryKeys.metricsSummary() });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.topologySummary() });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.topologyGroups() });
     },
     onError: (error) => {
       toast.error(getErrorMessage(error));
@@ -303,10 +304,10 @@ Mutations invalidate only the minimal affected query keys plus dashboard/metrics
 | Scenario | Keys to invalidate |
 |---|---|
 | Lock released | `queryKeys.locks()` |
-| Node enabled/disabled/approved | `queryKeys.nodes()`, `queryKeys.dashboardSummary()`, `queryKeys.metricsSummary()` |
+| Node enabled/disabled/approved | `queryKeys.nodes()`, `queryKeys.dashboardSummary()`, `queryKeys.metricsSummary()`, `queryKeys.topologySummary()`, `queryKeys.topologyGroups()` |
 | Trigger enabled/disabled/rebuilt | `queryKeys.triggers()` |
 | Trigger verified | none |
-| Batch retry (single) | `queryKeys.outgoingBatches(filter)` |
+| Batch retry (single) | `queryKeys.outgoingBatches()` — unfiltered base key to avoid filter instance mismatches |
 | Batch retry-all | `queryKeys.outgoingBatches()`, `queryKeys.dashboardSummary()`, `queryKeys.metricsSummary()` |
 
 ---
@@ -328,7 +329,7 @@ All return `Promise<void>` (backend returns `204 No Content` for operational act
 
 ## File Change Summary
 
-**New files (14):**
+**New files (11):**
 - `shared/utils/error.ts`
 - `shared/components/actions/ConfirmDialog.tsx`
 - `shared/components/actions/ActionMenu.tsx`
@@ -338,7 +339,6 @@ All return `Promise<void>` (backend returns `204 No Content` for operational act
 - `features/nodes/mutations.ts`
 - `features/triggers/mutations.ts`
 - `features/outgoing-batches/mutations.ts`
-- `components/ui/dialog.tsx` (shadcn generated)
 - `components/ui/dropdown-menu.tsx` (shadcn generated)
 - `components/ui/alert-dialog.tsx` (shadcn generated)
 
