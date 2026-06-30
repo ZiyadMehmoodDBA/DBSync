@@ -15,6 +15,7 @@ export const queryKeys = {
   event: (id: number) => ['event', id] as const,
 
   incomingBatches: (filter: IncomingBatchFilter) => ['incoming-batches', filter] as const,
+  outgoingBatchesBase: () => ['outgoing-batches'] as const,
   outgoingBatches: (filter: OutgoingBatchFilter) => ['outgoing-batches', filter] as const,
   batchErrors: (filter: BatchErrorFilter) => ['batch-errors', filter] as const,
 

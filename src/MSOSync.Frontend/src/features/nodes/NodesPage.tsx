@@ -62,10 +62,13 @@ export function NodesPage() {
   const handleConfirm = async () => {
     if (!confirmState) return;
     const { nodeId, action } = confirmState;
-    if (action === 'enable') await enableMutation.mutateAsync(nodeId);
-    else if (action === 'disable') await disableMutation.mutateAsync(nodeId);
-    else await approveMutation.mutateAsync(nodeId);
-    setConfirmState(null);
+    try {
+      if (action === 'enable') await enableMutation.mutateAsync(nodeId);
+      else if (action === 'disable') await disableMutation.mutateAsync(nodeId);
+      else await approveMutation.mutateAsync(nodeId);
+    } finally {
+      setConfirmState(null);
+    }
   };
 
   const config = confirmState ? CONFIRM_CONFIG[confirmState.action] : null;

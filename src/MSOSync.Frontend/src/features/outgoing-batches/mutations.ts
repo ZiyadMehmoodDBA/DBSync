@@ -10,7 +10,7 @@ export function useRetryBatchMutation() {
     mutationFn: (batchId: number) => retryBatch(batchId),
     onSuccess: () => {
       toast.success('Batch queued for retry');
-      void queryClient.invalidateQueries({ queryKey: ['outgoing-batches'] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.outgoingBatchesBase() });
     },
     onError: (error) => {
       toast.error(getErrorMessage(error));
@@ -24,7 +24,7 @@ export function useRetryAllBatchesMutation() {
     mutationFn: () => retryAllBatches(),
     onSuccess: () => {
       toast.success('All failed batches queued for retry');
-      void queryClient.invalidateQueries({ queryKey: ['outgoing-batches'] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.outgoingBatchesBase() });
       void queryClient.invalidateQueries({ queryKey: queryKeys.dashboardSummary() });
       void queryClient.invalidateQueries({ queryKey: queryKeys.metricsSummary() });
     },

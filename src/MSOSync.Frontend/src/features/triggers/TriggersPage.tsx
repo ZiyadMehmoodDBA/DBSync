@@ -62,10 +62,13 @@ export function TriggersPage() {
   const handleConfirm = async () => {
     if (!confirmState) return;
     const { triggerId, action } = confirmState;
-    if (action === 'enable') await enableMutation.mutateAsync(triggerId);
-    else if (action === 'disable') await disableMutation.mutateAsync(triggerId);
-    else await rebuildMutation.mutateAsync(triggerId);
-    setConfirmState(null);
+    try {
+      if (action === 'enable') await enableMutation.mutateAsync(triggerId);
+      else if (action === 'disable') await disableMutation.mutateAsync(triggerId);
+      else await rebuildMutation.mutateAsync(triggerId);
+    } finally {
+      setConfirmState(null);
+    }
   };
 
   const config = confirmState ? CONFIRM_CONFIG[confirmState.action] : null;

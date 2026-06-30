@@ -20,9 +20,12 @@ export function LocksGrid() {
 
   const handleConfirm = async () => {
     if (!pendingLockName) return;
-    await releaseMutation.mutateAsync(pendingLockName);
-    setConfirmOpen(false);
-    setPendingLockName(null);
+    try {
+      await releaseMutation.mutateAsync(pendingLockName);
+    } finally {
+      setConfirmOpen(false);
+      setPendingLockName(null);
+    }
   };
 
   return (
