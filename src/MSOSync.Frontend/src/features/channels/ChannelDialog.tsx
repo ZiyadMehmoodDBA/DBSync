@@ -13,8 +13,8 @@ import {
 import { Input } from '../../components/ui/input';
 import { EntityDialog, FormActions, FormError } from '../../shared/components/forms';
 import { getErrorMessage } from '../../shared/utils/error';
-import { channelFormSchema, CHANNEL_FORM_DEFAULTS } from './schemas';
-import type { ChannelForm } from './schemas';
+import { createChannelSchema, CHANNEL_FORM_DEFAULTS } from './schemas';
+import type { CreateChannelForm } from './schemas';
 import { useCreateChannelMutation, useUpdateChannelMutation } from './mutations';
 import type { ChannelDto } from '../../shared/types';
 
@@ -30,21 +30,22 @@ export function ChannelDialog({ open, mode, initialValues, onOpenChange }: Chann
   const createMutation = useCreateChannelMutation();
   const updateMutation = useUpdateChannelMutation();
 
-  const form = useForm<ChannelForm>({
-    resolver: zodResolver(channelFormSchema),
+  const form = useForm<CreateChannelForm>({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    resolver: zodResolver(createChannelSchema) as any,
     defaultValues: CHANNEL_FORM_DEFAULTS,
   });
 
   useEffect(() => {
     if (open) {
-      const resetVals: ChannelForm =
+      const resetVals: CreateChannelForm =
         mode === 'edit' && initialValues
           ? {
               channelId: initialValues.channelId,
-              priority: '0',
-              batchSize: '1000',
-              maxBatchToSend: '10',
-              maxDataSize: '1048576',
+              priority: 0,
+              batchSize: 1000,
+              maxBatchToSend: 10,
+              maxDataSize: 1048576,
             }
           : CHANNEL_FORM_DEFAULTS;
       form.reset(resetVals);
@@ -55,28 +56,28 @@ export function ChannelDialog({ open, mode, initialValues, onOpenChange }: Chann
     }
   }, [open, mode, initialValues, form]);
 
-  const onSubmit = async (values: ChannelForm) => {
+  const onSubmit = async (values: CreateChannelForm) => {
     setApiError(null);
     try {
-      const priority = Number(values.priority);
-      const batchSize = Number(values.batchSize);
-      const maxBatchToSend = Number(values.maxBatchToSend);
-      const maxDataSize = Number(values.maxDataSize);
-
       if (mode === 'create') {
         await createMutation.mutateAsync({
           channelId: values.channelId,
-          priority,
-          batchSize,
-          maxBatchToSend,
-          maxDataSize,
+          priority: values.priority,
+          batchSize: values.batchSize,
+          maxBatchToSend: values.maxBatchToSend,
+          maxDataSize: values.maxDataSize,
         });
         toast.success('Channel created');
       } else {
         if (!initialValues) return;
         await updateMutation.mutateAsync({
           channelId: initialValues.channelId,
-          data: { priority, batchSize, maxBatchToSend, maxDataSize },
+          data: {
+            priority: values.priority,
+            batchSize: values.batchSize,
+            maxBatchToSend: values.maxBatchToSend,
+            maxDataSize: values.maxDataSize,
+          },
         });
         toast.success('Channel updated');
       }
@@ -123,7 +124,7 @@ export function ChannelDialog({ open, mode, initialValues, onOpenChange }: Chann
               <FormItem>
                 <FormLabel>Priority (0–100)</FormLabel>
                 <FormControl>
-                  <Input {...field} inputMode="numeric" />
+                  <Input {...field} value={String(field.value)} inputMode="numeric" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -136,7 +137,7 @@ export function ChannelDialog({ open, mode, initialValues, onOpenChange }: Chann
               <FormItem>
                 <FormLabel>Batch Size (1–1,000,000)</FormLabel>
                 <FormControl>
-                  <Input {...field} inputMode="numeric" />
+                  <Input {...field} value={String(field.value)} inputMode="numeric" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -149,7 +150,7 @@ export function ChannelDialog({ open, mode, initialValues, onOpenChange }: Chann
               <FormItem>
                 <FormLabel>Max Batches to Send (1–10,000)</FormLabel>
                 <FormControl>
-                  <Input {...field} inputMode="numeric" />
+                  <Input {...field} value={String(field.value)} inputMode="numeric" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -162,7 +163,7 @@ export function ChannelDialog({ open, mode, initialValues, onOpenChange }: Chann
               <FormItem>
                 <FormLabel>Max Data Size (bytes)</FormLabel>
                 <FormControl>
-                  <Input {...field} inputMode="numeric" />
+                  <Input {...field} value={String(field.value)} inputMode="numeric" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
