@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -11,7 +12,7 @@ interface EntityDialogProps {
   title: string;
   description?: string;
   onOpenChange: (open: boolean) => void;
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
 export function EntityDialog({

@@ -1,6 +1,8 @@
+import type { ReactNode } from 'react';
+
 interface FormSectionProps {
   title: string;
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
 export function FormSection({ title, children }: FormSectionProps) {
