@@ -10,3 +10,7 @@ export async function getParameterDescriptors(): Promise<ParameterDescriptorDto[
   const { data } = await client.get<ParameterDescriptorDto[]>('/parameters/descriptors');
   return data;
 }
+
+export async function updateParameter(name: string, value: string): Promise<void> {
+  await client.put(`/parameters/${encodeURIComponent(name)}`, { value });
+}

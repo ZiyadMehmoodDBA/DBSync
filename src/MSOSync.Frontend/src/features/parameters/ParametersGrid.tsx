@@ -1,10 +1,15 @@
 import { useMemo } from 'react';
 import { DataGrid } from '../../shared/components/data-display/DataGrid';
-import { parameterColumns } from './columns';
+import { makeParameterColumns } from './columns';
 import type { ParameterRow } from './columns';
 import { useParameters, useParameterDescriptors } from './hooks';
 
-export function ParametersGrid() {
+interface Props {
+  quickFilterText?: string;
+  onEdit: (row: ParameterRow) => void;
+}
+
+export function ParametersGrid({ quickFilterText, onEdit }: Props) {
   const { data: params, isLoading: paramsLoading, error: paramsError, refetch: refetchParams } = useParameters();
   const { data: descriptors } = useParameterDescriptors();
 
@@ -14,13 +19,16 @@ export function ParametersGrid() {
     return params.map((p) => ({ ...p, descriptor: descriptorMap.get(p.name) }));
   }, [params, descriptors]);
 
+  const columns = useMemo(() => makeParameterColumns(onEdit), [onEdit]);
+
   return (
     <DataGrid
       rowData={rows}
-      columnDefs={parameterColumns}
+      columnDefs={columns}
       loading={paramsLoading}
       error={paramsError}
       onRetry={() => void refetchParams()}
+      quickFilterText={quickFilterText}
       height={500}
     />
   );
