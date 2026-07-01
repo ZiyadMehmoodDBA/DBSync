@@ -52,6 +52,32 @@ public sealed class SyncNodeConfiguration : IEntityTypeConfiguration<SyncNode>
             .HasDefaultValue(ConnectivityStatus.Unknown)
             .ValueGeneratedNever();
 
+        builder.Property(e => e.DbServer)
+            .HasColumnName("db_server")
+            .HasColumnType("nvarchar(255)")
+            .HasMaxLength(255);
+
+        builder.Property(e => e.DbName)
+            .HasColumnName("db_name")
+            .HasColumnType("nvarchar(255)")
+            .HasMaxLength(255);
+
+        builder.Property(e => e.DbAuthMode)
+            .HasColumnName("db_auth_mode")
+            .HasColumnType("varchar(10)")
+            .HasMaxLength(10)
+            .IsUnicode(false);
+
+        builder.Property(e => e.DbUser)
+            .HasColumnName("db_user")
+            .HasColumnType("nvarchar(128)")
+            .HasMaxLength(128);
+
+        builder.Property(e => e.DbPasswordEncrypted)
+            .HasColumnName("db_password_encrypted")
+            .HasColumnType("nvarchar(1000)")
+            .HasMaxLength(1000);
+
         builder.HasOne<SyncNode>()
             .WithMany()
             .HasForeignKey(e => e.UpstreamNodeId)
