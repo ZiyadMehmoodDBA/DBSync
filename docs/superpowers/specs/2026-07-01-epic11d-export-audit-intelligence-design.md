@@ -113,12 +113,12 @@ Every export action logs a record to `sync_audit`. Action names use `SCREAMING_S
 | Outgoing Batches | `EXPORT_OUTGOING_BATCHES` |
 | Audit | `EXPORT_AUDIT` |
 
-- `object_name`: format string, `"csv"` or `"json"` (varchar(100) fits)
+- `object_name`: compact pipe-delimited string `"{resource}|{format}|{rowCount}|{durationMs}"` e.g. `"events|csv|4821|312"` — fits within varchar(100)
 - `username`: from `ICurrentUserService`
 - `correlation_id`: from `HttpContext`
 - `create_time`: `DateTime.UtcNow`
 
-Filter parameters are NOT stored in `sync_audit` — `ObjectName` is `varchar(100)` (too small for JSON). The format and username are sufficient for compliance purposes.
+Row count is tracked during streaming (increment counter per row written). Duration is `Stopwatch` elapsed from when streaming begins to when it completes. Filter parameters NOT stored — varchar(100) constraint.
 
 Row count and duration are captured via a response-finished callback (no buffering needed — EF can return a count from a separate lightweight query before streaming, or it can be tracked during streaming).
 
