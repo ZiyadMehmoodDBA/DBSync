@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using MSOSync.Api.Dtos.Batches;
 using MSOSync.Batch;
 using MSOSync.Common;
+using MSOSync.Metadata.Export;
 using MSOSync.Persistence;
 using MSOSync.Persistence.Lock;
 
@@ -16,7 +17,9 @@ public sealed class BatchController(
     IBatchStateMachine stateMachine,
     RetryProcessor retryProcessor,
     ICurrentUserService currentUser,
-    IDatabaseLockProvider lockProvider) : ControllerBase
+    IDatabaseLockProvider lockProvider,
+    IExportService<OutgoingBatchExportFilter> exporter,
+    IExportAuditService exportAudit) : ControllerBase
 {
     [HttpGet]
     [Authorize]
@@ -105,5 +108,22 @@ public sealed class BatchController(
             var count = await retryProcessor.ProcessAsync(ct);
             return Ok(new RetryAllResponse(count, DateTime.UtcNow, currentUser.GetCurrentUsername()));
         }
+    }
+
+    [HttpGet("export")]
+    [Authorize(Policy = "ViewerOrAbove")]
+    public IActionResult ExportBatches(
+        [FromQuery] OutgoingBatchExportFilter filter,
+        [FromQuery] string format = "csv")
+    {
+        var isJson = format.Equals("json", StringComparison.OrdinalIgnoreCase);
+        var date = DateTime.UtcNow.ToString("yyyy-MM-dd");
+        return new MSOSync.Api.Results.StreamingExportResult(
+            isJson
+                ? (s, t) => exporter.ExportJsonAsync(s, filter, t)
+                : (s, t) => exporter.ExportCsvAsync(s, filter, t),
+            isJson ? "application/json" : "text/csv",
+            isJson ? $"batches-{date}.json" : $"batches-{date}.csv",
+            (rows, ms) => exportAudit.WriteAsync("outgoing-batches", format, rows, ms));
     }
 }

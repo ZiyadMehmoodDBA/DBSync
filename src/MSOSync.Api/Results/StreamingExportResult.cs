@@ -1,0 +1,38 @@
+using Microsoft.AspNetCore.Mvc;
+
+namespace MSOSync.Api.Results;
+
+public sealed class StreamingExportResult : IActionResult
+{
+    private readonly Func<Stream, CancellationToken, Task<int>> _writer;
+    private readonly string _contentType;
+    private readonly string _fileName;
+    private readonly Func<int, long, Task>? _onComplete;
+
+    public StreamingExportResult(
+        Func<Stream, CancellationToken, Task<int>> writer,
+        string contentType,
+        string fileName,
+        Func<int, long, Task>? onComplete = null)
+    {
+        _writer      = writer;
+        _contentType = contentType;
+        _fileName    = fileName;
+        _onComplete  = onComplete;
+    }
+
+    public async Task ExecuteResultAsync(ActionContext context)
+    {
+        var response = context.HttpContext.Response;
+        response.ContentType = _contentType;
+        response.Headers["Content-Disposition"] = $"attachment; filename=\"{_fileName}\"";
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        var rowCount = await _writer(response.Body, context.HttpContext.RequestAborted);
+        sw.Stop();
+        if (_onComplete is not null)
+        {
+            try { await _onComplete(rowCount, sw.ElapsedMilliseconds); }
+            catch { /* best effort — do not fail the response */ }
+        }
+    }
+}

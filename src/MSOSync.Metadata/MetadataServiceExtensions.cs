@@ -6,6 +6,7 @@ using MSOSync.Metadata.Audit;
 using MSOSync.Metadata.BatchErrors;
 using MSOSync.Metadata.Dashboard;
 using MSOSync.Metadata.Events;
+using MSOSync.Metadata.Export;
 using MSOSync.Metadata.IncomingBatches;
 using MSOSync.Metadata.Interfaces;
 using MSOSync.Metadata.Locks;
@@ -59,6 +60,13 @@ public static class MetadataServiceExtensions
         // Epic 9E — Dashboard Query Optimization
         services.AddScoped<IDashboardQueryService, DashboardQueryService>();
         services.AddScoped<IValidator<ActivityFilter>, ActivityFilterValidator>();
+
+        // Epic 11D — Export streaming
+        services.AddScoped<IExportService<Events.EventFilter>,                  EventExportService>();
+        services.AddScoped<IExportService<IncomingBatches.IncomingBatchFilter>, IncomingBatchExportService>();
+        services.AddScoped<IExportService<Export.OutgoingBatchExportFilter>,    OutgoingBatchExportService>();
+        services.AddScoped<IExportService<Audit.AuditFilter>,                   AuditExportService>();
+        services.AddScoped<IExportAuditService, ExportAuditService>();
 
         return services;
     }

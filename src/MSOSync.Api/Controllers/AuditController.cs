@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MSOSync.Common.Exceptions;
 using MSOSync.Metadata.Audit;
+using MSOSync.Metadata.Export;
 
 namespace MSOSync.Api.Controllers;
 
@@ -11,7 +12,9 @@ namespace MSOSync.Api.Controllers;
 [Authorize(Policy = "ViewerOrAbove")]
 public sealed class AuditController(
     IAuditQueryService          audit,
-    IValidator<AuditFilter>     validator) : ControllerBase
+    IValidator<AuditFilter>     validator,
+    IExportService<AuditFilter> exporter,
+    IExportAuditService         exportAudit) : ControllerBase
 {
     [HttpGet]
     [ProducesResponseType(200)]
@@ -31,5 +34,25 @@ public sealed class AuditController(
         var dto = await audit.GetAuditByIdAsync(auditId, ct);
         if (dto is null) throw new NotFoundException($"Audit {auditId} not found.");
         return Ok(dto);
+    }
+
+    [HttpGet("export")]
+    [ProducesResponseType(200)]
+    [ProducesResponseType(typeof(ProblemDetails), 400)]
+    public async Task<IActionResult> ExportAudit(
+        [FromQuery] AuditFilter filter,
+        [FromQuery] string format = "csv",
+        CancellationToken ct = default)
+    {
+        await validator.ValidateAndThrowAsync(filter, ct);
+        var isJson = format.Equals("json", StringComparison.OrdinalIgnoreCase);
+        var date = DateTime.UtcNow.ToString("yyyy-MM-dd");
+        return new MSOSync.Api.Results.StreamingExportResult(
+            isJson
+                ? (s, t) => exporter.ExportJsonAsync(s, filter, t)
+                : (s, t) => exporter.ExportCsvAsync(s, filter, t),
+            isJson ? "application/json" : "text/csv",
+            isJson ? $"audit-{date}.json" : $"audit-{date}.csv",
+            (rows, ms) => exportAudit.WriteAsync("audit", format, rows, ms));
     }
 }

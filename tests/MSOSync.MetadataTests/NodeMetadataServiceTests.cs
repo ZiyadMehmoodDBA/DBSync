@@ -1,5 +1,6 @@
 using FluentAssertions;
 using MediatR;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Caching.Memory;
 using Moq;
 using MSOSync.Common.Exceptions;
@@ -22,7 +23,12 @@ public sealed class NodeMetadataServiceTests
         var mediator = (mediatorMock ?? new Mock<IMediator>()).Object;
         var hasher = new BCryptPasswordHasher();
         var nodeSecurity = new NodeSecurityService(db, hasher);
-        var svc = new NodeMetadataService(db, cache, mediator, nodeSecurity);
+        var protectorMock = new Mock<IDataProtector>();
+        protectorMock.Setup(p => p.Protect(It.IsAny<byte[]>())).Returns((byte[] b) => b);
+        protectorMock.Setup(p => p.Unprotect(It.IsAny<byte[]>())).Returns((byte[] b) => b);
+        var dataProtectionMock = new Mock<IDataProtectionProvider>();
+        dataProtectionMock.Setup(dp => dp.CreateProtector(It.IsAny<string>())).Returns(protectorMock.Object);
+        var svc = new NodeMetadataService(db, cache, mediator, nodeSecurity, dataProtectionMock.Object);
         return (svc, db, hasher);
     }
 
