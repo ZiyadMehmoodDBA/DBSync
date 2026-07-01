@@ -25,5 +25,6 @@ export function useTopologyGraph() {
     queryKey: queryKeys.topologyGraph(),
     queryFn: getTopologyGraph,
     staleTime: 30_000,
+    refetchOnWindowFocus: false,
   });
 }
