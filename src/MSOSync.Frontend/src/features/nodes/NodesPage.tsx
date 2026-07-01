@@ -1,13 +1,16 @@
 import { useState, useCallback } from 'react';
 import { Input } from '../../components/ui/input';
+import { Button } from '../../components/ui/button';
 import { ConfirmDialog } from '../../shared/components/actions';
 import { NodesGrid } from './NodesGrid';
 import { NodeDialog } from './NodeDialog';
+import { CreateNodeDialog } from './CreateNodeDialog';
 import {
   useEnableNodeMutation,
   useDisableNodeMutation,
   useApproveRegistrationMutation,
 } from './mutations';
+import { useAuth } from '../auth/useAuth';
 import type { NodeDto } from '../../shared/types';
 
 type NodeAction = 'enable' | 'disable' | 'approve';
@@ -50,6 +53,10 @@ export function NodesPage() {
   const [search, setSearch] = useState('');
   const [confirmState, setConfirmState] = useState<ConfirmState | null>(null);
   const [editState, setEditState] = useState<NodeDto | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+
+  const { user } = useAuth();
+  const isAdmin = user?.roles.includes('Admin') ?? false;
 
   const enableMutation = useEnableNodeMutation();
   const disableMutation = useDisableNodeMutation();
@@ -83,12 +90,17 @@ export function NodesPage() {
   return (
     <div className="flex flex-col gap-4 p-6">
       <h1 className="text-2xl font-semibold">Nodes</h1>
-      <Input
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        placeholder="Search nodes…"
-        className="max-w-xs"
-      />
+      <div className="flex items-center gap-2">
+        <Input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search nodes…"
+          className="max-w-xs"
+        />
+        {isAdmin && (
+          <Button onClick={() => setCreateOpen(true)}>Add Node</Button>
+        )}
+      </div>
       <NodesGrid quickFilterText={search} onAction={onAction} onEdit={onEdit} />
       {editState && (
         <NodeDialog
@@ -99,6 +111,7 @@ export function NodesPage() {
           }}
         />
       )}
+      <CreateNodeDialog open={createOpen} onOpenChange={setCreateOpen} />
       {config && confirmState && (
         <ConfirmDialog
           open

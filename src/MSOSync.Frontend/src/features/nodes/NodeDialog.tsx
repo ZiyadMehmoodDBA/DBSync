@@ -72,7 +72,7 @@ export function NodeDialog({ open, initialValues, onOpenChange }: NodeDialogProp
   return (
     <EntityDialog
       open={open}
-      title={`Edit Node: ${initialValues.name || initialValues.nodeId}`}
+      title={`Edit Node: ${initialValues.nodeId}`}
       onOpenChange={onOpenChange}
     >
       <Form {...form}>

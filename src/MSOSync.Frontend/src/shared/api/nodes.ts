@@ -27,3 +27,28 @@ export interface UpdateNodeRequest {
 export async function updateNode(nodeId: string, data: UpdateNodeRequest): Promise<void> {
   await client.put(`/nodes/${encodeURIComponent(nodeId)}`, data);
 }
+
+export interface CreateNodeRequest {
+  nodeId: string;
+  groupId: string;
+  syncUrl: string;
+  heartbeatInterval: number;
+  transportMode: 'Pull' | 'Push';
+  upstreamNodeId?: string;
+  dbServer?: string;
+  dbName?: string;
+  dbAuthMode?: string;
+  dbUser?: string;
+  dbPassword?: string;
+}
+
+export interface CreateNodeResult {
+  nodeId: string;
+  nodeToken: string;
+  node: NodeDto;
+}
+
+export async function createNode(data: CreateNodeRequest): Promise<CreateNodeResult> {
+  const { data: result } = await client.post<CreateNodeResult>('/nodes', data);
+  return result;
+}

@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { enableNode, disableNode, approveRegistration, updateNode } from '../../shared/api/nodes';
-import type { UpdateNodeRequest } from '../../shared/api/nodes';
+import { enableNode, disableNode, approveRegistration, updateNode, createNode } from '../../shared/api/nodes';
+import type { UpdateNodeRequest, CreateNodeRequest } from '../../shared/api/nodes';
 import { getErrorMessage } from '../../shared/utils/error';
 import { queryKeys } from '../../shared/queryKeys';
 
@@ -65,5 +65,16 @@ export function useUpdateNodeMutation() {
       invalidateNodeRelated(queryClient);
     },
     // no onError — caller handles it
+  });
+}
+
+export function useCreateNodeMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: CreateNodeRequest) => createNode(data),
+    onSuccess: () => {
+      invalidateNodeRelated(queryClient);
+    },
+    // no toast here — caller shows one-time token banner
   });
 }

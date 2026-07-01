@@ -1,7 +1,6 @@
 import type { ColDef, ICellRendererParams } from 'ag-grid-community';
 import type { NodeDto } from '../../shared/types';
-import { formatDateTime, formatRelativeTime } from '../../shared/utils/date';
-import { formatLatency } from '../../shared/utils/numbers';
+import { formatRelativeTime } from '../../shared/utils/date';
 import { nodeStatusVariant } from '../../shared/utils/status';
 import { StatusBadge } from '../../shared/components/data-display/StatusBadge';
 import { ActionMenu } from '../../shared/components/actions';
@@ -15,7 +14,7 @@ export function makeNodeColumns(
   return [
     { field: 'nodeId', headerName: 'Node ID', width: 180 },
     { field: 'groupId', headerName: 'Group', width: 150 },
-    { field: 'name', headerName: 'Name', flex: 1, minWidth: 150 },
+    { field: 'syncUrl', headerName: 'Sync URL', flex: 1, minWidth: 150 },
     {
       field: 'status',
       headerName: 'Status',
@@ -32,22 +31,15 @@ export function makeNodeColumns(
       valueFormatter: (p) => (p.value ? 'Yes' : 'No'),
     },
     {
+      field: 'transportMode',
+      headerName: 'Mode',
+      width: 90,
+    },
+    {
       field: 'lastHeartbeat',
       headerName: 'Last Heartbeat',
       width: 150,
       valueFormatter: (p) => (p.value ? formatRelativeTime(p.value as string) : '—'),
-    },
-    {
-      field: 'probeLatencyMs',
-      headerName: 'Latency',
-      width: 100,
-      valueFormatter: (p) => (p.value != null ? formatLatency(p.value as number) : '—'),
-    },
-    {
-      field: 'createdTime',
-      headerName: 'Created',
-      width: 165,
-      valueFormatter: (p) => (p.value ? formatDateTime(p.value as string) : '—'),
     },
     {
       headerName: 'Actions',

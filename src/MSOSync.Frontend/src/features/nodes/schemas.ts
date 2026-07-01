@@ -11,7 +11,7 @@ export type UpdateNodeForm = z.infer<typeof updateNodeSchema>;
 export function getDefaultValues(initialValues: NodeDto): UpdateNodeForm {
   return {
     groupId: initialValues.groupId,
-    syncUrl: initialValues.syncUrl ?? '',
-    heartbeatInterval: initialValues.heartbeatInterval ?? 5,
+    syncUrl: initialValues.syncUrl,
+    heartbeatInterval: initialValues.heartbeatInterval,
   };
 }

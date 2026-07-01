@@ -1,12 +1,16 @@
 export interface NodeDto {
   nodeId: string;
   groupId: string;
-  name: string;
+  syncUrl: string;
   status: string;
-  syncEnabled: boolean;
+  registrationTime?: string;
   lastHeartbeat?: string;
-  probeLatencyMs?: number;
-  createdTime: string;
-  syncUrl?: string;
-  heartbeatInterval?: number;
+  heartbeatInterval: number;
+  syncEnabled: boolean;
+  transportMode: 'Pull' | 'Push';
+  dbServer?: string;
+  dbName?: string;
+  dbAuthMode?: string;
+  dbUser?: string;
+  hasDbPassword: boolean;
 }
