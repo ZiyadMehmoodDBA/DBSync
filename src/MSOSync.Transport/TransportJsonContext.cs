@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using MSOSync.Engine;
+using MSOSync.Metadata.Dtos;
 using MSOSync.Transport.Payloads;
 
 namespace MSOSync.Transport;
@@ -13,4 +14,5 @@ namespace MSOSync.Transport;
 [JsonSerializable(typeof(PingResponse))]
 [JsonSerializable(typeof(List<BatchPayload>))]
 [JsonSerializable(typeof(List<EventPayload>))]
+[JsonSerializable(typeof(HeartbeatRequest))]
 public partial class TransportJsonContext : JsonSerializerContext { }

@@ -4,23 +4,24 @@ import type { RouterDto } from '../../shared/types';
 export const ROUTER_TYPES = ['default'] as const;
 export type RouterType = typeof ROUTER_TYPES[number];
 
-export const createRouterSchema = z.object({
+const routerBase = z.object({
   routerId: z.string().trim().min(1, 'Router ID is required'),
   sourceNodeGroup: z.string().trim().min(1, 'Source group is required'),
   targetNodeGroup: z.string().trim().min(1, 'Target group is required'),
   routerType: z.enum(ROUTER_TYPES),
-}).refine(
-  (x) => x.sourceNodeGroup !== x.targetNodeGroup,
-  { message: 'Source and target groups must differ.', path: ['targetNodeGroup'] },
-);
+});
+
+const sourceNotTarget = (x: { sourceNodeGroup: string; targetNodeGroup: string }) =>
+  x.sourceNodeGroup !== x.targetNodeGroup;
+const sourceNotTargetOpts = {
+  message: 'Source and target groups must differ.',
+  path: ['targetNodeGroup'] as const,
+};
+
+export const createRouterSchema = routerBase.refine(sourceNotTarget, sourceNotTargetOpts);
 export type CreateRouterForm = z.infer<typeof createRouterSchema>;
 
-export const updateRouterSchema = createRouterSchema
-  .omit({ routerId: true })
-  .refine(
-    (x) => x.sourceNodeGroup !== x.targetNodeGroup,
-    { message: 'Source and target groups must differ.', path: ['targetNodeGroup'] },
-  );
+export const updateRouterSchema = routerBase.omit({ routerId: true }).refine(sourceNotTarget, sourceNotTargetOpts);
 export type UpdateRouterForm = z.infer<typeof updateRouterSchema>;
 
 export function getDefaultValues(
