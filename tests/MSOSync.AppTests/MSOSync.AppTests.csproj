@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="FluentAssertions" />
+    <PackageReference Include="Moq" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\MSOSync.App\MSOSync.App.csproj" />
+    <ProjectReference Include="..\..\src\MSOSync.Scheduler\MSOSync.Scheduler.csproj" />
+    <ProjectReference Include="..\..\src\MSOSync.Metadata\MSOSync.Metadata.csproj" />
+    <ProjectReference Include="..\..\src\MSOSync.Engine\MSOSync.Engine.csproj" />
+    <ProjectReference Include="..\..\src\MSOSync.Persistence\MSOSync.Persistence.csproj" />
+  </ItemGroup>
+</Project>

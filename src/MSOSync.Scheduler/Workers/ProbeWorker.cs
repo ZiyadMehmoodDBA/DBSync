@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -8,6 +9,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MSOSync.Common;
 using MSOSync.Persistence;
+using MSOSync.Persistence.Entities;
 using MSOSync.Topology;
 using MSOSync.Transport;
 
@@ -15,6 +17,7 @@ namespace MSOSync.Scheduler.Workers;
 
 public sealed class ProbeWorker(
     IServiceScopeFactory     scopeFactory,
+    IPublisher               publisher,
     IOptions<NodeProperties> nodeProps,
     IConfiguration           config,
     ILogger<ProbeWorker>     logger) : BackgroundService
@@ -60,7 +63,8 @@ public sealed class ProbeWorker(
 
         foreach (var child in children)
         {
-            var sw     = Stopwatch.StartNew();
+            var previousStatus = child.ConnectivityStatus;
+            var sw             = Stopwatch.StartNew();
             ConnectivityStatus status;
 
             try
@@ -94,6 +98,10 @@ public sealed class ProbeWorker(
 
             logger.LogDebug("ProbeWorker: {NodeId} → {Status} ({Ms}ms)",
                 child.NodeId, status, sw.ElapsedMilliseconds);
+
+            if (status != previousStatus)
+                await publisher.Publish(
+                    new NodeConnectivityChangedEvent(child.NodeId, previousStatus, status), ct);
         }
     }
 }

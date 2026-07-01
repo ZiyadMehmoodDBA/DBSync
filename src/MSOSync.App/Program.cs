@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using MSOSync.Api.Controllers.Auth;
@@ -75,6 +76,17 @@ try
     builder.Services.Configure<NodeProperties>(builder.Configuration.GetSection("Node"));
     builder.Services.AddTransportServices(builder.Configuration);
     builder.Services.AddTopologyServices();
+
+    builder.Services.AddSignalR()
+        .AddJsonProtocol(options =>
+        {
+            options.PayloadSerializerOptions.Converters
+                .Add(new JsonStringEnumConverter());
+        });
+
+    builder.Services.AddMediatR(cfg =>
+        cfg.RegisterServicesFromAssemblyContaining<MSOSync.App.SignalR.NodeOperationsPublisher>());
+
     builder.Services.AddHostedService<AdminBootstrapper>();
 
     var app = builder.Build();
@@ -96,6 +108,7 @@ try
     app.UseAuthorization();
 
     app.MapControllers();
+    app.MapHub<MSOSync.App.Hubs.OperationsHub>("/hubs/operations");
 
     app.MapGet("/health", () => Results.Ok(new { status = "UP", version = "0.1.0" }))
        .WithName("Health")
