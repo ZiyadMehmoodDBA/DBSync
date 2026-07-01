@@ -60,8 +60,9 @@ type TopologyTab = typeof TOPOLOGY_TABS[keyof typeof TOPOLOGY_TABS];
 export function TopologyPage() {
   const [selectedTab, setSelectedTab] = useState<TopologyTab>(TOPOLOGY_TABS.GRAPH);
 
-  function handleViewInTable() {
+  function handleViewInTable(_groupId: string) {
     setSelectedTab(TOPOLOGY_TABS.GROUPS);
+    // Epic 11D/11E: setSelectedGroupId(groupId) for row highlight
   }
 
   return (
@@ -210,7 +211,7 @@ import { CONNECTIVITY_META } from './constants';
 
 export function TopologyGroupNode({ data, selected }: NodeProps<TopologyGraphNodeDto>) {
   const status = CONNECTIVITY_META[data.status as keyof typeof CONNECTIVITY_META]
-    ?? CONNECTIVITY_META[0]; // fallback to Unknown
+    ?? CONNECTIVITY_META[ConnectivityStatus.Unknown]; // fallback to Unknown
 
   return (
     <div
@@ -275,7 +276,7 @@ export function TopologyRouterEdge({
       <EdgeLabelRenderer>
         <div
           style={{ transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)` }}
-          className="absolute text-xs bg-background border border-border rounded px-1 pointer-events-none"
+          className="absolute text-xs bg-background border border-border rounded px-1 pointer-events-none whitespace-nowrap"
         >
           {data?.channelIds.length ?? 0} ch
         </div>
@@ -319,7 +320,7 @@ export function TopologyDetailPanel({ selection, nodeMap, edgeMap, onClose, onVi
     const node = nodeMap.get(selection.id);
     if (!node) return null;
     const status = CONNECTIVITY_META[node.status as keyof typeof CONNECTIVITY_META]
-      ?? CONNECTIVITY_META[0];
+      ?? CONNECTIVITY_META[ConnectivityStatus.Unknown];
     return (
       <PanelShell onClose={onClose}>
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -508,7 +509,7 @@ export function TopologyGraph({ onViewInTable }: Props) {
           onPaneClick={() => setSelection(null)}
           nodesDraggable={false}
           nodesConnectable={false}
-          elementsSelectable={true}
+          elementsSelectable={false}
         >
           <Background />
           <Controls />
