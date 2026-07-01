@@ -20,12 +20,14 @@ export function useSignalR({
   const [connectionState, setConnectionState] = useState<ConnectionState>('disconnected');
   const [lastConnectedAt, setLastConnectedAt] = useState<Date | undefined>();
   const [lastDisconnectedAt, setLastDisconnectedAt] = useState<Date | undefined>();
+  const getAccessTokenRef = useRef(getAccessToken);
+  useEffect(() => { getAccessTokenRef.current = getAccessToken; }, [getAccessToken]);
   const connectionRef = useRef<ReturnType<typeof buildConnection> | null>(null);
 
   function buildConnection() {
     return new HubConnectionBuilder()
       .withUrl('/hubs/operations', {
-        accessTokenFactory: () => getAccessToken() ?? '',
+        accessTokenFactory: () => getAccessTokenRef.current() ?? '',
       })
       .withAutomaticReconnect([...RECONNECT_DELAYS])
       .build();
