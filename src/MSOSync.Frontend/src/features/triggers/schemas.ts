@@ -15,7 +15,7 @@ const atLeastOneOp = (x: { syncOnInsert: boolean; syncOnUpdate: boolean; syncOnD
   x.syncOnInsert || x.syncOnUpdate || x.syncOnDelete;
 const atLeastOneOpOpts = {
   message: 'At least one sync operation must be enabled.',
-  path: ['syncOnInsert'] as const,
+  path: ['syncOnInsert'] as PropertyKey[],
 };
 
 export const createTriggerSchema = triggerBase.refine(atLeastOneOp, atLeastOneOpOpts);

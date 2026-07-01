@@ -15,7 +15,7 @@ const sourceNotTarget = (x: { sourceNodeGroup: string; targetNodeGroup: string }
   x.sourceNodeGroup !== x.targetNodeGroup;
 const sourceNotTargetOpts = {
   message: 'Source and target groups must differ.',
-  path: ['targetNodeGroup'] as const,
+  path: ['targetNodeGroup'] as PropertyKey[],
 };
 
 export const createRouterSchema = routerBase.refine(sourceNotTarget, sourceNotTargetOpts);
