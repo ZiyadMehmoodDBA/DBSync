@@ -16,4 +16,5 @@ public interface INodeMetadataService
     Task RejectRegistrationAsync(long requestId, CancellationToken ct = default);
     Task<NodeSecurityInfoDto> GetNodeSecurityInfoAsync(string nodeId, CancellationToken ct = default);
     Task RecordHeartbeatAsync(string nodeId, DateTime heartbeatTime, CancellationToken ct = default);
+    Task<CreateNodeResult> CreateNodeAsync(CreateNodeRequest req, CancellationToken ct = default);
 }

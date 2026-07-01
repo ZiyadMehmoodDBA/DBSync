@@ -15,4 +15,11 @@ public sealed class SyncNode
     public DateTime? LastProbeTime { get; set; }
     public int? LastProbeLatencyMs { get; set; }
     public ConnectivityStatus ConnectivityStatus { get; set; } = ConnectivityStatus.Unknown;
+
+    // DB connection fields (admin-provisioned)
+    public string? DbServer { get; set; }
+    public string? DbName { get; set; }
+    public string? DbAuthMode { get; set; }  // "Windows" or "Sql"
+    public string? DbUser { get; set; }
+    public string? DbPasswordEncrypted { get; set; }
 }

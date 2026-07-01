@@ -52,6 +52,7 @@ try
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddSwaggerGen();
     builder.Services.AddPersistence(builder.Configuration);
+    builder.Services.AddDataProtection();
     builder.Services.AddSecurity(builder.Configuration);
     builder.Services.AddHttpContextAccessor();
     builder.Services.AddScoped<ICurrentUserService, HttpContextCurrentUserService>();

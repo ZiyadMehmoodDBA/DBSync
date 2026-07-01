@@ -98,6 +98,14 @@ public sealed class NodesController(
         return NoContent();
     }
 
+    [HttpPost]
+    [Authorize(Policy = "AdminOnly")]
+    public async Task<IActionResult> CreateNode([FromBody] CreateNodeRequest req, CancellationToken ct)
+    {
+        var result = await nodeService.CreateNodeAsync(req, ct);
+        return CreatedAtAction(nameof(GetNode), new { nodeId = result.NodeId }, result);
+    }
+
     [HttpPost("{nodeId}/heartbeat")]
     [Authorize(Policy = "NodeToken")]
     public async Task<IActionResult> Heartbeat(

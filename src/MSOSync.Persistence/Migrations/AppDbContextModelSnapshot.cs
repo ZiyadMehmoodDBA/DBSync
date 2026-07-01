@@ -426,6 +426,32 @@ namespace MSOSync.Persistence.Migrations
                         .HasDefaultValue((byte)0)
                         .HasColumnName("connectivity_status");
 
+                    b.Property<string>("DbServer")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)")
+                        .HasColumnName("db_server");
+
+                    b.Property<string>("DbName")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)")
+                        .HasColumnName("db_name");
+
+                    b.Property<string>("DbAuthMode")
+                        .HasMaxLength(10)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(10)")
+                        .HasColumnName("db_auth_mode");
+
+                    b.Property<string>("DbUser")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)")
+                        .HasColumnName("db_user");
+
+                    b.Property<string>("DbPasswordEncrypted")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)")
+                        .HasColumnName("db_password_encrypted");
+
                     b.Property<string>("GroupId")
                         .IsRequired()
                         .HasMaxLength(50)

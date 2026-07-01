@@ -1,4 +1,5 @@
 using MediatR;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using MSOSync.Common.Exceptions;
@@ -15,12 +16,15 @@ public sealed class NodeMetadataService(
     AppDbContext db,
     IMemoryCache cache,
     IMediator mediator,
-    NodeSecurityService nodeSecurity) : INodeMetadataService
+    NodeSecurityService nodeSecurity,
+    IDataProtectionProvider dataProtection) : INodeMetadataService
 {
     private static readonly MemoryCacheEntryOptions CacheOptions = new()
     {
         AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(60)
     };
+
+    private readonly IDataProtector _protector = dataProtection.CreateProtector("NodeDbConnection");
 
     public async Task<IReadOnlyList<NodeDto>> GetNodesAsync(CancellationToken ct = default)
     {
@@ -151,10 +155,48 @@ public sealed class NodeMetadataService(
         cache.Remove($"metadata:node:{nodeId}");
     }
 
+    public async Task<CreateNodeResult> CreateNodeAsync(CreateNodeRequest req, CancellationToken ct = default)
+    {
+        var exists = await db.Nodes.AnyAsync(n => n.NodeId == req.NodeId, ct);
+        if (exists)
+            throw new DuplicateEntityException($"Node '{req.NodeId}' already exists", "NODE_ALREADY_EXISTS");
+
+        string? encryptedPassword = req.DbPassword != null
+            ? _protector.Protect(req.DbPassword)
+            : null;
+
+        var node = new SyncNode
+        {
+            NodeId            = req.NodeId,
+            GroupId           = req.GroupId,
+            SyncUrl           = req.SyncUrl,
+            Status            = "PENDING",
+            RegistrationTime  = DateTime.UtcNow,
+            HeartbeatInterval = req.HeartbeatInterval,
+            TransportMode     = req.TransportMode,
+            UpstreamNodeId    = req.UpstreamNodeId,
+            DbServer          = req.DbServer,
+            DbName            = req.DbName,
+            DbAuthMode        = req.DbAuthMode,
+            DbUser            = req.DbUser,
+            DbPasswordEncrypted = encryptedPassword
+        };
+
+        db.Nodes.Add(node);
+
+        var provision = nodeSecurity.PrepareToken(req.NodeId);
+
+        await db.SaveChangesAsync(ct);
+        await mediator.Publish(new NodeMetadataChangedEvent(req.NodeId, "CREATED"), ct);
+
+        return new CreateNodeResult(req.NodeId, provision.RawToken, MapNode(node));
+    }
+
     private static NodeDto MapNode(SyncNode n) =>
         new(n.NodeId, n.GroupId, n.SyncUrl, n.Status,
             n.RegistrationTime, n.LastHeartbeat, n.HeartbeatInterval, n.SyncEnabled,
-            n.TransportMode);
+            n.TransportMode, n.DbServer, n.DbName, n.DbAuthMode, n.DbUser,
+            n.DbPasswordEncrypted != null);
 
     private static RegistrationRequestDto MapRegistration(SyncRegistrationRequest r) =>
         new(r.RequestId, r.NodeId, r.NodeGroup, r.SyncUrl, r.NodeVersion, r.DbType, r.RequestTime, r.Approved);
