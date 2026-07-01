@@ -6,7 +6,7 @@ export function useTriggers() {
   return useQuery({
     queryKey: queryKeys.triggers(),
     queryFn: getTriggers,
-    staleTime: 60_000,
+    staleTime: Infinity,
     refetchOnWindowFocus: false,
   });
 }

@@ -8,7 +8,7 @@ export function useUsers() {
   return useQuery({
     queryKey: queryKeys.users(ALL_USERS_FILTER),
     queryFn: () => getUsers(ALL_USERS_FILTER),
-    staleTime: 60_000,
+    staleTime: Infinity,
     refetchOnWindowFocus: false,
   });
 }

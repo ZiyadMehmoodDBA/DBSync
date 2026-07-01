@@ -3,6 +3,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../features/auth/useAuth';
 import { SignalRContext } from './context';
 import { useSignalR } from './useSignalR';
+import { routeToCache } from './eventRouter';
+import { routeToToast } from './notifications';
 import type { OperationsEvent } from './types';
 
 interface Props {
@@ -15,9 +17,13 @@ export function SignalRProvider({ children }: Props) {
 
   const getAccessToken = useCallback(() => accessToken, [accessToken]);
 
-  const handleEvent = useCallback((_event: OperationsEvent) => {
-    // Routing wired in Task 3 — placeholder keeps the callback stable
-  }, []);
+  const handleEvent = useCallback(
+    (event: OperationsEvent) => {
+      void routeToCache(queryClient, event);
+      routeToToast(event);
+    },
+    [queryClient],
+  );
 
   const { connectionState, lastConnectedAt, lastDisconnectedAt } = useSignalR({
     getAccessToken,

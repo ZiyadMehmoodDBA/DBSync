@@ -15,6 +15,7 @@ export function useMetricsSummary() {
     refetchInterval: DASHBOARD_REFRESH_MS,
     refetchIntervalInBackground: false,
     refetchOnWindowFocus: true,
+    staleTime: 60_000,
   });
 }
 
@@ -25,6 +26,7 @@ export function useRuntimeMetrics() {
     refetchInterval: DASHBOARD_REFRESH_MS,
     refetchIntervalInBackground: false,
     refetchOnWindowFocus: true,
+    staleTime: 60_000,
   });
 }
 

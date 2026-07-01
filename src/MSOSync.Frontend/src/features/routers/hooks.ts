@@ -6,7 +6,7 @@ export function useRouters() {
   return useQuery({
     queryKey: queryKeys.routers(),
     queryFn: getRouters,
-    staleTime: 60_000,
+    staleTime: Infinity,
     refetchOnWindowFocus: false,
   });
 }

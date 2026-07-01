@@ -6,7 +6,7 @@ export function useParameters() {
   return useQuery({
     queryKey: queryKeys.parameters(),
     queryFn: getParameters,
-    staleTime: 60_000,
+    staleTime: Infinity,
     refetchOnWindowFocus: false,
   });
 }
@@ -15,7 +15,7 @@ export function useParameterDescriptors() {
   return useQuery({
     queryKey: queryKeys.parameterDescriptors(),
     queryFn: getParameterDescriptors,
-    staleTime: 300_000,
+    staleTime: Infinity,
     refetchOnWindowFocus: false,
   });
 }

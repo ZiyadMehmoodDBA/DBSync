@@ -6,7 +6,7 @@ export function useChannels() {
   return useQuery({
     queryKey: queryKeys.channels(),
     queryFn: getChannels,
-    staleTime: 60_000,
+    staleTime: Infinity,
     refetchOnWindowFocus: false,
   });
 }

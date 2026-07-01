@@ -8,6 +8,7 @@ export function useIncomingBatches(filter: IncomingBatchFilter) {
     queryKey: queryKeys.incomingBatches(filter),
     queryFn: () => getIncomingBatches(filter),
     placeholderData: (prev) => prev,
-    refetchOnWindowFocus: false,
+    refetchOnWindowFocus: true,
+    staleTime: 0,
   });
 }

@@ -8,6 +8,7 @@ export function useEvents(filter: EventFilter) {
     queryKey: queryKeys.events(filter),
     queryFn: () => getEvents(filter),
     placeholderData: (prev) => prev,
-    refetchOnWindowFocus: false,
+    refetchOnWindowFocus: true,
+    staleTime: 0,
   });
 }

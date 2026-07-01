@@ -10,6 +10,7 @@ export function useDashboardSummary() {
     refetchInterval: DASHBOARD_REFRESH_MS,
     refetchIntervalInBackground: false,
     refetchOnWindowFocus: true,
+    staleTime: 60_000,
   });
 }
 

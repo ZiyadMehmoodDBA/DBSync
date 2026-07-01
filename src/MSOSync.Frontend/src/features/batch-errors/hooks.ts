@@ -8,6 +8,7 @@ export function useBatchErrors(filter: BatchErrorFilter) {
     queryKey: queryKeys.batchErrors(filter),
     queryFn: () => getBatchErrors(filter),
     placeholderData: (prev) => prev,
-    refetchOnWindowFocus: false,
+    refetchOnWindowFocus: true,
+    staleTime: 0,
   });
 }
