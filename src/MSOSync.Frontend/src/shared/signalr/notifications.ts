@@ -57,7 +57,7 @@ function showDeduped(
 
   if (seen.has(key)) return;
 
-  if (seen.size > 1000) seen.clear();
+  if (seen.size >= 1000) seen.clear();
   seen.set(key, true);
 
   toast[severity](message);
