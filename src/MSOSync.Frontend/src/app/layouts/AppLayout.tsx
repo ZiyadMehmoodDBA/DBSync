@@ -26,6 +26,7 @@ import { Separator } from '../../components/ui/separator';
 import { Avatar, AvatarFallback } from '../../components/ui/avatar';
 import { useAuth } from '../../features/auth/useAuth';
 import { cn } from '../../lib/utils';
+import { useSignalRContext } from '../../shared/signalr/context';
 
 type NavItem = { label: string; path: string; icon: React.ElementType };
 
@@ -67,6 +68,35 @@ const NAV_GROUPS: { heading: string; items: NavItem[] }[] = [
     ],
   },
 ];
+
+function SignalRIndicator() {
+  const { connectionState } = useSignalRContext();
+
+  if (connectionState === 'connected') return null;
+
+  const isReconnecting = connectionState === 'reconnecting';
+
+  return (
+    <div
+      className={cn(
+        'flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium',
+        isReconnecting
+          ? 'text-amber-600 dark:text-amber-400'
+          : 'text-red-600 dark:text-red-400',
+      )}
+      aria-live="polite"
+      aria-label={isReconnecting ? 'Reconnecting to server' : 'Disconnected from server'}
+    >
+      <span
+        className={cn(
+          'h-2 w-2 rounded-full shrink-0',
+          isReconnecting ? 'bg-amber-500' : 'bg-red-500',
+        )}
+      />
+      {isReconnecting ? 'Reconnecting…' : 'Offline'}
+    </div>
+  );
+}
 
 function NavGroup({ heading, items }: { heading: string; items: NavItem[] }) {
   return (
@@ -139,6 +169,7 @@ export function AppLayout() {
             MSOSync Operations Console
           </span>
           <div className="flex items-center gap-2">
+            <SignalRIndicator />
             <Button variant="ghost" size="icon" onClick={handleThemeToggle} aria-label="Toggle theme">
               {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </Button>
