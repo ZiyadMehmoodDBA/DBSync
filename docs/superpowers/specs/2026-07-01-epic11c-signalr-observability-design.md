@@ -102,6 +102,12 @@ public sealed class OperationsHub : Hub
         await Groups.AddToGroupAsync(Context.ConnectionId, "operators");
         await base.OnConnectedAsync();
     }
+
+    public override async Task OnDisconnectedAsync(Exception? exception)
+    {
+        await Groups.RemoveFromGroupAsync(Context.ConnectionId, "operators");
+        await base.OnDisconnectedAsync(exception);
+    }
 }
 ```
 
@@ -122,11 +128,13 @@ Implements `INotificationHandler<T>` for all six node domain events:
 - `NodeDisabledEvent` → `OperationsEventType.NodeDisabled`
 - `NodeEnabledEvent` → `OperationsEventType.NodeEnabled`
 
+**Prerequisite:** Verify `NodeEnabledEvent` exists as a first-class MediatR `INotification` before Task 1 begins. If node re-enablement is currently implemented as a command without a corresponding notification, add `NodeEnabledEvent` and its `Publish` call as part of Task 1 scope.
+
 Injects `IHubContext<OperationsHub>`. Each handler maps the domain event fields to `OperationsEvent` and calls `Clients.Group("operators").SendAsync("OperationsEvent", dto, ct)`.
 
 ### SyncOperationsPublisher
 
-Implements `INotificationHandler<SyncCycleCompletedEvent>` → `OperationsEventType.SyncCycleCompleted`. `NodeId` is `"system"`, all other node fields null.
+Implements `INotificationHandler<SyncCycleCompletedEvent>` → `OperationsEventType.SyncCycleCompleted`. `NodeId` is `"system"`, `GroupId` is `"global"`, all other node fields null. Using `"global"` (not null) avoids future null-checks when subgraph invalidation arrives.
 
 ### JWT Configuration
 
@@ -242,6 +250,7 @@ const connection = new HubConnectionBuilder()
 - Fires `onEvent(event: OperationsEvent)` callback on each `"OperationsEvent"` message
 - Updates `connectionState` via `onreconnecting`, `onreconnected`, `onclose` hooks
 - Updates `lastConnectedAt` / `lastDisconnectedAt` on state transitions
+- On `onreconnected`: calls `queryClient.invalidateQueries()` (no filter) for a full consistency sweep — reconnect may have missed events during downtime. **Rule: incremental invalidation while connected; full sweep after reconnect.**
 
 ### SignalRProvider.tsx
 
@@ -281,7 +290,7 @@ export async function routeToCache(
 | Group | Query keys invalidated |
 |---|---|
 | `invalidateNodeHealth` | `nodes`, `topologyGraph`, `topologySummary`, `metricsSummary`, `dashboardSummary` |
-| `invalidateNodeLifecycle` | `nodes`, `nodeGroups`, `topologyGraph`, `topologyGroups`, `dashboardSummary` |
+| `invalidateNodeLifecycle` | `nodes`, `nodeGroups`, `topologyGraph`, `topologyGroups`, `dashboardSummary`, `metricsSummary` |
 | `invalidateOperational` | `dashboardSummary`, `events`, `incomingBatches`, `outgoingBatches`, `batchErrors`, `metricsSummary` |
 
 Note: trigger-related invalidation (`triggers`, `topologyGraph`, `topologySummary`, `topologyGroups`) is handled by existing mutation helpers in 10C. No `TriggerChanged` event needed from SignalR — mutations already call `invalidateTriggerRelated()`.
@@ -309,7 +318,7 @@ const bucket = Math.floor(new Date(event.occurredAt).getTime() / 30_000);
 const key = `${event.type}:${event.nodeId}:${event.currentStatus}:${bucket}`;
 ```
 
-`Map<string, true>` stores seen keys. If key exists, suppress toast. If key is new, show toast and store key. Map is never purged (bounded by event volume; at most one entry per node per 30s per status).
+`Map<string, true>` stores seen keys. If key exists, suppress toast. If key is new, show toast and store key. Map is bounded: if `seen.size > 1000`, call `seen.clear()` before inserting — prevents unbounded growth in long-running console sessions.
 
 ### Connection State Indicator
 
@@ -374,6 +383,9 @@ expect(RECONNECT_DELAYS).toEqual([0, 2_000, 5_000, 10_000, 30_000]);
 ```
 Protects the explicit reconnect contract from accidental changes.
 
+**`useSignalR.test.ts` (reconnect recovery):**
+Simulate `onreconnected` firing on a mock connection → assert `queryClient.invalidateQueries()` called with no filter (full sweep). This is the most important resilience guarantee: a reconnect that missed events must trigger a full consistency sweep.
+
 ---
 
 ## Manual Acceptance Checklist
@@ -391,6 +403,7 @@ Protects the explicit reconnect contract from accidental changes.
 ✓ Same node, different status → second toast shown
 ✓ Anonymous browser tab → 401 on hub connect
 ✓ SignalR disconnected 5+ min → dashboard counters update via polling
+✓ SignalR reconnect → full invalidateQueries() sweep fires
 ✓ SignalR reconnect → immediate invalidation resumes
 ```
 
@@ -419,6 +432,7 @@ Protects the explicit reconnect contract from accidental changes.
 | `src/MSOSync.Frontend/src/features/*/hooks.ts` | 3 | Modify (polling policy per tier) |
 | `src/MSOSync.Frontend/src/App.tsx` (or main.tsx) | 2 | Modify (add SignalRProvider) |
 | `src/MSOSync.Frontend/src/shared/components/AppShell.tsx` | 4 | Modify (connection indicator) |
+| `src/MSOSync.Frontend/src/shared/signalr/useSignalR.test.ts` | 2 | Create (reconnect recovery test) |
 | `src/MSOSync.Frontend/src/shared/signalr/eventRouter.test.ts` | 3 | Create |
 | `src/MSOSync.Frontend/src/shared/signalr/notifications.test.ts` | 4 | Create |
 | `src/MSOSync.Frontend/src/shared/signalr/types.test.ts` | 2 | Create |
