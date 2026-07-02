@@ -41,5 +41,6 @@ export const queryKeys = {
   parameterDescriptors: () => ['parameter-descriptors'] as const,
 
   auditLog: (filter: AuditFilter) => ['audit', filter] as const,
+  auditSummary: (from: string, to: string) => ['audit', 'summary', from, to] as const,
   locks: () => ['locks'] as const,
 };
