@@ -59,7 +59,7 @@ export function makeNodeColumns(
               onClick: () => onAction(nodeId, 'disable'),
               variant: 'destructive',
             },
-            { label: 'Approve Registration', onClick: () => onAction(nodeId, 'approve'), disabled: !canApprove },
+            { label: 'Approve Registration', onClick: () => onAction(nodeId, 'approve'), disabled: !canApprove, disabledTitle: "You don't have permission to approve node registrations" },
           ],
         });
       },

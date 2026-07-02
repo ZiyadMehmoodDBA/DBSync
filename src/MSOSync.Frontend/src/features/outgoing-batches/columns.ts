@@ -69,6 +69,7 @@ export function makeOutgoingBatchColumns(
               label: 'Retry',
               onClick: () => onRetry(batchId),
               disabled: !canRetry || pendingBatchId === batchId,
+              disabledTitle: "You don't have permission to retry batches",
             },
           ],
         });

@@ -10,6 +10,7 @@ interface ActionMenuItem {
   label: string;
   onClick: () => void;
   disabled?: boolean;
+  disabledTitle?: string;
   variant?: 'default' | 'destructive';
 }
 
@@ -29,8 +30,9 @@ export function ActionMenu({ items }: ActionMenuProps) {
         {items.map((item) => (
           <DropdownMenuItem
             key={item.label}
-            onClick={item.onClick}
             disabled={item.disabled}
+            title={item.disabled && item.disabledTitle ? item.disabledTitle : undefined}
+            onClick={item.disabled ? undefined : item.onClick}
             variant={item.variant === 'destructive' ? 'destructive' : 'default'}
           >
             {item.label}

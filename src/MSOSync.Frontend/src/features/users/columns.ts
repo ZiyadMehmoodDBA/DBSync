@@ -54,12 +54,13 @@ export function makeUserColumns(
         const isSelf = currentUsername != null && row.username === currentUsername;
         return ActionMenu({
           items: [
-            { label: 'Edit', onClick: () => onEdit(row), disabled: !canManage },
+            { label: 'Edit', onClick: () => onEdit(row), disabled: !canManage, disabledTitle: "You don't have permission to manage users" },
             {
               label: 'Deactivate',
               onClick: () => onDeactivate(row),
               variant: 'destructive',
               disabled: isSelf || !canManage,
+              disabledTitle: "You don't have permission to manage users",
             },
           ],
         });

@@ -28,6 +28,15 @@ export function ExportMenu({
   supportsAllRows = true,
   canExport = true,
 }: ExportMenuProps) {
+  const {
+    isExporting,
+    showFailureDialog,
+    onExport,
+    onRetry,
+    onCloseFailureDialog,
+    onExportCurrentViewFallback,
+  } = useExport({ resource, currentData, queryParams });
+
   if (!canExport) {
     return (
       <span title="You don't have permission to export data">
@@ -38,15 +47,6 @@ export function ExportMenu({
       </span>
     );
   }
-
-  const {
-    isExporting,
-    showFailureDialog,
-    onExport,
-    onRetry,
-    onCloseFailureDialog,
-    onExportCurrentViewFallback,
-  } = useExport({ resource, currentData, queryParams });
 
   const handle = (scope: ExportScope, format: ExportFormat) => () =>
     onExport(scope, format);

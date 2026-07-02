@@ -59,7 +59,7 @@ export function makeParameterColumns(
         if (!p.data) return null;
         const row = p.data;
         return ActionMenu({
-          items: [{ label: 'Edit', onClick: () => onEdit(row), disabled: !canEdit }],
+          items: [{ label: 'Edit', onClick: () => onEdit(row), disabled: !canEdit, disabledTitle: "You don't have permission to edit parameters" }],
         });
       },
     },
