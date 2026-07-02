@@ -11,11 +11,12 @@ interface Props {
   onAction: (nodeId: string, action: NodeAction) => void;
   onEdit: (node: NodeDto) => void;
   paginationPageSize?: number;
+  canApprove?: boolean;
 }
 
-export function NodesGrid({ quickFilterText, onAction, onEdit, paginationPageSize }: Props) {
+export function NodesGrid({ quickFilterText, onAction, onEdit, paginationPageSize, canApprove = true }: Props) {
   const { data, isLoading, error, refetch } = useNodes();
-  const columns = useMemo(() => makeNodeColumns(onAction, onEdit), [onAction, onEdit]);
+  const columns = useMemo(() => makeNodeColumns(onAction, onEdit, canApprove), [onAction, onEdit, canApprove]);
   return (
     <DataGrid
       rowData={data}

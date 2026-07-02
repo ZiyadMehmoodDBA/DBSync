@@ -18,6 +18,7 @@ interface ExportMenuProps {
   currentData: Record<string, unknown>[];
   queryParams: Record<string, string | number | boolean | undefined>;
   supportsAllRows?: boolean;
+  canExport?: boolean;
 }
 
 export function ExportMenu({
@@ -25,7 +26,19 @@ export function ExportMenu({
   currentData,
   queryParams,
   supportsAllRows = true,
+  canExport = true,
 }: ExportMenuProps) {
+  if (!canExport) {
+    return (
+      <span title="You don't have permission to export data">
+        <Button variant="outline" size="sm" disabled>
+          <Download className="mr-2 h-4 w-4" />
+          Export
+        </Button>
+      </span>
+    );
+  }
+
   const {
     isExporting,
     showFailureDialog,

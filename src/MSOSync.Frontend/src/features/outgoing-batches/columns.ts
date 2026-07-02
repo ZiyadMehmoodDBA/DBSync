@@ -8,6 +8,7 @@ import { ActionMenu } from '../../shared/components/actions';
 export function makeOutgoingBatchColumns(
   onRetry: (batchId: number) => void,
   pendingBatchId: number | null,
+  canRetry = true,
 ): ColDef<OutgoingBatchDto>[] {
   return [
     { field: 'batchId', headerName: 'Batch ID', width: 110 },
@@ -67,7 +68,7 @@ export function makeOutgoingBatchColumns(
             {
               label: 'Retry',
               onClick: () => onRetry(batchId),
-              disabled: pendingBatchId === batchId,
+              disabled: !canRetry || pendingBatchId === batchId,
             },
           ],
         });

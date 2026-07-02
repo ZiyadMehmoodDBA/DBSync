@@ -4,10 +4,14 @@ import { ParameterDialog } from './ParameterDialog';
 import { useParameters } from './hooks';
 import { ExportMenu } from '../../shared/components/ExportMenu';
 import type { ParameterRow } from './columns';
+import { useHasPermission } from '../../shared/hooks/usePermissions';
+import { PermissionKeys } from '../../shared/types/permissions';
 
 export function ParametersPage() {
   const [editState, setEditState] = useState<ParameterRow | null>(null);
   const { data: paramsData } = useParameters();
+  const canEdit   = useHasPermission(PermissionKeys.EditParameters);
+  const canExport = useHasPermission(PermissionKeys.ExportData);
 
   const onEdit = useCallback((row: ParameterRow) => {
     setEditState(row);
@@ -22,9 +26,10 @@ export function ParametersPage() {
           currentData={(paramsData ?? []) as unknown as Record<string, unknown>[]}
           queryParams={{}}
           supportsAllRows={false}
+          canExport={canExport}
         />
       </div>
-      <ParametersGrid onEdit={onEdit} />
+      <ParametersGrid onEdit={onEdit} canEdit={canEdit} />
       {editState && (
         <ParameterDialog
           open={!!editState}

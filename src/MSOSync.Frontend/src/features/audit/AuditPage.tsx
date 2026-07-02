@@ -14,6 +14,8 @@ import { DEFAULT_PAGE_SIZE } from '../../shared/constants/query';
 import { useAuditLog } from './hooks';
 import { usePreference, useSetPreference } from '../../shared/hooks/usePreferences';
 import { PreferenceKeys } from '../../shared/types/preferences';
+import { useHasPermission } from '../../shared/hooks/usePermissions';
+import { PermissionKeys } from '../../shared/types/permissions';
 
 export function AuditPage() {
   const savedFilter   = usePreference<AuditFilter>(PreferenceKeys.auditFilter,   { page: 1, pageSize: DEFAULT_PAGE_SIZE });
@@ -30,6 +32,7 @@ export function AuditPage() {
   }, [savedFilter]);
 
   const { data } = useAuditLog(filter); // cache-shared with AuditGrid
+  const canExport = useHasPermission(PermissionKeys.ExportData);
 
   function handleFilterChange(next: AuditFilter) {
     setFilter(next);
@@ -56,6 +59,7 @@ export function AuditPage() {
                 queryParams={
                   filter as unknown as Record<string, string | number | boolean | undefined>
                 }
+                canExport={canExport}
               />
             </div>
             <AuditGrid filter={filter} onFilterChange={handleFilterChange} />

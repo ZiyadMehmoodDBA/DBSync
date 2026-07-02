@@ -8,9 +8,10 @@ import { useRetryBatchMutation } from './mutations';
 interface Props {
   filter: OutgoingBatchFilter;
   onFilterChange: (f: OutgoingBatchFilter) => void;
+  canRetry?: boolean;
 }
 
-export function OutgoingBatchesGrid({ filter, onFilterChange }: Props) {
+export function OutgoingBatchesGrid({ filter, onFilterChange, canRetry = true }: Props) {
   const { data, isLoading, error, refetch } = useOutgoingBatches(filter);
   const retryMutation = useRetryBatchMutation();
   const [pendingBatchId, setPendingBatchId] = useState<number | null>(null);
@@ -28,8 +29,8 @@ export function OutgoingBatchesGrid({ filter, onFilterChange }: Props) {
   );
 
   const columns = useMemo(
-    () => makeOutgoingBatchColumns((batchId) => void handleRetry(batchId), pendingBatchId),
-    [handleRetry, pendingBatchId],
+    () => makeOutgoingBatchColumns((batchId) => void handleRetry(batchId), pendingBatchId, canRetry),
+    [handleRetry, pendingBatchId, canRetry],
   );
 
   return (

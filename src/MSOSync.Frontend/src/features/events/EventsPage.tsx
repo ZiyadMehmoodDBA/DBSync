@@ -7,6 +7,8 @@ import { DEFAULT_PAGE_SIZE } from '../../shared/constants/query';
 import { useEvents } from './hooks';
 import { usePreference, useSetPreference } from '../../shared/hooks/usePreferences';
 import { PreferenceKeys } from '../../shared/types/preferences';
+import { useHasPermission } from '../../shared/hooks/usePermissions';
+import { PermissionKeys } from '../../shared/types/permissions';
 
 export function EventsPage() {
   const savedFilter   = usePreference<EventFilter>(PreferenceKeys.eventsFilter,   { page: 1, pageSize: DEFAULT_PAGE_SIZE });
@@ -23,6 +25,7 @@ export function EventsPage() {
   }, [savedFilter]);
 
   const { data } = useEvents(filter);
+  const canExport = useHasPermission(PermissionKeys.ExportData);
 
   function handleFilterChange(next: EventFilter) {
     setFilter(next);
@@ -39,6 +42,7 @@ export function EventsPage() {
           resource="events"
           currentData={(data?.data ?? []) as unknown as Record<string, unknown>[]}
           queryParams={filter as unknown as Record<string, string | number | boolean | undefined>}
+          canExport={canExport}
         />
       </div>
       <EventFilters onFilter={handleFilterChange} />

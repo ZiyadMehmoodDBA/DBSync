@@ -13,6 +13,8 @@ import { getErrorMessage } from '../../shared/utils/error';
 import type { UserSummaryDto } from '../../shared/types';
 import { usePreference } from '../../shared/hooks/usePreferences';
 import { PreferenceKeys } from '../../shared/types/preferences';
+import { useHasPermission } from '../../shared/hooks/usePermissions';
+import { PermissionKeys } from '../../shared/types/permissions';
 
 export function UsersPage() {
   const [search, setSearch] = useState('');
@@ -21,6 +23,9 @@ export function UsersPage() {
   const [deactivateState, setDeactivateState] = useState<UserSummaryDto | null>(null);
 
   const savedPageSize = usePreference<number>(PreferenceKeys.usersPageSize, 25);
+
+  const canExport      = useHasPermission(PermissionKeys.ExportData);
+  const canManageUsers = useHasPermission(PermissionKeys.ManageUsers);
 
   const deactivateMutation = useDeactivateUserMutation();
   const { user } = useAuth();
@@ -51,8 +56,11 @@ export function UsersPage() {
             currentData={(usersData?.data ?? []) as unknown as Record<string, unknown>[]}
             queryParams={{}}
             supportsAllRows={false}
+            canExport={canExport}
           />
-          <Button onClick={() => setCreateOpen(true)}>Add User</Button>
+          {canManageUsers && (
+            <Button onClick={() => setCreateOpen(true)}>Add User</Button>
+          )}
         </div>
       </div>
       <Input
@@ -67,6 +75,7 @@ export function UsersPage() {
         onDeactivate={onDeactivate}
         currentUsername={user?.username}
         paginationPageSize={savedPageSize}
+        canManage={canManageUsers}
       />
       <UserDialog
         open={createOpen}

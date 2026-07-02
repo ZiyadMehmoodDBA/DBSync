@@ -3,7 +3,7 @@ import type { LockDto } from '../../shared/types';
 import { formatRelativeTime } from '../../shared/utils/date';
 import { ActionButton } from '../../shared/components/actions';
 
-export function makeLocksColumns(onRelease: (lockName: string) => void): ColDef<LockDto>[] {
+export function makeLocksColumns(onRelease: (lockName: string) => void, canRelease = true): ColDef<LockDto>[] {
   return [
     { field: 'lockName', headerName: 'Lock Name', flex: 1, minWidth: 180 },
     { field: 'lockOwner', headerName: 'Owner', width: 200 },
@@ -36,6 +36,8 @@ export function makeLocksColumns(onRelease: (lockName: string) => void): ColDef<
           label: 'Release',
           onClick: () => onRelease(p.data!.lockName),
           variant: 'destructive',
+          disabled: !canRelease,
+          disabledTitle: "You don't have permission to release locks",
         });
       },
     },

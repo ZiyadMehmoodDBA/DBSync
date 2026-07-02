@@ -7,6 +7,8 @@ import { DEFAULT_BATCH_PAGE_SIZE } from '../../shared/constants/query';
 import { useIncomingBatches } from './hooks';
 import { usePreference, useSetPreference } from '../../shared/hooks/usePreferences';
 import { PreferenceKeys } from '../../shared/types/preferences';
+import { useHasPermission } from '../../shared/hooks/usePermissions';
+import { PermissionKeys } from '../../shared/types/permissions';
 
 export function IncomingBatchesPage() {
   const savedFilter   = usePreference<IncomingBatchFilter>(PreferenceKeys.incomingFilter,   { page: 1, pageSize: DEFAULT_BATCH_PAGE_SIZE });
@@ -23,6 +25,7 @@ export function IncomingBatchesPage() {
   }, [savedFilter]);
 
   const { data } = useIncomingBatches(filter);
+  const canExport = useHasPermission(PermissionKeys.ExportData);
 
   function handleFilterChange(next: IncomingBatchFilter) {
     setFilter(next);
@@ -39,6 +42,7 @@ export function IncomingBatchesPage() {
           resource="incoming-batches"
           currentData={(data?.data ?? []) as unknown as Record<string, unknown>[]}
           queryParams={filter as unknown as Record<string, string | number | boolean | undefined>}
+          canExport={canExport}
         />
       </div>
       <IncomingBatchFilters onFilter={handleFilterChange} />

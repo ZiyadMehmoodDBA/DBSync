@@ -28,11 +28,13 @@ import { useAuth } from '../../features/auth/useAuth';
 import { cn } from '../../lib/utils';
 import { useSignalRContext } from '../../shared/signalr/context';
 import { usePreferences, usePreference, useSetPreference } from '../../shared/hooks/usePreferences';
-import { usePermissions } from '../../shared/hooks/usePermissions';
+import { usePermissions, useHasPermission } from '../../shared/hooks/usePermissions';
+import { PermissionKeys } from '../../shared/types/permissions';
+import type { PermissionKey } from '../../shared/types/permissions';
 import { PreferenceKeys } from '../../shared/types/preferences';
 import type { Theme } from '../../shared/types/preferences';
 
-type NavItem = { label: string; path: string; icon: React.ElementType };
+type NavItem = { label: string; path: string; icon: React.ElementType; requiredPermission?: PermissionKey };
 
 const NAV_GROUPS: { heading: string; items: NavItem[] }[] = [
   {
@@ -43,13 +45,13 @@ const NAV_GROUPS: { heading: string; items: NavItem[] }[] = [
       { label: 'Incoming Batches', path: '/incoming-batches', icon: ArrowDownCircle },
       { label: 'Outgoing Batches', path: '/outgoing-batches', icon: ArrowUpCircle },
       { label: 'Batch Errors',     path: '/batch-errors',     icon: AlertTriangle },
-      { label: 'Metrics',          path: '/metrics',          icon: BarChart2 },
+      { label: 'Metrics',          path: '/metrics',          icon: BarChart2, requiredPermission: PermissionKeys.ViewMetrics },
     ],
   },
   {
     heading: 'Topology',
     items: [
-      { label: 'Topology',  path: '/topology',  icon: Network },
+      { label: 'Topology',  path: '/topology',  icon: Network, requiredPermission: PermissionKeys.ViewTopology },
       { label: 'Nodes',     path: '/nodes',     icon: Server },
       { label: 'Channels',  path: '/channels',  icon: Cable },
       { label: 'Triggers',  path: '/triggers',  icon: Zap },
@@ -59,9 +61,9 @@ const NAV_GROUPS: { heading: string; items: NavItem[] }[] = [
   {
     heading: 'Administration',
     items: [
-      { label: 'Users',      path: '/users',      icon: Users },
+      { label: 'Users',      path: '/users',      icon: Users,     requiredPermission: PermissionKeys.ManageUsers },
       { label: 'Parameters', path: '/parameters', icon: Settings },
-      { label: 'Audit',      path: '/audit',      icon: FileText },
+      { label: 'Audit',      path: '/audit',      icon: FileText,  requiredPermission: PermissionKeys.ViewAudit },
       { label: 'Locks',      path: '/locks',      icon: Lock },
     ],
   },
@@ -103,12 +105,38 @@ function SignalRIndicator() {
 }
 
 function NavGroup({ heading, items }: { heading: string; items: NavItem[] }) {
+  const canViewMetrics  = useHasPermission(PermissionKeys.ViewMetrics);
+  const canViewTopology = useHasPermission(PermissionKeys.ViewTopology);
+  const canViewAudit    = useHasPermission(PermissionKeys.ViewAudit);
+  const canManageUsers  = useHasPermission(PermissionKeys.ManageUsers);
+
+  const permMap: Record<PermissionKey, boolean> = {
+    [PermissionKeys.ViewMetrics]:    canViewMetrics,
+    [PermissionKeys.ViewTopology]:   canViewTopology,
+    [PermissionKeys.ViewAudit]:      canViewAudit,
+    [PermissionKeys.ManageUsers]:    canManageUsers,
+    [PermissionKeys.ViewEvents]:     true,
+    [PermissionKeys.ExportData]:     true,
+    [PermissionKeys.RetryBatches]:   true,
+    [PermissionKeys.ApproveNodes]:   true,
+    [PermissionKeys.ReleaseLocks]:   true,
+    [PermissionKeys.EditParameters]: true,
+    [PermissionKeys.ManageTriggers]: true,
+    [PermissionKeys.ManageRouters]:  true,
+  };
+
+  const visibleItems = items.filter(
+    item => !item.requiredPermission || permMap[item.requiredPermission],
+  );
+
+  if (visibleItems.length === 0) return null;
+
   return (
     <div className="flex flex-col gap-1">
       <p className="px-3 text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 mb-1">
         {heading}
       </p>
-      {items.map(({ label, path, icon: Icon }) => (
+      {visibleItems.map(({ label, path, icon: Icon }) => (
         <NavLink
           key={path}
           to={path}

@@ -9,6 +9,8 @@ import { useRetryAllBatchesMutation } from './mutations';
 import { useOutgoingBatches } from './hooks';
 import { usePreference, useSetPreference } from '../../shared/hooks/usePreferences';
 import { PreferenceKeys } from '../../shared/types/preferences';
+import { useHasPermission } from '../../shared/hooks/usePermissions';
+import { PermissionKeys } from '../../shared/types/permissions';
 
 export function OutgoingBatchesPage() {
   const savedFilter   = usePreference<OutgoingBatchFilter>(PreferenceKeys.outgoingFilter,   { page: 1, pageSize: DEFAULT_BATCH_PAGE_SIZE });
@@ -26,6 +28,8 @@ export function OutgoingBatchesPage() {
 
   const retryAllMutation = useRetryAllBatchesMutation();
   const { data } = useOutgoingBatches(filter);
+  const canExport = useHasPermission(PermissionKeys.ExportData);
+  const canRetry  = useHasPermission(PermissionKeys.RetryBatches);
 
   function handleFilterChange(next: OutgoingBatchFilter) {
     setFilter(next);
@@ -43,18 +47,25 @@ export function OutgoingBatchesPage() {
             resource="outgoing-batches"
             currentData={(data?.data ?? []) as unknown as Record<string, unknown>[]}
             queryParams={filter as unknown as Record<string, string | number | boolean | undefined>}
+            canExport={canExport}
           />
-          <Button
-            variant="outline"
-            onClick={() => void retryAllMutation.mutateAsync()}
-            disabled={retryAllMutation.isPending}
-          >
-            {retryAllMutation.isPending ? 'Retrying…' : 'Retry All'}
-          </Button>
+          {canRetry ? (
+            <Button
+              variant="outline"
+              onClick={() => void retryAllMutation.mutateAsync()}
+              disabled={retryAllMutation.isPending}
+            >
+              {retryAllMutation.isPending ? 'Retrying…' : 'Retry All'}
+            </Button>
+          ) : (
+            <span title="You don't have permission to retry batches">
+              <Button variant="outline" disabled>Retry All</Button>
+            </span>
+          )}
         </div>
       </div>
       <OutgoingBatchFilters onFilter={handleFilterChange} />
-      <OutgoingBatchesGrid filter={filter} onFilterChange={handleFilterChange} />
+      <OutgoingBatchesGrid filter={filter} onFilterChange={handleFilterChange} canRetry={canRetry} />
     </div>
   );
 }

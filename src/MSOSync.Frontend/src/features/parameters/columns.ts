@@ -9,6 +9,7 @@ export interface ParameterRow extends ParameterDto {
 
 export function makeParameterColumns(
   onEdit: (row: ParameterRow) => void,
+  canEdit = true,
 ): ColDef<ParameterRow>[] {
   return [
     { field: 'name', headerName: 'Name', width: 220 },
@@ -58,7 +59,7 @@ export function makeParameterColumns(
         if (!p.data) return null;
         const row = p.data;
         return ActionMenu({
-          items: [{ label: 'Edit', onClick: () => onEdit(row) }],
+          items: [{ label: 'Edit', onClick: () => onEdit(row), disabled: !canEdit }],
         });
       },
     },

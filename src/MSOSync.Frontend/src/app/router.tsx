@@ -2,6 +2,7 @@ import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { RootInitializer } from '../features/auth/RootInitializer';
 import { AuthGuard } from '../features/auth/AuthGuard';
 import { LoginPage } from '../features/auth/LoginPage';
+import { PermissionGuard } from '../features/auth/PermissionGuard';
 import { AuthLayout } from './layouts/AuthLayout';
 import { AppLayout } from './layouts/AppLayout';
 import { DashboardPage } from '../features/dashboard/DashboardPage';
@@ -20,6 +21,7 @@ import { ParametersPage } from '../features/parameters/ParametersPage';
 import { AuditPage } from '../features/audit/AuditPage';
 import { ProfilePage } from '../features/profile/ProfilePage';
 import { LocksPage } from '../features/locks/LocksPage';
+import { PermissionKeys } from '../shared/types/permissions';
 
 export const router = createBrowserRouter([
   {
@@ -44,15 +46,15 @@ export const router = createBrowserRouter([
               { path: 'incoming-batches', element: <IncomingBatchesPage /> },
               { path: 'outgoing-batches', element: <OutgoingBatchesPage /> },
               { path: 'batch-errors',     element: <BatchErrorsPage /> },
-              { path: 'metrics',          element: <MetricsPage /> },
-              { path: 'topology',         element: <TopologyPage /> },
+              { path: 'metrics',          element: <PermissionGuard permissionKey={PermissionKeys.ViewMetrics}><MetricsPage /></PermissionGuard> },
+              { path: 'topology',         element: <PermissionGuard permissionKey={PermissionKeys.ViewTopology}><TopologyPage /></PermissionGuard> },
               { path: 'nodes',            element: <NodesPage /> },
               { path: 'channels',         element: <ChannelsPage /> },
               { path: 'triggers',         element: <TriggersPage /> },
               { path: 'routers',          element: <RoutersPage /> },
-              { path: 'users',            element: <UsersPage /> },
+              { path: 'users',            element: <PermissionGuard permissionKey={PermissionKeys.ManageUsers}><UsersPage /></PermissionGuard> },
               { path: 'parameters',       element: <ParametersPage /> },
-              { path: 'audit',            element: <AuditPage /> },
+              { path: 'audit',            element: <PermissionGuard permissionKey={PermissionKeys.ViewAudit}><AuditPage /></PermissionGuard> },
               { path: 'locks',            element: <LocksPage /> },
               { path: 'profile',          element: <ProfilePage /> },
             ],

@@ -8,6 +8,7 @@ export function makeUserColumns(
   onEdit: (row: UserSummaryDto) => void,
   onDeactivate: (row: UserSummaryDto) => void,
   currentUsername?: string,
+  canManage = true,
 ): ColDef<UserSummaryDto>[] {
   return [
     { field: 'userId', headerName: 'User ID', width: 90 },
@@ -53,12 +54,12 @@ export function makeUserColumns(
         const isSelf = currentUsername != null && row.username === currentUsername;
         return ActionMenu({
           items: [
-            { label: 'Edit', onClick: () => onEdit(row) },
+            { label: 'Edit', onClick: () => onEdit(row), disabled: !canManage },
             {
               label: 'Deactivate',
               onClick: () => onDeactivate(row),
               variant: 'destructive',
-              disabled: isSelf,
+              disabled: isSelf || !canManage,
             },
           ],
         });

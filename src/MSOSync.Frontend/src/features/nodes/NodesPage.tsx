@@ -10,12 +10,13 @@ import {
   useDisableNodeMutation,
   useApproveRegistrationMutation,
 } from './mutations';
-import { useAuth } from '../auth/useAuth';
 import { useNodes } from './hooks';
 import { ExportMenu } from '../../shared/components/ExportMenu';
 import type { NodeDto } from '../../shared/types';
 import { usePreference } from '../../shared/hooks/usePreferences';
 import { PreferenceKeys } from '../../shared/types/preferences';
+import { useHasPermission } from '../../shared/hooks/usePermissions';
+import { PermissionKeys } from '../../shared/types/permissions';
 
 type NodeAction = 'enable' | 'disable' | 'approve';
 
@@ -61,8 +62,9 @@ export function NodesPage() {
 
   const savedPageSize = usePreference<number>(PreferenceKeys.nodesPageSize, 25);
 
-  const { user } = useAuth();
-  const isAdmin = user?.roles.includes('Admin') ?? false;
+  const canExport  = useHasPermission(PermissionKeys.ExportData);
+  const canApprove = useHasPermission(PermissionKeys.ApproveNodes);
+  const canManage  = useHasPermission(PermissionKeys.ManageUsers);
 
   const { data: nodesData } = useNodes();
 
@@ -104,6 +106,7 @@ export function NodesPage() {
           currentData={(nodesData ?? []) as unknown as Record<string, unknown>[]}
           queryParams={{}}
           supportsAllRows={false}
+          canExport={canExport}
         />
       </div>
       <div className="flex items-center gap-2">
@@ -113,11 +116,11 @@ export function NodesPage() {
           placeholder="Search nodes…"
           className="max-w-xs"
         />
-        {isAdmin && (
+        {canManage && (
           <Button onClick={() => setCreateOpen(true)}>Add Node</Button>
         )}
       </div>
-      <NodesGrid quickFilterText={search} onAction={onAction} onEdit={onEdit} paginationPageSize={savedPageSize} />
+      <NodesGrid quickFilterText={search} onAction={onAction} onEdit={onEdit} paginationPageSize={savedPageSize} canApprove={canApprove} />
       {editState && (
         <NodeDialog
           open={!!editState}

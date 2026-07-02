@@ -5,7 +5,11 @@ import { makeLocksColumns } from './columns';
 import { useReleaseLockMutation } from './mutations';
 import { useLocks } from './hooks';
 
-export function LocksGrid() {
+interface Props {
+  canRelease?: boolean;
+}
+
+export function LocksGrid({ canRelease = true }: Props) {
   const { data, isLoading, error, refetch } = useLocks();
   const releaseMutation = useReleaseLockMutation();
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -16,7 +20,7 @@ export function LocksGrid() {
     setConfirmOpen(true);
   }, []);
 
-  const columns = useMemo(() => makeLocksColumns(openConfirm), [openConfirm]);
+  const columns = useMemo(() => makeLocksColumns(openConfirm, canRelease), [openConfirm, canRelease]);
 
   const handleConfirm = async () => {
     if (!pendingLockName) return;

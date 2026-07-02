@@ -10,6 +10,7 @@ type NodeAction = 'enable' | 'disable' | 'approve';
 export function makeNodeColumns(
   onAction: (nodeId: string, action: NodeAction) => void,
   onEdit: (node: NodeDto) => void,
+  canApprove = true,
 ): ColDef<NodeDto>[] {
   return [
     { field: 'nodeId', headerName: 'Node ID', width: 180 },
@@ -58,7 +59,7 @@ export function makeNodeColumns(
               onClick: () => onAction(nodeId, 'disable'),
               variant: 'destructive',
             },
-            { label: 'Approve Registration', onClick: () => onAction(nodeId, 'approve') },
+            { label: 'Approve Registration', onClick: () => onAction(nodeId, 'approve'), disabled: !canApprove },
           ],
         });
       },
