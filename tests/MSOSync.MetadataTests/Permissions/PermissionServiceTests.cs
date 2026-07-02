@@ -56,14 +56,17 @@ public sealed class PermissionServiceTests : IDisposable
             new SyncRolePermission { RoleName = "VIEWER", PermissionKey = "VIEW_TOPOLOGY" });
         // Seed OPERATOR permissions
         _db.RolePermissions.AddRange(
-            new SyncRolePermission { RoleName = "OPERATOR", PermissionKey = "VIEW_EVENTS"    },
-            new SyncRolePermission { RoleName = "OPERATOR", PermissionKey = "VIEW_METRICS"   },
-            new SyncRolePermission { RoleName = "OPERATOR", PermissionKey = "VIEW_AUDIT"     },
-            new SyncRolePermission { RoleName = "OPERATOR", PermissionKey = "VIEW_TOPOLOGY"  },
-            new SyncRolePermission { RoleName = "OPERATOR", PermissionKey = "EXPORT_DATA"    },
-            new SyncRolePermission { RoleName = "OPERATOR", PermissionKey = "RETRY_BATCHES"  },
-            new SyncRolePermission { RoleName = "OPERATOR", PermissionKey = "APPROVE_NODES"  },
-            new SyncRolePermission { RoleName = "OPERATOR", PermissionKey = "RELEASE_LOCKS"  });
+            new SyncRolePermission { RoleName = "OPERATOR", PermissionKey = "VIEW_EVENTS"      },
+            new SyncRolePermission { RoleName = "OPERATOR", PermissionKey = "VIEW_METRICS"     },
+            new SyncRolePermission { RoleName = "OPERATOR", PermissionKey = "VIEW_AUDIT"       },
+            new SyncRolePermission { RoleName = "OPERATOR", PermissionKey = "VIEW_TOPOLOGY"    },
+            new SyncRolePermission { RoleName = "OPERATOR", PermissionKey = "EXPORT_DATA"      },
+            new SyncRolePermission { RoleName = "OPERATOR", PermissionKey = "RETRY_BATCHES"    },
+            new SyncRolePermission { RoleName = "OPERATOR", PermissionKey = "APPROVE_NODES"    },
+            new SyncRolePermission { RoleName = "OPERATOR", PermissionKey = "RELEASE_LOCKS"    },
+            new SyncRolePermission { RoleName = "OPERATOR", PermissionKey = "EDIT_PARAMETERS"  },
+            new SyncRolePermission { RoleName = "OPERATOR", PermissionKey = "MANAGE_TRIGGERS"  },
+            new SyncRolePermission { RoleName = "OPERATOR", PermissionKey = "MANAGE_ROUTERS"   });
         // Seed ADMIN permissions (all 12)
         _db.RolePermissions.AddRange(
             new SyncRolePermission { RoleName = "ADMIN", PermissionKey = "VIEW_EVENTS"     },
@@ -95,7 +98,7 @@ public sealed class PermissionServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task GetEffective_Operator_ReturnsEightPermissions()
+    public async Task GetEffective_Operator_ReturnsElevenPermissions()
     {
         // Add operator user
         _db.Users.Add(new SyncUser { UserId = 2, Username = "bob", PasswordHash = "h",
@@ -105,7 +108,7 @@ public sealed class PermissionServiceTests : IDisposable
 
         var result = await _sut.GetEffectivePermissionsAsync("bob");
         result.Role.Should().Be("OPERATOR");
-        result.Permissions.Should().HaveCount(8);
+        result.Permissions.Should().HaveCount(11);
         result.Permissions.Should().Contain("RETRY_BATCHES");
     }
 
@@ -169,7 +172,7 @@ public sealed class PermissionServiceTests : IDisposable
         await _sut.CopyPermissionsFromAsync("VIEWER", "OPERATOR");
 
         var result = await _sut.GetEffectivePermissionsAsync("alice");
-        result.Permissions.Should().HaveCount(8);
+        result.Permissions.Should().HaveCount(11);
         result.Permissions.Should().Contain("RETRY_BATCHES");
     }
 
@@ -180,7 +183,7 @@ public sealed class PermissionServiceTests : IDisposable
         await _sut.CopyPermissionsFromAsync("VIEWER", "OPERATOR");
 
         var result = await _sut.GetEffectivePermissionsAsync("alice");
-        result.Permissions.Should().HaveCount(8);
+        result.Permissions.Should().HaveCount(11);
     }
 
     [Fact]

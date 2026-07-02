@@ -10,7 +10,8 @@ public static class SystemPermissions
         {
             ["VIEWER"]   = ["VIEW_EVENTS", "VIEW_METRICS", "VIEW_AUDIT", "VIEW_TOPOLOGY"],
             ["OPERATOR"] = ["VIEW_EVENTS", "VIEW_METRICS", "VIEW_AUDIT", "VIEW_TOPOLOGY",
-                            "EXPORT_DATA", "RETRY_BATCHES", "APPROVE_NODES", "RELEASE_LOCKS"],
+                            "EXPORT_DATA", "RETRY_BATCHES", "APPROVE_NODES", "RELEASE_LOCKS",
+                            "EDIT_PARAMETERS", "MANAGE_TRIGGERS", "MANAGE_ROUTERS"],
             ["ADMIN"]    = ["VIEW_EVENTS", "VIEW_METRICS", "VIEW_AUDIT", "VIEW_TOPOLOGY",
                             "EXPORT_DATA", "RETRY_BATCHES", "APPROVE_NODES", "RELEASE_LOCKS",
                             "EDIT_PARAMETERS", "MANAGE_TRIGGERS", "MANAGE_ROUTERS", "MANAGE_USERS"],

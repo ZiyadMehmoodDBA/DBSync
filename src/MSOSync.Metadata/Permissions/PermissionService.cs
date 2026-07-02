@@ -96,7 +96,7 @@ public sealed class PermissionService(AppDbContext db, IMemoryCache cache, IMedi
             db.RolePermissions.Add(new SyncRolePermission
                 { RoleName = roleName, PermissionKey = permissionKey });
         }
-        await WriteAuditAsync("GRANT_PERMISSION", roleName, permissionKey, ct);
+        WriteAudit("GRANT_PERMISSION", roleName, permissionKey);
         await db.SaveChangesAsync(ct);
         cache.Remove(CacheKey(roleName));
         await mediator.Publish(new PermissionChangedNotification(roleName, "Grant", DateTimeOffset.UtcNow), ct);
@@ -117,7 +117,7 @@ public sealed class PermissionService(AppDbContext db, IMemoryCache cache, IMedi
         if (existing is not null)
             db.RolePermissions.Remove(existing);
 
-        await WriteAuditAsync("REVOKE_PERMISSION", roleName, permissionKey, ct);
+        WriteAudit("REVOKE_PERMISSION", roleName, permissionKey);
         await db.SaveChangesAsync(ct);
         cache.Remove(CacheKey(roleName));
         await mediator.Publish(new PermissionChangedNotification(roleName, "Revoke", DateTimeOffset.UtcNow), ct);
@@ -138,7 +138,7 @@ public sealed class PermissionService(AppDbContext db, IMemoryCache cache, IMedi
                 db.RolePermissions.Add(new SyncRolePermission { RoleName = roleName, PermissionKey = key });
         }
 
-        await WriteAuditAsync("RESET_ROLE", roleName, "defaults", ct);
+        WriteAudit("RESET_ROLE", roleName, "defaults");
         await db.SaveChangesAsync(ct);
         cache.Remove(CacheKey(roleName));
         await mediator.Publish(new PermissionChangedNotification(roleName, "Reset", DateTimeOffset.UtcNow), ct);
@@ -163,7 +163,7 @@ public sealed class PermissionService(AppDbContext db, IMemoryCache cache, IMedi
         foreach (var key in sourceKeys)
             db.RolePermissions.Add(new SyncRolePermission { RoleName = targetRole, PermissionKey = key });
 
-        await WriteAuditAsync("COPY_PERMISSIONS", targetRole, $"from:{sourceRole}", ct);
+        WriteAudit("COPY_PERMISSIONS", targetRole, $"from:{sourceRole}");
         await db.SaveChangesAsync(ct);
         cache.Remove(CacheKey(targetRole));
         await mediator.Publish(new PermissionChangedNotification(targetRole, "Copy", DateTimeOffset.UtcNow), ct);
@@ -171,8 +171,7 @@ public sealed class PermissionService(AppDbContext db, IMemoryCache cache, IMedi
 
     // ── Private ──────────────────────────────────────────────────────────────
 
-    private async Task WriteAuditAsync(
-        string actionName, string roleName, string objectName, CancellationToken ct)
+    private void WriteAudit(string actionName, string roleName, string objectName)
     {
         db.Audits.Add(new SyncAudit
         {
@@ -182,6 +181,5 @@ public sealed class PermissionService(AppDbContext db, IMemoryCache cache, IMedi
             CreateTime  = DateTime.UtcNow,
         });
         // Note: caller calls SaveChangesAsync which persists audit + data change together
-        await Task.CompletedTask;
     }
 }

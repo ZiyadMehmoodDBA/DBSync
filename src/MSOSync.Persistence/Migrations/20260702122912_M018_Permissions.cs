@@ -102,6 +102,9 @@ namespace MSOSync.Persistence.Migrations
                     { "OPERATOR", "RETRY_BATCHES" },
                     { "OPERATOR", "APPROVE_NODES" },
                     { "OPERATOR", "RELEASE_LOCKS" },
+                    { "OPERATOR", "EDIT_PARAMETERS" },
+                    { "OPERATOR", "MANAGE_TRIGGERS" },
+                    { "OPERATOR", "MANAGE_ROUTERS" },
                 });
 
             // Seed ADMIN permissions (all 12)
@@ -154,6 +157,12 @@ namespace MSOSync.Persistence.Migrations
                 keyColumns: ["RoleName", "PermissionKey"], keyValues: new object[] { "ADMIN", "VIEW_METRICS" });
             migrationBuilder.DeleteData(schema: "msosync", table: "sync_role_permission",
                 keyColumns: ["RoleName", "PermissionKey"], keyValues: new object[] { "ADMIN", "VIEW_EVENTS" });
+            migrationBuilder.DeleteData(schema: "msosync", table: "sync_role_permission",
+                keyColumns: ["RoleName", "PermissionKey"], keyValues: new object[] { "OPERATOR", "MANAGE_ROUTERS" });
+            migrationBuilder.DeleteData(schema: "msosync", table: "sync_role_permission",
+                keyColumns: ["RoleName", "PermissionKey"], keyValues: new object[] { "OPERATOR", "MANAGE_TRIGGERS" });
+            migrationBuilder.DeleteData(schema: "msosync", table: "sync_role_permission",
+                keyColumns: ["RoleName", "PermissionKey"], keyValues: new object[] { "OPERATOR", "EDIT_PARAMETERS" });
             migrationBuilder.DeleteData(schema: "msosync", table: "sync_role_permission",
                 keyColumns: ["RoleName", "PermissionKey"], keyValues: new object[] { "OPERATOR", "RELEASE_LOCKS" });
             migrationBuilder.DeleteData(schema: "msosync", table: "sync_role_permission",
