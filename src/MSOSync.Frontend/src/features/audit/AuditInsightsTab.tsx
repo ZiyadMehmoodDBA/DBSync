@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import ReactApexChart from 'react-apexcharts';
 import type { ApexOptions } from 'apexcharts';
@@ -31,13 +31,15 @@ export function AuditInsightsTab() {
   const [customFrom, setCustomFrom] = useState('');
   const [customTo, setCustomTo] = useState('');
 
-  const { from, to } =
-    preset === 'custom'
-      ? {
-          from: customFrom ? new Date(customFrom).toISOString() : '',
-          to: customTo ? new Date(customTo).toISOString() : '',
-        }
-      : presetToRange(preset);
+  const { from, to } = useMemo(() => {
+    if (preset === 'custom') {
+      return {
+        from: customFrom ? new Date(customFrom).toISOString() : '',
+        to: customTo ? new Date(customTo).toISOString() : '',
+      };
+    }
+    return presetToRange(preset);
+  }, [preset, customFrom, customTo]);
 
   const enabled = Boolean(from && to);
 
