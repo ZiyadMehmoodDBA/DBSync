@@ -112,18 +112,32 @@ public sealed class BatchController(
 
     [HttpGet("export")]
     [Authorize(Policy = "ViewerOrAbove")]
-    public IActionResult ExportBatches(
+    public Task<IActionResult> ExportBatches(
         [FromQuery] OutgoingBatchExportFilter filter,
-        [FromQuery] string format = "csv")
+        [FromQuery] string format = "csv",
+        CancellationToken ct = default)
     {
+        if (!string.IsNullOrEmpty(filter.Status) &&
+            !OutgoingBatchExportService.IsValidStatus(filter.Status))
+        {
+            IActionResult bad = BadRequest(new
+            {
+                code    = "INVALID_STATUS",
+                message = $"Unknown status '{filter.Status}'. Valid values: New, Sending, Acknowledged, Error, Retry."
+            });
+            return Task.FromResult(bad);
+        }
+
         var isJson = format.Equals("json", StringComparison.OrdinalIgnoreCase);
         var date = DateTime.UtcNow.ToString("yyyy-MM-dd");
-        return new MSOSync.Api.Results.StreamingExportResult(
+        IActionResult result = new MSOSync.Api.Results.StreamingExportResult(
             isJson
                 ? (s, t) => exporter.ExportJsonAsync(s, filter, t)
                 : (s, t) => exporter.ExportCsvAsync(s, filter, t),
             isJson ? "application/json" : "text/csv",
             isJson ? $"batches-{date}.json" : $"batches-{date}.csv",
-            (rows, ms) => exportAudit.WriteAsync("outgoing-batches", format, rows, ms));
+            (rows, ms) => exportAudit.WriteAsync("outgoing-batches", format, rows, ms),
+            ct);
+        return Task.FromResult(result);
     }
 }

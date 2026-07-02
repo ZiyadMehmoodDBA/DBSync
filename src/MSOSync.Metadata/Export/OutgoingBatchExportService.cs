@@ -19,6 +19,13 @@ public sealed class OutgoingBatchExportService(AppDbContext db) : IExportService
             { "Retry",        4 },
         };
 
+    // Reverse lookup: byte value → canonical string name for serialization.
+    private static readonly Dictionary<byte, string> StatusNameMap =
+        StatusMap.ToDictionary(kv => kv.Value, kv => kv.Key);
+
+    /// <summary>Returns true if <paramref name="status"/> is a known status name.</summary>
+    public static bool IsValidStatus(string status) => StatusMap.ContainsKey(status);
+
     public async Task<int> ExportCsvAsync(Stream output, OutgoingBatchExportFilter filter, CancellationToken ct)
     {
         using var writer = new StreamWriter(output, leaveOpen: true);
@@ -26,8 +33,9 @@ public sealed class OutgoingBatchExportService(AppDbContext db) : IExportService
         int count = 0;
         await foreach (var r in BuildQuery(filter).AsAsyncEnumerable().WithCancellation(ct))
         {
+            var statusName = StatusNameMap.TryGetValue(r.Status, out var n) ? n : r.Status.ToString();
             await writer.WriteLineAsync(
-                $"{r.BatchId},{r.Status},{CsvHelper.Escape(r.NodeId)},{CsvHelper.Escape(r.ChannelId)},{r.CreateTime?.ToString("O") ?? ""},{r.SentTime?.ToString("O") ?? ""},{r.AckTime?.ToString("O") ?? ""},{r.RetryCount},{r.RowCount}");
+                $"{r.BatchId},{statusName},{CsvHelper.Escape(r.NodeId)},{CsvHelper.Escape(r.ChannelId)},{r.CreateTime?.ToString("O") ?? ""},{r.SentTime?.ToString("O") ?? ""},{r.AckTime?.ToString("O") ?? ""},{r.RetryCount},{r.RowCount}");
             count++;
         }
         await writer.FlushAsync(ct);
@@ -43,7 +51,7 @@ public sealed class OutgoingBatchExportService(AppDbContext db) : IExportService
         {
             writer.WriteStartObject();
             writer.WriteNumber("batchId",    r.BatchId);
-            writer.WriteNumber("status",     r.Status);
+            writer.WriteString("status",     StatusNameMap.TryGetValue(r.Status, out var sn) ? sn : r.Status.ToString());
             writer.WriteString("nodeId",     r.NodeId);
             writer.WriteString("channelId",  r.ChannelId);
             if (r.CreateTime.HasValue) writer.WriteString("createTime", r.CreateTime.Value.ToString("O"));
@@ -71,6 +79,10 @@ public sealed class OutgoingBatchExportService(AppDbContext db) : IExportService
         if (!string.IsNullOrEmpty(filter.Status) &&
             StatusMap.TryGetValue(filter.Status, out var statusByte))
             q = q.Where(b => b.Status == statusByte);
+        if (filter.From.HasValue)
+            q = q.Where(b => b.CreateTime.HasValue && b.CreateTime.Value >= filter.From.Value);
+        if (filter.To.HasValue)
+            q = q.Where(b => b.CreateTime.HasValue && b.CreateTime.Value <= filter.To.Value);
         return q.OrderByDescending(b => b.BatchId)
             .Select(b => new OutgoingBatchExportRow(
                 b.BatchId, b.Status, b.NodeId, b.ChannelId,
