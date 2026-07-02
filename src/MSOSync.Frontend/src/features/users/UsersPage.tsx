@@ -5,7 +5,9 @@ import { ConfirmDialog } from '../../shared/components/actions';
 import { UsersGrid } from './UsersGrid';
 import { UserDialog } from './UserDialog';
 import { useDeactivateUserMutation } from './mutations';
+import { useUsers } from './hooks';
 import { useAuth } from '../auth/useAuth';
+import { ExportMenu } from '../../shared/components/ExportMenu';
 import { toast } from 'sonner';
 import { getErrorMessage } from '../../shared/utils/error';
 import type { UserSummaryDto } from '../../shared/types';
@@ -18,6 +20,7 @@ export function UsersPage() {
 
   const deactivateMutation = useDeactivateUserMutation();
   const { user } = useAuth();
+  const { data: usersData } = useUsers();
 
   const onEdit = useCallback((row: UserSummaryDto) => { setEditState(row); }, []);
   const onDeactivate = useCallback((row: UserSummaryDto) => { setDeactivateState(row); }, []);
@@ -38,7 +41,15 @@ export function UsersPage() {
     <div className="flex flex-col gap-4 p-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Users</h1>
-        <Button onClick={() => setCreateOpen(true)}>Add User</Button>
+        <div className="flex items-center gap-2">
+          <ExportMenu
+            resource="users"
+            currentData={(usersData?.data ?? []) as unknown as Record<string, unknown>[]}
+            queryParams={{}}
+            supportsAllRows={false}
+          />
+          <Button onClick={() => setCreateOpen(true)}>Add User</Button>
+        </div>
       </div>
       <Input
         value={search}

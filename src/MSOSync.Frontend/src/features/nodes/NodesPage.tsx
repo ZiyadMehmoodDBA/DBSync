@@ -11,6 +11,8 @@ import {
   useApproveRegistrationMutation,
 } from './mutations';
 import { useAuth } from '../auth/useAuth';
+import { useNodes } from './hooks';
+import { ExportMenu } from '../../shared/components/ExportMenu';
 import type { NodeDto } from '../../shared/types';
 
 type NodeAction = 'enable' | 'disable' | 'approve';
@@ -58,6 +60,8 @@ export function NodesPage() {
   const { user } = useAuth();
   const isAdmin = user?.roles.includes('Admin') ?? false;
 
+  const { data: nodesData } = useNodes();
+
   const enableMutation = useEnableNodeMutation();
   const disableMutation = useDisableNodeMutation();
   const approveMutation = useApproveRegistrationMutation();
@@ -89,7 +93,15 @@ export function NodesPage() {
 
   return (
     <div className="flex flex-col gap-4 p-6">
-      <h1 className="text-2xl font-semibold">Nodes</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-semibold">Nodes</h1>
+        <ExportMenu
+          resource="nodes"
+          currentData={(nodesData ?? []) as unknown as Record<string, unknown>[]}
+          queryParams={{}}
+          supportsAllRows={false}
+        />
+      </div>
       <div className="flex items-center gap-2">
         <Input
           value={search}

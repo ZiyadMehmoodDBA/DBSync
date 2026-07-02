@@ -5,6 +5,8 @@ import { ConfirmDialog } from '../../shared/components/actions';
 import { ChannelsGrid } from './ChannelsGrid';
 import { ChannelDialog } from './ChannelDialog';
 import { useDeleteChannelMutation } from './mutations';
+import { useChannels } from './hooks';
+import { ExportMenu } from '../../shared/components/ExportMenu';
 import { toast } from 'sonner';
 import { getErrorMessage } from '../../shared/utils/error';
 import type { ChannelDto } from '../../shared/types';
@@ -16,6 +18,7 @@ export function ChannelsPage() {
   const [deleteState, setDeleteState] = useState<ChannelDto | null>(null);
 
   const deleteMutation = useDeleteChannelMutation();
+  const { data: channelsData } = useChannels();
 
   const onEdit = useCallback((row: ChannelDto) => { setEditState(row); }, []);
   const onDelete = useCallback((row: ChannelDto) => { setDeleteState(row); }, []);
@@ -36,7 +39,15 @@ export function ChannelsPage() {
     <div className="flex flex-col gap-4 p-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Channels</h1>
-        <Button onClick={() => setCreateOpen(true)}>Add Channel</Button>
+        <div className="flex items-center gap-2">
+          <ExportMenu
+            resource="channels"
+            currentData={(channelsData ?? []) as unknown as Record<string, unknown>[]}
+            queryParams={{}}
+            supportsAllRows={false}
+          />
+          <Button onClick={() => setCreateOpen(true)}>Add Channel</Button>
+        </div>
       </div>
       <Input
         value={search}

@@ -5,6 +5,8 @@ import { ConfirmDialog } from '../../shared/components/actions';
 import { RoutersGrid } from './RoutersGrid';
 import { RouterDialog } from './RouterDialog';
 import { useDeleteRouterMutation } from './mutations';
+import { useRouters } from './hooks';
+import { ExportMenu } from '../../shared/components/ExportMenu';
 import { toast } from 'sonner';
 import { getErrorMessage } from '../../shared/utils/error';
 import type { RouterDto } from '../../shared/types';
@@ -16,6 +18,7 @@ export function RoutersPage() {
   const [deleteState, setDeleteState] = useState<RouterDto | null>(null);
 
   const deleteMutation = useDeleteRouterMutation();
+  const { data: routersData } = useRouters();
 
   const onEdit = useCallback((row: RouterDto) => { setEditState(row); }, []);
   const onDelete = useCallback((row: RouterDto) => { setDeleteState(row); }, []);
@@ -36,7 +39,15 @@ export function RoutersPage() {
     <div className="flex flex-col gap-4 p-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Routers</h1>
-        <Button onClick={() => setCreateOpen(true)}>Add Router</Button>
+        <div className="flex items-center gap-2">
+          <ExportMenu
+            resource="routers"
+            currentData={(routersData ?? []) as unknown as Record<string, unknown>[]}
+            queryParams={{}}
+            supportsAllRows={false}
+          />
+          <Button onClick={() => setCreateOpen(true)}>Add Router</Button>
+        </div>
       </div>
       <Input
         value={search}

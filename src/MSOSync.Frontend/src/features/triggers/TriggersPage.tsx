@@ -10,6 +10,8 @@ import {
   useRebuildTriggerMutation,
   useDeleteTriggerMutation,
 } from './mutations';
+import { useTriggers } from './hooks';
+import { ExportMenu } from '../../shared/components/ExportMenu';
 import { toast } from 'sonner';
 import { getErrorMessage } from '../../shared/utils/error';
 import type { TriggerDto } from '../../shared/types';
@@ -61,6 +63,7 @@ export function TriggersPage() {
   const disableMutation = useDisableTriggerMutation();
   const rebuildMutation = useRebuildTriggerMutation();
   const deleteMutation = useDeleteTriggerMutation();
+  const { data: triggersData } = useTriggers();
 
   const onAction = useCallback((triggerId: string, action: ConfirmableAction) => {
     setConfirmState({ triggerId, action });
@@ -102,7 +105,15 @@ export function TriggersPage() {
     <div className="flex flex-col gap-4 p-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Triggers</h1>
-        <Button onClick={() => setCreateOpen(true)}>Add Trigger</Button>
+        <div className="flex items-center gap-2">
+          <ExportMenu
+            resource="triggers"
+            currentData={(triggersData ?? []) as unknown as Record<string, unknown>[]}
+            queryParams={{}}
+            supportsAllRows={false}
+          />
+          <Button onClick={() => setCreateOpen(true)}>Add Trigger</Button>
+        </div>
       </div>
       <Input
         value={search}
