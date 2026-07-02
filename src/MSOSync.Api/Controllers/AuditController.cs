@@ -47,6 +47,8 @@ public sealed class AuditController(
     {
         if (from >= to)
             return BadRequest(new { code = "INVALID_RANGE", message = "'from' must be before 'to'" });
+        if ((to - from).TotalDays > 365)
+            return BadRequest(new { code = "RANGE_TOO_LARGE", message = "Date range cannot exceed 365 days." });
         return Ok(await summaryService.GetSummaryAsync(from, to, ct));
     }
 
@@ -67,6 +69,6 @@ public sealed class AuditController(
                 : (s, t) => exporter.ExportCsvAsync(s, filter, t),
             isJson ? "application/json" : "text/csv",
             isJson ? $"audit-{date}.json" : $"audit-{date}.csv",
-            (rows, ms) => exportAudit.WriteAsync("audit", format, rows, ms));
+            (rows, ms) => exportAudit.WriteAsync("audit", format, rows, ms, ct));
     }
 }

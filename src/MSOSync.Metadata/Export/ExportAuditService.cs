@@ -6,7 +6,7 @@ namespace MSOSync.Metadata.Export;
 
 public sealed class ExportAuditService(AppDbContext db, ICurrentUserService currentUser) : IExportAuditService
 {
-    public async Task WriteAsync(string resource, string format, int rowCount, long durationMs)
+    public async Task WriteAsync(string resource, string format, int rowCount, long durationMs, CancellationToken ct = default)
     {
         db.Audits.Add(new SyncAudit
         {
@@ -15,6 +15,6 @@ public sealed class ExportAuditService(AppDbContext db, ICurrentUserService curr
             Username   = currentUser.GetCurrentUsername(),
             CreateTime = DateTime.UtcNow,
         });
-        await db.SaveChangesAsync();
+        await db.SaveChangesAsync(ct);
     }
 }

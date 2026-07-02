@@ -53,6 +53,6 @@ public sealed class IncomingBatchesController(
                 : (s, t) => exporter.ExportCsvAsync(s, filter, t),
             isJson ? "application/json" : "text/csv",
             isJson ? $"incoming-batches-{date}.json" : $"incoming-batches-{date}.csv",
-            (rows, ms) => exportAudit.WriteAsync("incoming-batches", format, rows, ms));
+            (rows, ms) => exportAudit.WriteAsync("incoming-batches", format, rows, ms, ct));
     }
 }

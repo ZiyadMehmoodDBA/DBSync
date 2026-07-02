@@ -53,6 +53,6 @@ public sealed class EventsController(
                 : (s, t) => exporter.ExportCsvAsync(s, filter, t),
             isJson ? "application/json" : "text/csv",
             isJson ? $"events-{date}.json" : $"events-{date}.csv",
-            (rows, ms) => exportAudit.WriteAsync("events", format, rows, ms));
+            (rows, ms) => exportAudit.WriteAsync("events", format, rows, ms, ct));
     }
 }

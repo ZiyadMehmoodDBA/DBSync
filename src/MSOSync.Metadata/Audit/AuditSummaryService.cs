@@ -72,15 +72,17 @@ public sealed class AuditSummaryService(AppDbContext db) : IAuditSummaryService
             .Select(x => new UserBucket(x.Username, x.Count))
             .ToList();
 
-        // ByEntityType — group by ObjectName, descending
+        // ByEntityType — group by ObjectName, exclude EXPORT_ actions, cap to top 20
         var byEntityTypeRaw = await baseQ
-            .Where(a => a.ObjectName != null)
+            .Where(a => a.ObjectName != null
+                     && (a.ActionName == null || !a.ActionName.StartsWith("EXPORT_")))
             .GroupBy(a => a.ObjectName!)
             .Select(g => new { EntityType = g.Key, Count = g.Count() })
             .ToListAsync(ct);
 
         var byEntityType = byEntityTypeRaw
             .OrderByDescending(x => x.Count)
+            .Take(20)
             .Select(x => new EntityTypeBucket(x.EntityType, x.Count))
             .ToList();
 
