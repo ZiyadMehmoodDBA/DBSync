@@ -74,6 +74,7 @@ export function useExport({
   }, []);
 
   const onExportCurrentViewFallback = useCallback(() => {
+    if (!pendingViewFormat) return;
     setShowFailureDialog(false);
     if (pendingViewFormat === 'csv') downloadCurrentViewCsv(currentData, resource);
     else downloadCurrentViewJson(currentData, resource);
