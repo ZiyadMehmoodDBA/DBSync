@@ -46,13 +46,17 @@ public sealed class AuditSummaryService(AppDbContext db) : IAuditSummaryService
             })
             .ToListAsync(ct);
 
-        var byDayDict = byDayRaw.ToDictionary(x => x.Date, x => (x.Total, x.Failed));
+        var byDayDict = byDayRaw.ToDictionary(
+            x => DateOnly.FromDateTime(x.Date),
+            x => (x.Total, x.Failed));
+
         var totalDays = (int)(to.Date - from.Date).TotalDays + 1;
+        var fromDate  = DateOnly.FromDateTime(from.Date);
         var byDay = Enumerable.Range(0, totalDays)
-            .Select(i => from.Date.AddDays(i))
+            .Select(i => fromDate.AddDays(i))
             .Select(d => byDayDict.TryGetValue(d, out var b)
-                ? new DayBucket(DateOnly.FromDateTime(d), b.Total, b.Failed)
-                : new DayBucket(DateOnly.FromDateTime(d), 0, 0))
+                ? new DayBucket(d, b.Total, b.Failed)
+                : new DayBucket(d, 0, 0))
             .ToList();
 
         // ByUser — top 10 descending (materialize then sort to avoid SQLite translation issues)
