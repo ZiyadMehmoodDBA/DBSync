@@ -61,13 +61,14 @@ public sealed class PermissionService(AppDbContext db, IMemoryCache cache, IMedi
             select ur
         ).CountAsync(ct);
 
-        var permissions = await db.RolePermissions.AsNoTracking()
-            .Where(rp => rp.RoleName == roleName)
-            .Join(db.Permissions.AsNoTracking(), rp => rp.PermissionKey, p => p.PermissionKey,
-                  (rp, p) => new PermissionDto(p.PermissionKey, p.DisplayName, p.Description,
-                                               p.Category, p.SortOrder, p.IsSystem))
-            .OrderBy(p => p.Category).ThenBy(p => p.SortOrder)
-            .ToListAsync(ct);
+        var permissions = await (
+            from rp in db.RolePermissions.AsNoTracking()
+            join p  in db.Permissions.AsNoTracking() on rp.PermissionKey equals p.PermissionKey
+            where rp.RoleName == roleName
+            orderby p.Category, p.SortOrder
+            select new PermissionDto(p.PermissionKey, p.DisplayName, p.Description,
+                                     p.Category, p.SortOrder, p.IsSystem)
+        ).ToListAsync(ct);
 
         return new RolePermissionsDto(roleName, userCount, permissions);
     }
