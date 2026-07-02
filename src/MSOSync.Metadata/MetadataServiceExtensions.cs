@@ -14,6 +14,7 @@ using MSOSync.Metadata.Metrics;
 using MSOSync.Metadata.Nodes;
 using MSOSync.Metadata.Services;
 using MSOSync.Metadata.Topology;
+using MSOSync.Metadata.Permissions;
 using MSOSync.Metadata.Preferences;
 using MSOSync.Metadata.Users;
 
@@ -74,6 +75,9 @@ public static class MetadataServiceExtensions
 
         // Epic 11E — User preferences
         services.AddScoped<IUserPreferencesService, UserPreferencesService>();
+
+        // Epic 11F — Fine-grained RBAC
+        services.AddScoped<IPermissionService, PermissionService>();
 
         return services;
     }
