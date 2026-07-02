@@ -34,6 +34,7 @@ public sealed class NodesController(
         CancellationToken ct = default)
     {
         pageSize = Math.Min(pageSize, 200);
+        pageNumber = Math.Max(1, pageNumber);
         return Ok(await nodeService.GetNodesPagedAsync(pageNumber, pageSize, ct));
     }
 

@@ -19,8 +19,10 @@ public sealed class CursorTokenTests
     public void Encode_ProducesOpaqueBase64()
     {
         var token = CursorToken.Encode(1L, 0L);
-        Convert.FromBase64String(token).Should().NotBeEmpty(); // valid base64
-        token.Should().NotContain("1");  // opaque — raw id not visible
+        // Verify token is valid base64
+        var decoded = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(token));
+        decoded.Should().Be("v1:1:0");  // correct content
+        token.Should().NotBe("v1:1:0");  // actually encoded, not raw
     }
 
     [Fact]
