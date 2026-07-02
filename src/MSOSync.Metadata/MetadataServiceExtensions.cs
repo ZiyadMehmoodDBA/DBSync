@@ -68,6 +68,9 @@ public static class MetadataServiceExtensions
         services.AddScoped<IExportService<Audit.AuditFilter>,                   AuditExportService>();
         services.AddScoped<IExportAuditService, ExportAuditService>();
 
+        // Epic 11D — Audit summary
+        services.AddScoped<IAuditSummaryService, AuditSummaryService>();
+
         return services;
     }
 }

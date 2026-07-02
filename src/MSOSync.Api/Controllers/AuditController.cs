@@ -14,7 +14,8 @@ public sealed class AuditController(
     IAuditQueryService          audit,
     IValidator<AuditFilter>     validator,
     IExportService<AuditFilter> exporter,
-    IExportAuditService         exportAudit) : ControllerBase
+    IExportAuditService         exportAudit,
+    IAuditSummaryService        summaryService) : ControllerBase
 {
     [HttpGet]
     [ProducesResponseType(200)]
@@ -34,6 +35,19 @@ public sealed class AuditController(
         var dto = await audit.GetAuditByIdAsync(auditId, ct);
         if (dto is null) throw new NotFoundException($"Audit {auditId} not found.");
         return Ok(dto);
+    }
+
+    [HttpGet("summary")]
+    [ProducesResponseType(200)]
+    [ProducesResponseType(typeof(ProblemDetails), 400)]
+    public async Task<IActionResult> GetAuditSummary(
+        [FromQuery] DateTime from,
+        [FromQuery] DateTime to,
+        CancellationToken ct)
+    {
+        if (from >= to)
+            return BadRequest(new { code = "INVALID_RANGE", message = "'from' must be before 'to'" });
+        return Ok(await summaryService.GetSummaryAsync(from, to, ct));
     }
 
     [HttpGet("export")]
