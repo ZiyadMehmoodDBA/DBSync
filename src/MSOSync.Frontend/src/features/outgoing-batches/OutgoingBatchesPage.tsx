@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import type { OutgoingBatchFilter } from '../../shared/types';
 import { OutgoingBatchFilters } from './OutgoingBatchFilters';
 import { OutgoingBatchesGrid } from './OutgoingBatchesGrid';
@@ -7,13 +7,32 @@ import { DEFAULT_BATCH_PAGE_SIZE } from '../../shared/constants/query';
 import { Button } from '../../components/ui/button';
 import { useRetryAllBatchesMutation } from './mutations';
 import { useOutgoingBatches } from './hooks';
-
-const defaultFilter: OutgoingBatchFilter = { page: 1, pageSize: DEFAULT_BATCH_PAGE_SIZE };
+import { usePreference, useSetPreference } from '../../shared/hooks/usePreferences';
+import { PreferenceKeys } from '../../shared/types/preferences';
 
 export function OutgoingBatchesPage() {
-  const [filter, setFilter] = useState<OutgoingBatchFilter>(defaultFilter);
+  const savedFilter   = usePreference<OutgoingBatchFilter>(PreferenceKeys.outgoingFilter,   { page: 1, pageSize: DEFAULT_BATCH_PAGE_SIZE });
+  const savedPageSize = usePreference<number>             (PreferenceKeys.outgoingPageSize,  DEFAULT_BATCH_PAGE_SIZE);
+  const { mutate: setPref } = useSetPreference();
+
+  const [filter, setFilter] = useState<OutgoingBatchFilter>({ page: 1, pageSize: savedPageSize });
+  const prefsApplied = useRef(false);
+  useEffect(() => {
+    if (!prefsApplied.current && savedFilter.page !== undefined) {
+      setFilter({ ...savedFilter, page: 1 });
+      prefsApplied.current = true;
+    }
+  }, [savedFilter]);
+
   const retryAllMutation = useRetryAllBatchesMutation();
   const { data } = useOutgoingBatches(filter);
+
+  function handleFilterChange(next: OutgoingBatchFilter) {
+    setFilter(next);
+    const { page: _page, ...filterToSave } = next;
+    setPref({ key: PreferenceKeys.outgoingFilter,   value: filterToSave });
+    setPref({ key: PreferenceKeys.outgoingPageSize,  value: next.pageSize });
+  }
 
   return (
     <div className="flex flex-col gap-4 p-6">
@@ -34,8 +53,8 @@ export function OutgoingBatchesPage() {
           </Button>
         </div>
       </div>
-      <OutgoingBatchFilters onFilter={setFilter} />
-      <OutgoingBatchesGrid filter={filter} onFilterChange={setFilter} />
+      <OutgoingBatchFilters onFilter={handleFilterChange} />
+      <OutgoingBatchesGrid filter={filter} onFilterChange={handleFilterChange} />
     </div>
   );
 }

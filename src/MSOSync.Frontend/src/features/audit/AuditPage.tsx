@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import type { AuditFilter } from '../../shared/types';
 import {
   Tabs,
@@ -12,12 +12,31 @@ import { AuditInsightsTab } from './AuditInsightsTab';
 import { ExportMenu } from '../../shared/components/ExportMenu';
 import { DEFAULT_PAGE_SIZE } from '../../shared/constants/query';
 import { useAuditLog } from './hooks';
-
-const defaultFilter: AuditFilter = { page: 1, pageSize: DEFAULT_PAGE_SIZE };
+import { usePreference, useSetPreference } from '../../shared/hooks/usePreferences';
+import { PreferenceKeys } from '../../shared/types/preferences';
 
 export function AuditPage() {
-  const [filter, setFilter] = useState<AuditFilter>(defaultFilter);
+  const savedFilter   = usePreference<AuditFilter>(PreferenceKeys.auditFilter,   { page: 1, pageSize: DEFAULT_PAGE_SIZE });
+  const savedPageSize = usePreference<number>      (PreferenceKeys.auditPageSize,  DEFAULT_PAGE_SIZE);
+  const { mutate: setPref } = useSetPreference();
+
+  const [filter, setFilter] = useState<AuditFilter>({ page: 1, pageSize: savedPageSize });
+  const prefsApplied = useRef(false);
+  useEffect(() => {
+    if (!prefsApplied.current && savedFilter.page !== undefined) {
+      setFilter({ ...savedFilter, page: 1 });
+      prefsApplied.current = true;
+    }
+  }, [savedFilter]);
+
   const { data } = useAuditLog(filter); // cache-shared with AuditGrid
+
+  function handleFilterChange(next: AuditFilter) {
+    setFilter(next);
+    const { page: _page, ...filterToSave } = next;
+    setPref({ key: PreferenceKeys.auditFilter,   value: filterToSave });
+    setPref({ key: PreferenceKeys.auditPageSize,  value: next.pageSize });
+  }
 
   return (
     <div className="flex flex-col gap-4 p-6">
@@ -30,7 +49,7 @@ export function AuditPage() {
         <TabsContent value="log">
           <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between pt-2">
-              <AuditFilters onFilter={setFilter} />
+              <AuditFilters onFilter={handleFilterChange} />
               <ExportMenu
                 resource="audit"
                 currentData={(data?.data ?? []) as unknown as Record<string, unknown>[]}
@@ -39,7 +58,7 @@ export function AuditPage() {
                 }
               />
             </div>
-            <AuditGrid filter={filter} onFilterChange={setFilter} />
+            <AuditGrid filter={filter} onFilterChange={handleFilterChange} />
           </div>
         </TabsContent>
         <TabsContent value="insights">

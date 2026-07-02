@@ -14,6 +14,8 @@ import { useAuth } from '../auth/useAuth';
 import { useNodes } from './hooks';
 import { ExportMenu } from '../../shared/components/ExportMenu';
 import type { NodeDto } from '../../shared/types';
+import { usePreference } from '../../shared/hooks/usePreferences';
+import { PreferenceKeys } from '../../shared/types/preferences';
 
 type NodeAction = 'enable' | 'disable' | 'approve';
 
@@ -56,6 +58,8 @@ export function NodesPage() {
   const [confirmState, setConfirmState] = useState<ConfirmState | null>(null);
   const [editState, setEditState] = useState<NodeDto | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
+
+  const savedPageSize = usePreference<number>(PreferenceKeys.nodesPageSize, 25);
 
   const { user } = useAuth();
   const isAdmin = user?.roles.includes('Admin') ?? false;
@@ -113,7 +117,7 @@ export function NodesPage() {
           <Button onClick={() => setCreateOpen(true)}>Add Node</Button>
         )}
       </div>
-      <NodesGrid quickFilterText={search} onAction={onAction} onEdit={onEdit} />
+      <NodesGrid quickFilterText={search} onAction={onAction} onEdit={onEdit} paginationPageSize={savedPageSize} />
       {editState && (
         <NodeDialog
           open={!!editState}

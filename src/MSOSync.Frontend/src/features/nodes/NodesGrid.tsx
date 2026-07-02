@@ -10,9 +10,10 @@ interface Props {
   quickFilterText?: string;
   onAction: (nodeId: string, action: NodeAction) => void;
   onEdit: (node: NodeDto) => void;
+  paginationPageSize?: number;
 }
 
-export function NodesGrid({ quickFilterText, onAction, onEdit }: Props) {
+export function NodesGrid({ quickFilterText, onAction, onEdit, paginationPageSize }: Props) {
   const { data, isLoading, error, refetch } = useNodes();
   const columns = useMemo(() => makeNodeColumns(onAction, onEdit), [onAction, onEdit]);
   return (
@@ -24,6 +25,7 @@ export function NodesGrid({ quickFilterText, onAction, onEdit }: Props) {
       onRetry={() => void refetch()}
       quickFilterText={quickFilterText}
       height={500}
+      paginationPageSize={paginationPageSize}
     />
   );
 }

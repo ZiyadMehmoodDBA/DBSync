@@ -11,6 +11,7 @@ interface Props<T extends object> {
   quickFilterText?: string;
   error?: unknown;
   onRetry?: () => void;
+  paginationPageSize?: number;
 }
 
 export function DataGrid<T extends object>({
@@ -21,6 +22,7 @@ export function DataGrid<T extends object>({
   quickFilterText,
   error,
   onRetry,
+  paginationPageSize = 20,
 }: Props<T>) {
   if (error) return <ErrorState error={error} onRetry={onRetry} />;
 
@@ -35,7 +37,7 @@ export function DataGrid<T extends object>({
           loading={loading}
           quickFilterText={quickFilterText}
           pagination
-          paginationPageSize={20}
+          paginationPageSize={paginationPageSize}
           defaultColDef={{ sortable: true, filter: true, resizable: true }}
         />
       </div>

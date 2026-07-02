@@ -9,9 +9,10 @@ interface Props {
   onEdit: (row: UserSummaryDto) => void;
   onDeactivate: (row: UserSummaryDto) => void;
   currentUsername?: string;
+  paginationPageSize?: number;
 }
 
-export function UsersGrid({ quickFilterText, onEdit, onDeactivate, currentUsername }: Props) {
+export function UsersGrid({ quickFilterText, onEdit, onDeactivate, currentUsername, paginationPageSize }: Props) {
   const { data, isLoading, error, refetch } = useUsers();
   const columns = useMemo(
     () => makeUserColumns(onEdit, onDeactivate, currentUsername),
@@ -26,6 +27,7 @@ export function UsersGrid({ quickFilterText, onEdit, onDeactivate, currentUserna
       onRetry={() => void refetch()}
       quickFilterText={quickFilterText}
       height={500}
+      paginationPageSize={paginationPageSize}
     />
   );
 }

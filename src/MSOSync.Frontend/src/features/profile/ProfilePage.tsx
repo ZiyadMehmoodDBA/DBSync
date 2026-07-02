@@ -1,6 +1,8 @@
 import { useAuth } from '../auth/useAuth';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
+import { usePreference, useSetPreference } from '../../shared/hooks/usePreferences';
+import { PreferenceKeys } from '../../shared/types/preferences';
 
 function tokenExpiryLabel(expiresAt: string): string {
   const diffMs = new Date(expiresAt).getTime() - Date.now();
@@ -14,6 +16,12 @@ function tokenExpiryLabel(expiresAt: string): string {
 
 export function ProfilePage() {
   const { user } = useAuth();
+
+  const autoRefreshEnabled   = usePreference<boolean>(PreferenceKeys.autoRefreshEnabled,  false);
+  const autoRefreshInterval  = usePreference<number> (PreferenceKeys.autoRefreshInterval, 30);
+  const notificationsEnabled = usePreference<boolean>(PreferenceKeys.notificationsEnabled, true);
+  const defaultLandingPage   = usePreference<string> (PreferenceKeys.defaultLandingPage,  '/dashboard');
+  const { mutate: setPref }  = useSetPreference();
 
   if (!user) {
     return (
@@ -48,6 +56,64 @@ export function ProfilePage() {
               Token expires in
             </p>
             <p className="text-sm">{tokenExpiryLabel(user.expiresAt)}</p>
+          </div>
+
+          <div className="mt-6 border-t pt-6">
+            <h3 className="text-sm font-semibold mb-4">Application Settings</h3>
+
+            <div className="space-y-4">
+              {/* Default landing page */}
+              <div className="flex items-center justify-between">
+                <label className="text-sm">Default landing page</label>
+                <select
+                  className="text-sm border rounded px-2 py-1"
+                  value={defaultLandingPage}
+                  onChange={e => setPref({ key: PreferenceKeys.defaultLandingPage, value: e.target.value })}
+                >
+                  <option value="/dashboard">Dashboard</option>
+                  <option value="/events">Events</option>
+                  <option value="/incoming-batches">Incoming Batches</option>
+                  <option value="/outgoing-batches">Outgoing Batches</option>
+                  <option value="/audit">Audit</option>
+                  <option value="/topology">Topology</option>
+                  <option value="/nodes">Nodes</option>
+                </select>
+              </div>
+
+              {/* Auto-refresh */}
+              <div className="flex items-center justify-between">
+                <label className="text-sm">Auto-refresh dashboard</label>
+                <input
+                  type="checkbox"
+                  checked={autoRefreshEnabled}
+                  onChange={e => setPref({ key: PreferenceKeys.autoRefreshEnabled, value: e.target.checked })}
+                />
+              </div>
+
+              {autoRefreshEnabled && (
+                <div className="flex items-center justify-between pl-4">
+                  <label className="text-sm text-muted-foreground">Refresh every (seconds)</label>
+                  <input
+                    type="number"
+                    min={10}
+                    max={300}
+                    className="text-sm border rounded px-2 py-1 w-20"
+                    value={autoRefreshInterval}
+                    onChange={e => setPref({ key: PreferenceKeys.autoRefreshInterval, value: Number(e.target.value) })}
+                  />
+                </div>
+              )}
+
+              {/* Toast notifications */}
+              <div className="flex items-center justify-between">
+                <label className="text-sm">Show event notifications</label>
+                <input
+                  type="checkbox"
+                  checked={notificationsEnabled}
+                  onChange={e => setPref({ key: PreferenceKeys.notificationsEnabled, value: e.target.checked })}
+                />
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -27,6 +27,9 @@ import { Avatar, AvatarFallback } from '../../components/ui/avatar';
 import { useAuth } from '../../features/auth/useAuth';
 import { cn } from '../../lib/utils';
 import { useSignalRContext } from '../../shared/signalr/context';
+import { usePreferences, usePreference, useSetPreference } from '../../shared/hooks/usePreferences';
+import { PreferenceKeys } from '../../shared/types/preferences';
+import type { Theme } from '../../shared/types/preferences';
 
 type NavItem = { label: string; path: string; icon: React.ElementType };
 
@@ -129,15 +132,33 @@ export function AppLayout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
-  const [isDark, setIsDark] = useState(() =>
-    document.documentElement.classList.contains('dark')
-  );
+  // Prefetch preferences for the whole session (staleTime: Infinity means one fetch)
+  usePreferences();
+
+  // Read saved theme preference; fall back to current localStorage value
+  const localTheme = (localStorage.getItem('msosync.theme') as Theme | null) ?? 'light';
+  const savedTheme = usePreference<Theme>(PreferenceKeys.theme, localTheme);
+  const { mutate: setPref } = useSetPreference();
+
+  const [isDark, setIsDark] = useState<boolean>(localTheme === 'dark');
+
+  // Sync to backend-saved theme once it loads
+  const themeApplied = useRef(false);
+  useEffect(() => {
+    if (!themeApplied.current && savedTheme !== localTheme) {
+      const dark = savedTheme === 'dark';
+      setIsDark(dark);
+      document.documentElement.classList.toggle('dark', dark);
+      themeApplied.current = true;
+    }
+  }, [savedTheme, localTheme]);
 
   function handleThemeToggle() {
     const next = !isDark;
     document.documentElement.classList.toggle('dark', next);
     localStorage.setItem('msosync.theme', next ? 'dark' : 'light');
     setIsDark(next);
+    setPref({ key: PreferenceKeys.theme, value: next ? 'dark' : 'light' });
   }
 
   const handleLogout = async () => {

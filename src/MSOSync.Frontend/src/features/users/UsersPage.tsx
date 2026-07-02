@@ -11,12 +11,16 @@ import { ExportMenu } from '../../shared/components/ExportMenu';
 import { toast } from 'sonner';
 import { getErrorMessage } from '../../shared/utils/error';
 import type { UserSummaryDto } from '../../shared/types';
+import { usePreference } from '../../shared/hooks/usePreferences';
+import { PreferenceKeys } from '../../shared/types/preferences';
 
 export function UsersPage() {
   const [search, setSearch] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
   const [editState, setEditState] = useState<UserSummaryDto | null>(null);
   const [deactivateState, setDeactivateState] = useState<UserSummaryDto | null>(null);
+
+  const savedPageSize = usePreference<number>(PreferenceKeys.usersPageSize, 25);
 
   const deactivateMutation = useDeactivateUserMutation();
   const { user } = useAuth();
@@ -62,6 +66,7 @@ export function UsersPage() {
         onEdit={onEdit}
         onDeactivate={onDeactivate}
         currentUsername={user?.username}
+        paginationPageSize={savedPageSize}
       />
       <UserDialog
         open={createOpen}

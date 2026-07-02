@@ -1,16 +1,35 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import type { EventFilter } from '../../shared/types';
 import { EventFilters } from './EventFilters';
 import { EventsGrid } from './EventsGrid';
 import { ExportMenu } from '../../shared/components/ExportMenu';
 import { DEFAULT_PAGE_SIZE } from '../../shared/constants/query';
 import { useEvents } from './hooks';
-
-const defaultFilter: EventFilter = { page: 1, pageSize: DEFAULT_PAGE_SIZE };
+import { usePreference, useSetPreference } from '../../shared/hooks/usePreferences';
+import { PreferenceKeys } from '../../shared/types/preferences';
 
 export function EventsPage() {
-  const [filter, setFilter] = useState<EventFilter>(defaultFilter);
+  const savedFilter   = usePreference<EventFilter>(PreferenceKeys.eventsFilter,   { page: 1, pageSize: DEFAULT_PAGE_SIZE });
+  const savedPageSize = usePreference<number>     (PreferenceKeys.eventsPageSize,  DEFAULT_PAGE_SIZE);
+  const { mutate: setPref } = useSetPreference();
+
+  const [filter, setFilter] = useState<EventFilter>({ page: 1, pageSize: savedPageSize });
+  const prefsApplied = useRef(false);
+  useEffect(() => {
+    if (!prefsApplied.current && savedFilter.page !== undefined) {
+      setFilter({ ...savedFilter, page: 1 });
+      prefsApplied.current = true;
+    }
+  }, [savedFilter]);
+
   const { data } = useEvents(filter);
+
+  function handleFilterChange(next: EventFilter) {
+    setFilter(next);
+    const { page: _page, ...filterToSave } = next;
+    setPref({ key: PreferenceKeys.eventsFilter,   value: filterToSave });
+    setPref({ key: PreferenceKeys.eventsPageSize,  value: next.pageSize });
+  }
 
   return (
     <div className="flex flex-col gap-4 p-6">
@@ -22,8 +41,8 @@ export function EventsPage() {
           queryParams={filter as unknown as Record<string, string | number | boolean | undefined>}
         />
       </div>
-      <EventFilters onFilter={setFilter} />
-      <EventsGrid filter={filter} onFilterChange={setFilter} />
+      <EventFilters onFilter={handleFilterChange} />
+      <EventsGrid filter={filter} onFilterChange={handleFilterChange} />
     </div>
   );
 }
