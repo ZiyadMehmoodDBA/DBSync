@@ -235,9 +235,12 @@ public interface IExportJobService
     Task CompleteJobAsync(Guid jobId, string outputPath, long rowCount, CancellationToken ct);
     Task FailJobAsync(Guid jobId, string errorMessage, CancellationToken ct);
     Task SoftDeleteJobAsync(Guid jobId, CancellationToken ct);
+    // Atomic claim — single UPDATE...OUTPUT statement; safe for future multi-worker
     Task<SyncExportJob?> ClaimNextPendingJobAsync(CancellationToken ct);
 }
 ```
+
+`ClaimNextPendingJobAsync` must execute atomically — no read-then-update. Implementation uses a raw SQL `UPDATE TOP(1) ... SET status='Running', started_at=SYSUTCDATETIME() OUTPUT inserted.* WHERE status='Pending' ORDER BY created_at` so future multiple workers never double-claim the same job.
 
 ### `ExportJobWorker : BackgroundService`
 
@@ -277,13 +280,15 @@ Runs independently of `ExportJobWorker`. Failure in cleanup never blocks export 
 
 ### SignalR: `ExportJobChangedNotification`
 
-`ExportJobChangedPublisher : INotificationHandler<ExportJobChangedNotification>` sends:
+`ExportJobChangedPublisher : INotificationHandler<ExportJobChangedNotification>` sends only to the job owner — not broadcast to all users:
 
 ```
-hub.Clients.All.SendAsync("ExportJobEvent", {
+hub.Clients.User(job.RequestedBy).SendAsync("ExportJobEvent", {
   jobId, status, progressPercent, rowCount
 })
 ```
+
+Other operators must not see each other's export progress. `Clients.User(username)` maps to the authenticated user's connection(s) via the hub's user ID provider (ASP.NET Core Identity integration already wired in `OperationsHub`).
 
 Frontend strategy:
 - **Running** (progress update): `queryClient.setQueryData(queryKeys.exportJobs, ...)` — patch in-place for smooth progress bars, no refetch
@@ -460,6 +465,22 @@ src/MSOSync.Frontend/src/app/layouts/AppLayout.tsx
 | 4 | Downloads frontend | `ExportJobsPage`, `ExportMenu` changes, SignalR patch, sidebar wiring |
 
 Tasks 1 and 2 are sequential (backend before frontend). Tasks 3 and 4 are sequential. Tasks 1-2 and 3-4 tracks can be developed in order: finish Track 1 completely before starting Track 2.
+
+---
+
+## Operational Metrics
+
+Export workers emit counters via existing `IMetricsService` (or `System.Diagnostics.Metrics` if IMetricsService not yet abstracted):
+
+```
+msosync_export_jobs_created_total      — incremented in CreateJobAsync
+msosync_export_jobs_completed_total    — incremented in CompleteJobAsync
+msosync_export_jobs_failed_total       — incremented in FailJobAsync
+msosync_export_job_duration_seconds    — histogram recorded in ExportJobWorker (started_at → completed_at)
+msosync_export_rows_written_total      — incremented by row_count in CompleteJobAsync
+```
+
+These fit the observability pattern established in earlier epics and allow early diagnosis of throughput or failure-rate issues without waiting for user reports.
 
 ---
 
