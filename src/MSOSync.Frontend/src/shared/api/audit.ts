@@ -1,11 +1,20 @@
 import client from './client';
 import type { AuditDto, AuditFilter } from '../types';
-import type { PagedResult } from '../types/common';
+import type { CursorPageResult } from '../types/common';
 import type { AuditSummaryDto } from '../types/audit-summary';
 
-export async function getAuditLog(filter: AuditFilter): Promise<PagedResult<AuditDto>> {
-  const { data } = await client.get<PagedResult<AuditDto>>('/audit', {
+export type CursorAuditFilter = Omit<AuditFilter, 'page'> & {
+  cursor?: string;
+  includeTotalCount?: boolean;
+};
+
+export async function getAuditLog(
+  filter: CursorAuditFilter,
+  options?: { signal?: AbortSignal },
+): Promise<CursorPageResult<AuditDto>> {
+  const { data } = await client.get<CursorPageResult<AuditDto>>('/audit', {
     params: filter,
+    signal: options?.signal,
   });
   return data;
 }

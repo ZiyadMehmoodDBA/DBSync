@@ -1,12 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
-import type { AuditFilter } from '../../shared/types';
 import { queryKeys } from '../../shared/queryKeys';
-import { getAuditLog } from '../../shared/api/audit';
+import { getAuditLog, type CursorAuditFilter } from '../../shared/api/audit';
 
-export function useAuditLog(filter: AuditFilter) {
+export function useAuditLog(filter: CursorAuditFilter) {
   return useQuery({
-    queryKey: queryKeys.auditLog(filter),
-    queryFn: () => getAuditLog(filter),
+    queryKey: queryKeys.auditLogInfinite(filter),
+    queryFn: ({ signal }) => getAuditLog(filter, { signal }),
     placeholderData: (prev) => prev,
     refetchOnWindowFocus: false,
   });

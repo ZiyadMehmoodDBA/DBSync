@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import type { EventFilter } from '../../shared/types';
+import type { CursorEventFilter } from '../../shared/api/events';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Button } from '../../components/ui/button';
 import { DEFAULT_PAGE_SIZE } from '../../shared/constants/query';
 
 interface Props {
-  onFilter: (filter: EventFilter) => void;
+  onFilter: (filter: CursorEventFilter) => void;
 }
 
 export function EventFilters({ onFilter }: Props) {
@@ -23,7 +23,6 @@ export function EventFilters({ onFilter }: Props) {
       isProcessed: isProcessed === '' ? undefined : isProcessed === 'true',
       from: from || undefined,
       to: to || undefined,
-      page: 1,
       pageSize: DEFAULT_PAGE_SIZE,
     });
   }
@@ -34,7 +33,7 @@ export function EventFilters({ onFilter }: Props) {
     setIsProcessed('');
     setFrom('');
     setTo('');
-    onFilter({ page: 1, pageSize: DEFAULT_PAGE_SIZE });
+    onFilter({ pageSize: DEFAULT_PAGE_SIZE });
   }
 
   return (

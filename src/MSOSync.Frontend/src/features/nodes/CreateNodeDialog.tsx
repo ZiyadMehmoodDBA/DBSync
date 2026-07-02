@@ -84,12 +84,13 @@ export function CreateNodeDialog({ open, onOpenChange }: CreateNodeDialogProps) 
 
   const mutation = useCreateNodeMutation();
   const { data: groups } = useTopologyGroups();
-  const { data: nodes } = useQuery({
+  const { data: nodesPage } = useQuery({
     queryKey: queryKeys.nodes(),
-    queryFn: getNodes,
+    queryFn: ({ signal }) => getNodes(1, 50, { signal }),
     staleTime: 60_000,
     refetchOnWindowFocus: false,
   });
+  const nodes = nodesPage?.data;
 
   const form = useForm<CreateNodeForm>({
     resolver: zodResolver(createNodeSchema) as unknown as Resolver<CreateNodeForm>,

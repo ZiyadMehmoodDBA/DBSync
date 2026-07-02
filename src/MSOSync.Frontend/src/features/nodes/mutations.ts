@@ -6,7 +6,7 @@ import { getErrorMessage } from '../../shared/utils/error';
 import { queryKeys } from '../../shared/queryKeys';
 
 function invalidateNodeRelated(queryClient: ReturnType<typeof useQueryClient>) {
-  void queryClient.invalidateQueries({ queryKey: queryKeys.nodes() });
+  void queryClient.invalidateQueries({ queryKey: ['nodes'] });
   void queryClient.invalidateQueries({ queryKey: queryKeys.dashboardSummary() });
   void queryClient.invalidateQueries({ queryKey: queryKeys.metricsSummary() });
   void queryClient.invalidateQueries({ queryKey: queryKeys.topologySummary() });

@@ -54,11 +54,14 @@ const CONFIRM_CONFIG: Record<
   },
 };
 
+const PAGE_SIZE = 50;
+
 export function NodesPage() {
   const [search, setSearch] = useState('');
   const [confirmState, setConfirmState] = useState<ConfirmState | null>(null);
   const [editState, setEditState] = useState<NodeDto | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
+  const [pageNumber, setPageNumber] = useState(1);
 
   const savedPageSize = usePreference<number>(PreferenceKeys.nodesPageSize, 25);
 
@@ -66,7 +69,9 @@ export function NodesPage() {
   const canApprove = useHasPermission(PermissionKeys.ApproveNodes);
   const canManage  = useHasPermission(PermissionKeys.ManageUsers);
 
-  const { data: nodesData } = useNodes();
+  const { data: nodesData, isLoading, error, refetch } = useNodes(pageNumber, PAGE_SIZE);
+  const nodes = nodesData?.data;
+  const totalCount = nodesData?.total ?? 0;
 
   const enableMutation = useEnableNodeMutation();
   const disableMutation = useDisableNodeMutation();
@@ -97,13 +102,16 @@ export function NodesPage() {
 
   const config = confirmState ? CONFIRM_CONFIG[confirmState.action] : null;
 
+  const rangeStart = (pageNumber - 1) * PAGE_SIZE + 1;
+  const rangeEnd = Math.min(pageNumber * PAGE_SIZE, totalCount);
+
   return (
     <div className="flex flex-col gap-4 p-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Nodes</h1>
         <ExportMenu
           resource="nodes"
-          currentData={(nodesData ?? []) as unknown as Record<string, unknown>[]}
+          currentData={(nodes ?? []) as unknown as Record<string, unknown>[]}
           queryParams={{}}
           supportsAllRows={false}
           canExport={canExport}
@@ -120,7 +128,42 @@ export function NodesPage() {
           <Button onClick={() => setCreateOpen(true)}>Add Node</Button>
         )}
       </div>
-      <NodesGrid quickFilterText={search} onAction={onAction} onEdit={onEdit} paginationPageSize={savedPageSize} canApprove={canApprove} />
+      <NodesGrid
+        rowData={nodes}
+        isLoading={isLoading}
+        error={error}
+        onRetry={() => void refetch()}
+        quickFilterText={search}
+        onAction={onAction}
+        onEdit={onEdit}
+        paginationPageSize={savedPageSize}
+        canApprove={canApprove}
+      />
+      {totalCount > 0 && (
+        <div className="flex items-center justify-between px-2 py-3 border-t text-sm text-muted-foreground">
+          <span>
+            Showing {rangeStart}–{rangeEnd} of {totalCount}
+          </span>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPageNumber(p => p - 1)}
+              disabled={pageNumber === 1}
+            >
+              Previous
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPageNumber(p => p + 1)}
+              disabled={pageNumber * PAGE_SIZE >= totalCount}
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      )}
       {editState && (
         <NodeDialog
           open={!!editState}

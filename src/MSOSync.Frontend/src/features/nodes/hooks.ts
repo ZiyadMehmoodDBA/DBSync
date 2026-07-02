@@ -2,10 +2,10 @@ import { useQuery } from '@tanstack/react-query';
 import { queryKeys } from '../../shared/queryKeys';
 import { getNodes } from '../../shared/api/nodes';
 
-export function useNodes() {
+export function useNodes(pageNumber = 1, pageSize = 50) {
   return useQuery({
-    queryKey: queryKeys.nodes(),
-    queryFn: getNodes,
+    queryKey: queryKeys.nodes(pageNumber, pageSize),
+    queryFn: ({ signal }) => getNodes(pageNumber, pageSize, { signal }),
     staleTime: 60_000,
     refetchOnWindowFocus: false,
   });

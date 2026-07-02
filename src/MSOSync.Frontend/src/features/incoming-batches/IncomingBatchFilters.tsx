@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import type { IncomingBatchFilter } from '../../shared/types';
+import type { CursorIncomingBatchFilter } from '../../shared/api/batches';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Button } from '../../components/ui/button';
 import { DEFAULT_BATCH_PAGE_SIZE } from '../../shared/constants/query';
 
 interface Props {
-  onFilter: (filter: IncomingBatchFilter) => void;
+  onFilter: (filter: CursorIncomingBatchFilter) => void;
 }
 
 export function IncomingBatchFilters({ onFilter }: Props) {
@@ -23,14 +23,13 @@ export function IncomingBatchFilters({ onFilter }: Props) {
       status: status || undefined,
       from: from || undefined,
       to: to || undefined,
-      page: 1,
       pageSize: DEFAULT_BATCH_PAGE_SIZE,
     });
   }
 
   function handleReset() {
     setSourceNodeId(''); setChannelId(''); setStatus(''); setFrom(''); setTo('');
-    onFilter({ page: 1, pageSize: DEFAULT_BATCH_PAGE_SIZE });
+    onFilter({ pageSize: DEFAULT_BATCH_PAGE_SIZE });
   }
 
   return (

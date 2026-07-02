@@ -1,8 +1,16 @@
 import client from './client';
 import type { NodeDto } from '../types';
+import type { PagedResult } from '../types/common';
 
-export async function getNodes(): Promise<NodeDto[]> {
-  const { data } = await client.get<NodeDto[]>('/nodes');
+export async function getNodes(
+  pageNumber = 1,
+  pageSize   = 50,
+  options?: { signal?: AbortSignal },
+): Promise<PagedResult<NodeDto>> {
+  const { data } = await client.get<PagedResult<NodeDto>>('/nodes/paged', {
+    params: { pageNumber, pageSize },
+    signal: options?.signal,
+  });
   return data;
 }
 

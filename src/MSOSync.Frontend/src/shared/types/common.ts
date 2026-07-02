@@ -6,6 +6,13 @@ export interface PagedResult<T> {
   totalPages: number;
 }
 
+export interface CursorPageResult<T> {
+  items: T[];
+  nextCursor: string | null;
+  hasMore: boolean;
+  totalCount: number | null;
+}
+
 export interface ApiError {
   title: string;
   status: number;

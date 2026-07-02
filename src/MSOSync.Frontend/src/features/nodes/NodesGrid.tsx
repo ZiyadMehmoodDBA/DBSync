@@ -1,12 +1,15 @@
 import { useMemo } from 'react';
 import { DataGrid } from '../../shared/components/data-display/DataGrid';
 import { makeNodeColumns } from './columns';
-import { useNodes } from './hooks';
 import type { NodeDto } from '../../shared/types';
 
 type NodeAction = 'enable' | 'disable' | 'approve';
 
 interface Props {
+  rowData: NodeDto[] | undefined;
+  isLoading?: boolean;
+  error?: unknown;
+  onRetry?: () => void;
   quickFilterText?: string;
   onAction: (nodeId: string, action: NodeAction) => void;
   onEdit: (node: NodeDto) => void;
@@ -14,16 +17,25 @@ interface Props {
   canApprove?: boolean;
 }
 
-export function NodesGrid({ quickFilterText, onAction, onEdit, paginationPageSize, canApprove = true }: Props) {
-  const { data, isLoading, error, refetch } = useNodes();
+export function NodesGrid({
+  rowData,
+  isLoading = false,
+  error,
+  onRetry,
+  quickFilterText,
+  onAction,
+  onEdit,
+  paginationPageSize,
+  canApprove = true,
+}: Props) {
   const columns = useMemo(() => makeNodeColumns(onAction, onEdit, canApprove), [onAction, onEdit, canApprove]);
   return (
     <DataGrid
-      rowData={data}
+      rowData={rowData}
       columnDefs={columns}
       loading={isLoading}
       error={error}
-      onRetry={() => void refetch()}
+      onRetry={onRetry}
       quickFilterText={quickFilterText}
       height={500}
       paginationPageSize={paginationPageSize}

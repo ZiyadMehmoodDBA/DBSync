@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import type { AuditFilter } from '../../shared/types';
+import type { CursorAuditFilter } from '../../shared/api/audit';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Button } from '../../components/ui/button';
 import { DEFAULT_PAGE_SIZE } from '../../shared/constants/query';
 
-interface Props { onFilter: (filter: AuditFilter) => void; }
+interface Props { onFilter: (filter: CursorAuditFilter) => void; }
 
 export function AuditFilters({ onFilter }: Props) {
   const [username, setUsername] = useState('');
@@ -19,14 +19,13 @@ export function AuditFilters({ onFilter }: Props) {
       actionName: actionName || undefined,
       from: from || undefined,
       to: to || undefined,
-      page: 1,
       pageSize: DEFAULT_PAGE_SIZE,
     });
   }
 
   function handleReset() {
     setUsername(''); setActionName(''); setFrom(''); setTo('');
-    onFilter({ page: 1, pageSize: DEFAULT_PAGE_SIZE });
+    onFilter({ pageSize: DEFAULT_PAGE_SIZE });
   }
 
   return (

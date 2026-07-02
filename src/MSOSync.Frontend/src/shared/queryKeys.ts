@@ -12,14 +12,20 @@ export const queryKeys = {
   dashboardActivity: (page: number) => ['dashboard-activity', page] as const,
 
   events: (filter: EventFilter) => ['events', filter] as const,
+  eventsInfinite: (filter: Omit<EventFilter, 'page'>) =>
+    ['events', 'infinite', filter] as const,
   event: (id: number) => ['event', id] as const,
 
   incomingBatches: (filter: IncomingBatchFilter) => ['incoming-batches', filter] as const,
+  incomingBatchesInfinite: (filter: Omit<IncomingBatchFilter, 'page'>) =>
+    ['incoming-batches', 'infinite', filter] as const,
   outgoingBatchesBase: () => ['outgoing-batches'] as const,
   outgoingBatches: (filter: OutgoingBatchFilter) => ['outgoing-batches', filter] as const,
+  outgoingBatchesInfinite: (filter: Omit<OutgoingBatchFilter, 'page'>) =>
+    ['outgoing-batches', 'infinite', filter] as const,
   batchErrors: (filter: BatchErrorFilter) => ['batch-errors', filter] as const,
 
-  nodes: () => ['nodes'] as const,
+  nodes: (pageNumber = 1, pageSize = 50) => ['nodes', pageNumber, pageSize] as const,
   node: (id: string) => ['node', id] as const,
 
   topologySummary: () => ['topology-summary'] as const,
@@ -41,6 +47,8 @@ export const queryKeys = {
   parameterDescriptors: () => ['parameter-descriptors'] as const,
 
   auditLog: (filter: AuditFilter) => ['audit', filter] as const,
+  auditLogInfinite: (filter: Omit<AuditFilter, 'page'>) =>
+    ['audit', 'infinite', filter] as const,
   auditSummary: (from: string, to: string) => ['audit-summary', from, to] as const,
   locks: () => ['locks'] as const,
 
@@ -50,4 +58,6 @@ export const queryKeys = {
   permissionCatalog: () => ['permission-catalog'] as const,
   roles:             () => ['roles'] as const,
   role:              (name: string) => ['roles', name] as const,
+
+  exportJobs: () => ['export-jobs'] as const,
 };
