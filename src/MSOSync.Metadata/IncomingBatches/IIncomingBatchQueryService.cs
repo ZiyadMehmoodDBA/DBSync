@@ -1,10 +1,10 @@
-using MSOSync.Metadata.Common;
+using MSOSync.Common.Pagination;
 
 namespace MSOSync.Metadata.IncomingBatches;
 
 public interface IIncomingBatchQueryService
 {
-    Task<PagedResult<IncomingBatchSummaryDto>> GetIncomingBatchesAsync(
+    Task<CursorPageResult<IncomingBatchSummaryDto>> GetIncomingBatchesAsync(
         IncomingBatchFilter filter, CancellationToken ct = default);
 
     Task<IncomingBatchDetailDto?> GetIncomingBatchByIdAsync(

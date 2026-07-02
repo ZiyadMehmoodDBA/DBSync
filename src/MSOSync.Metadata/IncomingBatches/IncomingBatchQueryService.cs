@@ -1,26 +1,33 @@
 using Microsoft.EntityFrameworkCore;
-using MSOSync.Metadata.Common;
+using MSOSync.Common.Pagination;
 using MSOSync.Persistence;
 
 namespace MSOSync.Metadata.IncomingBatches;
 
 public sealed class IncomingBatchQueryService(AppDbContext db) : IIncomingBatchQueryService
 {
-    public async Task<PagedResult<IncomingBatchSummaryDto>> GetIncomingBatchesAsync(
+    public async Task<CursorPageResult<IncomingBatchSummaryDto>> GetIncomingBatchesAsync(
         IncomingBatchFilter filter, CancellationToken ct = default)
     {
-        var q = db.IncomingBatches.AsNoTracking();
+        var baseQ = db.IncomingBatches.AsNoTracking();
 
-        if (filter.SourceNodeId is not null) q = q.Where(b => b.SourceNodeId == filter.SourceNodeId);
-        if (filter.ChannelId    is not null) q = q.Where(b => b.ChannelId    == filter.ChannelId);
-        if (filter.Status       is not null) q = q.Where(b => b.Status       == filter.Status);
-        if (filter.From         is not null) q = q.Where(b => b.ReceivedTime >= filter.From);
-        if (filter.To           is not null) q = q.Where(b => b.ReceivedTime <= filter.To);
+        if (filter.SourceNodeId is not null) baseQ = baseQ.Where(b => b.SourceNodeId == filter.SourceNodeId);
+        if (filter.ChannelId    is not null) baseQ = baseQ.Where(b => b.ChannelId    == filter.ChannelId);
+        if (filter.Status       is not null) baseQ = baseQ.Where(b => b.Status       == filter.Status);
+        if (filter.From         is not null) baseQ = baseQ.Where(b => b.ReceivedTime >= filter.From);
+        if (filter.To           is not null) baseQ = baseQ.Where(b => b.ReceivedTime <= filter.To);
 
-        var total = await q.CountAsync(ct);
+        var q = baseQ;
+        if (filter.Cursor is not null)
+        {
+            var (cursorId, _) = CursorToken.Decode(filter.Cursor);
+            q = q.Where(b => b.BatchId < cursorId);
+        }
 
-        var items = await q
-            .OrderByDescending(b => b.ReceivedTime)
+        var pageSize = filter.PageSize;
+        var rows = await q
+            .OrderByDescending(b => b.BatchId)
+            .Take(pageSize + 1)
             .Select(b => new IncomingBatchSummaryDto(
                 b.BatchId,
                 b.SourceNodeId,
@@ -30,12 +37,23 @@ public sealed class IncomingBatchQueryService(AppDbContext db) : IIncomingBatchQ
                 b.BatchSequence,
                 b.ReceivedTime,
                 b.ApplyTimeMs))
-            .Skip((filter.Page - 1) * filter.PageSize)
-            .Take(filter.PageSize)
             .ToListAsync(ct);
 
-        return new PagedResult<IncomingBatchSummaryDto>(
-            items.AsReadOnly(), filter.Page, filter.PageSize, total);
+        var hasMore = rows.Count > pageSize;
+        if (hasMore) rows = rows.Take(pageSize).ToList();
+
+        string? nextCursor = null;
+        if (hasMore)
+        {
+            var last = rows[^1];
+            nextCursor = CursorToken.Encode(last.BatchId, last.ReceivedTime.Ticks);
+        }
+
+        int? totalCount = null;
+        if (filter.IncludeTotalCount)
+            totalCount = await baseQ.CountAsync(ct);
+
+        return new CursorPageResult<IncomingBatchSummaryDto>(rows.AsReadOnly(), nextCursor, hasMore, totalCount);
     }
 
     public async Task<IncomingBatchDetailDto?> GetIncomingBatchByIdAsync(

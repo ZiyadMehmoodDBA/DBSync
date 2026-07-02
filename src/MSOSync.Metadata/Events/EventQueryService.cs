@@ -1,28 +1,35 @@
 using Microsoft.EntityFrameworkCore;
-using MSOSync.Metadata.Common;
+using MSOSync.Common.Pagination;
 using MSOSync.Persistence;
 
 namespace MSOSync.Metadata.Events;
 
 public sealed class EventQueryService(AppDbContext db) : IEventQueryService
 {
-    public async Task<PagedResult<EventSummaryDto>> GetEventsAsync(
+    public async Task<CursorPageResult<EventSummaryDto>> GetEventsAsync(
         EventFilter filter, CancellationToken ct = default)
     {
-        var q = db.DataEvents.AsNoTracking();
+        var baseQ = db.DataEvents.AsNoTracking();
 
-        if (filter.SourceNodeId is not null) q = q.Where(e => e.SourceNodeId == filter.SourceNodeId);
-        if (filter.TriggerId    is not null) q = q.Where(e => e.TriggerId    == filter.TriggerId);
-        if (filter.ChannelId    is not null) q = q.Where(e => e.ChannelId    == filter.ChannelId);
-        if (filter.EventType    is not null) q = q.Where(e => e.EventType    == filter.EventType);
-        if (filter.IsProcessed  is not null) q = q.Where(e => e.IsProcessed  == filter.IsProcessed);
-        if (filter.From         is not null) q = q.Where(e => e.CreateTime   >= filter.From);
-        if (filter.To           is not null) q = q.Where(e => e.CreateTime   <= filter.To);
+        if (filter.SourceNodeId is not null) baseQ = baseQ.Where(e => e.SourceNodeId == filter.SourceNodeId);
+        if (filter.TriggerId    is not null) baseQ = baseQ.Where(e => e.TriggerId    == filter.TriggerId);
+        if (filter.ChannelId    is not null) baseQ = baseQ.Where(e => e.ChannelId    == filter.ChannelId);
+        if (filter.EventType    is not null) baseQ = baseQ.Where(e => e.EventType    == filter.EventType);
+        if (filter.IsProcessed  is not null) baseQ = baseQ.Where(e => e.IsProcessed  == filter.IsProcessed);
+        if (filter.From         is not null) baseQ = baseQ.Where(e => e.CreateTime   >= filter.From);
+        if (filter.To           is not null) baseQ = baseQ.Where(e => e.CreateTime   <= filter.To);
 
-        var total = await q.CountAsync(ct);
+        var q = baseQ;
+        if (filter.Cursor is not null)
+        {
+            var (cursorId, _) = CursorToken.Decode(filter.Cursor);
+            q = q.Where(e => e.EventId < cursorId);
+        }
 
-        var items = await q
-            .OrderByDescending(e => e.CreateTime)
+        var pageSize = filter.PageSize;
+        var rows = await q
+            .OrderByDescending(e => e.EventId)
+            .Take(pageSize + 1)
             .Select(e => new EventSummaryDto(
                 e.EventId,
                 e.TriggerId,
@@ -35,11 +42,23 @@ public sealed class EventQueryService(AppDbContext db) : IEventQueryService
                     .Max(deb => (long?)deb.BatchId),
                 e.CreateTime,
                 e.IsProcessed))
-            .Skip((filter.Page - 1) * filter.PageSize)
-            .Take(filter.PageSize)
             .ToListAsync(ct);
 
-        return new PagedResult<EventSummaryDto>(items.AsReadOnly(), filter.Page, filter.PageSize, total);
+        var hasMore = rows.Count > pageSize;
+        if (hasMore) rows = rows.Take(pageSize).ToList();
+
+        string? nextCursor = null;
+        if (hasMore)
+        {
+            var last = rows[^1];
+            nextCursor = CursorToken.Encode(last.EventId, last.CreateTime.Ticks);
+        }
+
+        int? totalCount = null;
+        if (filter.IncludeTotalCount)
+            totalCount = await baseQ.CountAsync(ct);
+
+        return new CursorPageResult<EventSummaryDto>(rows.AsReadOnly(), nextCursor, hasMore, totalCount);
     }
 
     public async Task<EventDetailDto?> GetEventByIdAsync(

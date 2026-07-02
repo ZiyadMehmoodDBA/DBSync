@@ -6,8 +6,7 @@ public sealed class IncomingBatchFilterValidator : AbstractValidator<IncomingBat
 {
     public IncomingBatchFilterValidator()
     {
-        RuleFor(f => f.Page).GreaterThanOrEqualTo(1);
-        RuleFor(f => f.PageSize).InclusiveBetween(1, 100);
+        RuleFor(f => f.PageSize).InclusiveBetween(1, 500);
         RuleFor(f => f.To)
             .GreaterThanOrEqualTo(f => f.From!.Value)
             .When(f => f.From.HasValue && f.To.HasValue)

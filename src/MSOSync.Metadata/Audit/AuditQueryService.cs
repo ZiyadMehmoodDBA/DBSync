@@ -1,26 +1,33 @@
 using Microsoft.EntityFrameworkCore;
-using MSOSync.Metadata.Common;
+using MSOSync.Common.Pagination;
 using MSOSync.Persistence;
 
 namespace MSOSync.Metadata.Audit;
 
 public sealed class AuditQueryService(AppDbContext db) : IAuditQueryService
 {
-    public async Task<PagedResult<AuditDto>> GetAuditsAsync(
+    public async Task<CursorPageResult<AuditDto>> GetAuditsAsync(
         AuditFilter filter, CancellationToken ct = default)
     {
-        var q = db.Audits.AsNoTracking()
+        var baseQ = db.Audits.AsNoTracking()
             .Where(a => a.CreateTime != null);
 
-        if (filter.Username   is not null) q = q.Where(a => a.Username   == filter.Username);
-        if (filter.ActionName is not null) q = q.Where(a => a.ActionName == filter.ActionName);
-        if (filter.From       is not null) q = q.Where(a => a.CreateTime >= filter.From);
-        if (filter.To         is not null) q = q.Where(a => a.CreateTime <= filter.To);
+        if (filter.Username   is not null) baseQ = baseQ.Where(a => a.Username   == filter.Username);
+        if (filter.ActionName is not null) baseQ = baseQ.Where(a => a.ActionName == filter.ActionName);
+        if (filter.From       is not null) baseQ = baseQ.Where(a => a.CreateTime >= filter.From);
+        if (filter.To         is not null) baseQ = baseQ.Where(a => a.CreateTime <= filter.To);
 
-        var total = await q.CountAsync(ct);
+        var q = baseQ;
+        if (filter.Cursor is not null)
+        {
+            var (cursorId, _) = CursorToken.Decode(filter.Cursor);
+            q = q.Where(a => a.AuditId < cursorId);
+        }
 
-        var items = await q
-            .OrderByDescending(a => a.CreateTime)
+        var pageSize = filter.PageSize;
+        var rows = await q
+            .OrderByDescending(a => a.AuditId)
+            .Take(pageSize + 1)
             .Select(a => new AuditDto(
                 a.AuditId,
                 a.Username,
@@ -28,11 +35,23 @@ public sealed class AuditQueryService(AppDbContext db) : IAuditQueryService
                 a.ObjectName,
                 a.CorrelationId,
                 a.CreateTime!.Value))
-            .Skip((filter.Page - 1) * filter.PageSize)
-            .Take(filter.PageSize)
             .ToListAsync(ct);
 
-        return new PagedResult<AuditDto>(items.AsReadOnly(), filter.Page, filter.PageSize, total);
+        var hasMore = rows.Count > pageSize;
+        if (hasMore) rows = rows.Take(pageSize).ToList();
+
+        string? nextCursor = null;
+        if (hasMore)
+        {
+            var last = rows[^1];
+            nextCursor = CursorToken.Encode(last.AuditId, last.CreateTime.Ticks);
+        }
+
+        int? totalCount = null;
+        if (filter.IncludeTotalCount)
+            totalCount = await baseQ.CountAsync(ct);
+
+        return new CursorPageResult<AuditDto>(rows.AsReadOnly(), nextCursor, hasMore, totalCount);
     }
 
     public async Task<AuditDto?> GetAuditByIdAsync(long auditId, CancellationToken ct = default)

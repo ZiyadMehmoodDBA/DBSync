@@ -37,8 +37,8 @@ public sealed class EventQueryServiceTests
 
         var result = await svc.GetEventsAsync(new EventFilter(), default);
 
-        result.TotalCount.Should().Be(2);
         result.Items.Should().HaveCount(2);
+        result.HasMore.Should().BeFalse();
     }
 
     [Fact]
@@ -52,7 +52,6 @@ public sealed class EventQueryServiceTests
 
         var result = await svc.GetEventsAsync(new EventFilter { SourceNodeId = "node-1" }, default);
 
-        result.TotalCount.Should().Be(1);
         result.Items.Single().SourceNodeId.Should().Be("node-1");
     }
 
@@ -68,7 +67,6 @@ public sealed class EventQueryServiceTests
 
         var result = await svc.GetEventsAsync(new EventFilter { EventType = 'U' }, default);
 
-        result.TotalCount.Should().Be(1);
         result.Items.Single().EventType.Should().Be('U');
     }
 
@@ -84,7 +82,6 @@ public sealed class EventQueryServiceTests
 
         var result = await svc.GetEventsAsync(new EventFilter { IsProcessed = true }, default);
 
-        result.TotalCount.Should().Be(1);
         result.Items.Single().IsProcessed.Should().BeTrue();
     }
 
@@ -102,7 +99,7 @@ public sealed class EventQueryServiceTests
         var result = await svc.GetEventsAsync(
             new EventFilter { From = DateTime.UtcNow.AddDays(-1) }, default);
 
-        result.TotalCount.Should().Be(1);
+        result.Items.Should().HaveCount(1);
     }
 
     [Fact]
@@ -113,12 +110,48 @@ public sealed class EventQueryServiceTests
             db.DataEvents.Add(MakeEvent("node-1", $"trig-{i}", 'I'));
         await db.SaveChangesAsync();
 
-        var result = await svc.GetEventsAsync(new EventFilter { Page = 1, PageSize = 3 }, default);
+        var result = await svc.GetEventsAsync(new EventFilter { PageSize = 3 }, default);
+
+        result.Items.Should().HaveCount(3);
+        result.HasMore.Should().BeTrue();
+        result.NextCursor.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task GetEventsAsync_IncludeTotalCount_ReturnsTotalCount()
+    {
+        var (svc, db) = Make();
+        for (int i = 0; i < 10; i++)
+            db.DataEvents.Add(MakeEvent("node-1", $"trig-{i}", 'I'));
+        await db.SaveChangesAsync();
+
+        var result = await svc.GetEventsAsync(
+            new EventFilter { PageSize = 3, IncludeTotalCount = true }, default);
 
         result.TotalCount.Should().Be(10);
         result.Items.Should().HaveCount(3);
-        result.Page.Should().Be(1);
-        result.PageSize.Should().Be(3);
+    }
+
+    [Fact]
+    public async Task GetEventsAsync_Cursor_ReturnsNextPage()
+    {
+        var (svc, db) = Make();
+        for (int i = 0; i < 5; i++)
+            db.DataEvents.Add(MakeEvent("node-1", $"trig-{i}", 'I'));
+        await db.SaveChangesAsync();
+
+        var page1 = await svc.GetEventsAsync(new EventFilter { PageSize = 2 }, default);
+        page1.Items.Should().HaveCount(2);
+        page1.HasMore.Should().BeTrue();
+
+        var page2 = await svc.GetEventsAsync(
+            new EventFilter { PageSize = 2, Cursor = page1.NextCursor }, default);
+        page2.Items.Should().HaveCount(2);
+
+        var allIds = page1.Items.Select(e => e.EventId)
+            .Concat(page2.Items.Select(e => e.EventId))
+            .ToList();
+        allIds.Should().OnlyHaveUniqueItems();
     }
 
     [Fact]

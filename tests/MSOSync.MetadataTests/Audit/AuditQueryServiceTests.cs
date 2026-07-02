@@ -40,8 +40,8 @@ public sealed class AuditQueryServiceTests : IDisposable
 
         var result = await _sut.GetAuditsAsync(new AuditFilter(), default);
 
-        result.TotalCount.Should().Be(3);
         result.Items.Should().HaveCount(3);
+        result.HasMore.Should().BeFalse();
     }
 
     [Fact]
@@ -56,7 +56,7 @@ public sealed class AuditQueryServiceTests : IDisposable
         var result = await _sut.GetAuditsAsync(
             new AuditFilter { Username = "alice" }, default);
 
-        result.TotalCount.Should().Be(2);
+        result.Items.Should().HaveCount(2);
         result.Items.Should().AllSatisfy(a => a.Username.Should().Be("alice"));
     }
 
@@ -72,7 +72,7 @@ public sealed class AuditQueryServiceTests : IDisposable
         var result = await _sut.GetAuditsAsync(
             new AuditFilter { ActionName = "UPDATE" }, default);
 
-        result.TotalCount.Should().Be(2);
+        result.Items.Should().HaveCount(2);
     }
 
     [Fact]
@@ -88,28 +88,61 @@ public sealed class AuditQueryServiceTests : IDisposable
         var result = await _sut.GetAuditsAsync(
             new AuditFilter { From = now.AddDays(-1).AddHours(-1), To = now.AddHours(-1) }, default);
 
-        result.TotalCount.Should().Be(1);
+        result.Items.Should().HaveCount(1);
         result.Items[0].AuditId.Should().Be(2);
     }
 
     [Fact]
-    public async Task GetAudits_Pagination_ReturnsCorrectPage()
+    public async Task GetAudits_Pagination_HonorsPageSize()
     {
         for (int i = 1; i <= 10; i++)
             _db.Audits.Add(Audit(i, createTime: DateTime.UtcNow.AddMinutes(-i)));
         await _db.SaveChangesAsync();
 
         var result = await _sut.GetAuditsAsync(
-            new AuditFilter { Page = 2, PageSize = 3 }, default);
+            new AuditFilter { PageSize = 3 }, default);
 
-        result.TotalCount.Should().Be(10);
         result.Items.Should().HaveCount(3);
-        result.Page.Should().Be(2);
-        result.PageSize.Should().Be(3);
+        result.HasMore.Should().BeTrue();
     }
 
     [Fact]
-    public async Task GetAudits_OrderedByCreateTimeDesc()
+    public async Task GetAudits_IncludeTotalCount_ReturnsTotalCount()
+    {
+        for (int i = 1; i <= 10; i++)
+            _db.Audits.Add(Audit(i, createTime: DateTime.UtcNow.AddMinutes(-i)));
+        await _db.SaveChangesAsync();
+
+        var result = await _sut.GetAuditsAsync(
+            new AuditFilter { PageSize = 3, IncludeTotalCount = true }, default);
+
+        result.TotalCount.Should().Be(10);
+        result.Items.Should().HaveCount(3);
+    }
+
+    [Fact]
+    public async Task GetAudits_Cursor_ReturnsNextPage()
+    {
+        for (int i = 1; i <= 5; i++)
+            _db.Audits.Add(Audit(i, createTime: DateTime.UtcNow.AddMinutes(-i)));
+        await _db.SaveChangesAsync();
+
+        var page1 = await _sut.GetAuditsAsync(new AuditFilter { PageSize = 2 }, default);
+        page1.Items.Should().HaveCount(2);
+        page1.HasMore.Should().BeTrue();
+
+        var page2 = await _sut.GetAuditsAsync(
+            new AuditFilter { PageSize = 2, Cursor = page1.NextCursor }, default);
+        page2.Items.Should().HaveCount(2);
+
+        var allIds = page1.Items.Select(a => a.AuditId)
+            .Concat(page2.Items.Select(a => a.AuditId))
+            .ToList();
+        allIds.Should().OnlyHaveUniqueItems();
+    }
+
+    [Fact]
+    public async Task GetAudits_OrderedByAuditIdDesc()
     {
         var now = DateTime.UtcNow;
         _db.Audits.AddRange(
@@ -135,7 +168,7 @@ public sealed class AuditQueryServiceTests : IDisposable
 
         var result = await _sut.GetAuditsAsync(new AuditFilter(), default);
 
-        result.TotalCount.Should().Be(1);
+        result.Items.Should().HaveCount(1);
         result.Items[0].AuditId.Should().Be(1);
     }
 

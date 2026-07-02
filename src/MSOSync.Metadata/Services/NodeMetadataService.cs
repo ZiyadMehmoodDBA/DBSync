@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using MSOSync.Common.Exceptions;
+using MSOSync.Metadata.Common;
 using MSOSync.Metadata.Dtos;
 using MSOSync.Metadata.Events;
 using MSOSync.Metadata.Interfaces;
@@ -30,6 +31,20 @@ public sealed class NodeMetadataService(
     {
         var nodes = await db.Nodes.AsNoTracking().ToListAsync(ct);
         return nodes.Select(MapNode).ToList().AsReadOnly();
+    }
+
+    public async Task<PagedResult<NodeDto>> GetNodesPagedAsync(
+        int pageNumber, int pageSize, CancellationToken ct = default)
+    {
+        var q = db.Nodes.AsNoTracking();
+        var total = await q.CountAsync(ct);
+        var nodes = await q
+            .OrderBy(n => n.NodeId)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(ct);
+        var items = nodes.Select(MapNode).ToList().AsReadOnly();
+        return new PagedResult<NodeDto>(items, pageNumber, pageSize, total);
     }
 
     public async Task<NodeDto?> GetNodeAsync(string nodeId, CancellationToken ct = default)

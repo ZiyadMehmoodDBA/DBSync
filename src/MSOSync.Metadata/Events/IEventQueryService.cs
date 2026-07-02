@@ -1,10 +1,10 @@
-using MSOSync.Metadata.Common;
+using MSOSync.Common.Pagination;
 
 namespace MSOSync.Metadata.Events;
 
 public interface IEventQueryService
 {
-    Task<PagedResult<EventSummaryDto>> GetEventsAsync(
+    Task<CursorPageResult<EventSummaryDto>> GetEventsAsync(
         EventFilter filter, CancellationToken ct = default);
 
     Task<EventDetailDto?> GetEventByIdAsync(

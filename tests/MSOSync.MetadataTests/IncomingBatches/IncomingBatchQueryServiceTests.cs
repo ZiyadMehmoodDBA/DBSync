@@ -48,8 +48,8 @@ public sealed class IncomingBatchQueryServiceTests
 
         var result = await svc.GetIncomingBatchesAsync(new IncomingBatchFilter(), default);
 
-        result.TotalCount.Should().Be(2);
         result.Items.Should().HaveCount(2);
+        result.HasMore.Should().BeFalse();
     }
 
     [Fact]
@@ -67,7 +67,6 @@ public sealed class IncomingBatchQueryServiceTests
         var result = await svc.GetIncomingBatchesAsync(
             new IncomingBatchFilter { Status = IncomingBatchStatus.Error }, default);
 
-        result.TotalCount.Should().Be(1);
         result.Items.Single().Status.Should().Be(IncomingBatchStatus.Error);
     }
 
@@ -85,7 +84,6 @@ public sealed class IncomingBatchQueryServiceTests
         var result = await svc.GetIncomingBatchesAsync(
             new IncomingBatchFilter { SourceNodeId = "node-1" }, default);
 
-        result.TotalCount.Should().Be(1);
         result.Items.Single().SourceNodeId.Should().Be("node-1");
     }
 
@@ -100,11 +98,52 @@ public sealed class IncomingBatchQueryServiceTests
         await db.SaveChangesAsync();
 
         var result = await svc.GetIncomingBatchesAsync(
-            new IncomingBatchFilter { Page = 2, PageSize = 3 }, default);
+            new IncomingBatchFilter { PageSize = 3 }, default);
+
+        result.Items.Should().HaveCount(3);
+        result.HasMore.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task GetIncomingBatchesAsync_IncludeTotalCount_ReturnsTotalCount()
+    {
+        var (svc, db) = Make();
+        db.Nodes.Add(MakeNode("node-1"));
+        await db.SaveChangesAsync();
+        for (long i = 1; i <= 8; i++)
+            db.IncomingBatches.Add(MakeBatch("node-1", IncomingBatchStatus.Applied, i));
+        await db.SaveChangesAsync();
+
+        var result = await svc.GetIncomingBatchesAsync(
+            new IncomingBatchFilter { PageSize = 3, IncludeTotalCount = true }, default);
 
         result.TotalCount.Should().Be(8);
         result.Items.Should().HaveCount(3);
-        result.Page.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task GetIncomingBatchesAsync_Cursor_ReturnsNextPage()
+    {
+        var (svc, db) = Make();
+        db.Nodes.Add(MakeNode("node-1"));
+        await db.SaveChangesAsync();
+        for (long i = 1; i <= 5; i++)
+            db.IncomingBatches.Add(MakeBatch("node-1", IncomingBatchStatus.Applied, i));
+        await db.SaveChangesAsync();
+
+        var page1 = await svc.GetIncomingBatchesAsync(
+            new IncomingBatchFilter { PageSize = 2 }, default);
+        page1.Items.Should().HaveCount(2);
+        page1.HasMore.Should().BeTrue();
+
+        var page2 = await svc.GetIncomingBatchesAsync(
+            new IncomingBatchFilter { PageSize = 2, Cursor = page1.NextCursor }, default);
+        page2.Items.Should().HaveCount(2);
+
+        var allIds = page1.Items.Select(b => b.BatchId)
+            .Concat(page2.Items.Select(b => b.BatchId))
+            .ToList();
+        allIds.Should().OnlyHaveUniqueItems();
     }
 
     [Fact]

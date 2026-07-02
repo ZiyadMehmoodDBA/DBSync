@@ -10,15 +10,9 @@ public sealed class IncomingBatchFilterValidatorTests
     private static IncomingBatchFilterValidator Sut() => new();
 
     [Fact]
-    public void Page_Zero_Fails()
+    public void PageSize_Over500_Fails()
     {
-        Sut().Validate(new IncomingBatchFilter { Page = 0 }).IsValid.Should().BeFalse();
-    }
-
-    [Fact]
-    public void PageSize_Over100_Fails()
-    {
-        Sut().Validate(new IncomingBatchFilter { PageSize = 101 }).IsValid.Should().BeFalse();
+        Sut().Validate(new IncomingBatchFilter { PageSize = 501 }).IsValid.Should().BeFalse();
     }
 
     [Fact]

@@ -9,17 +9,9 @@ public sealed class EventFilterValidatorTests
     private static EventFilterValidator Sut() => new();
 
     [Fact]
-    public void Page_Zero_Fails()
+    public void PageSize_Over500_Fails()
     {
-        var result = Sut().Validate(new EventFilter { Page = 0 });
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.PropertyName == "Page");
-    }
-
-    [Fact]
-    public void PageSize_Over100_Fails()
-    {
-        var result = Sut().Validate(new EventFilter { PageSize = 101 });
+        var result = Sut().Validate(new EventFilter { PageSize = 501 });
         result.IsValid.Should().BeFalse();
         result.Errors.Should().Contain(e => e.PropertyName == "PageSize");
     }
@@ -63,7 +55,6 @@ public sealed class EventFilterValidatorTests
             IsProcessed  = false,
             From         = now.AddDays(-1),
             To           = now,
-            Page         = 2,
             PageSize     = 100
         });
         result.IsValid.Should().BeTrue();

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MSOSync.Api.Dtos.Nodes;
 using MSOSync.Common;
+using MSOSync.Metadata.Common;
 using MSOSync.Metadata.Dtos;
 using MSOSync.Metadata.Interfaces;
 using MSOSync.Metadata.Nodes;
@@ -22,6 +23,18 @@ public sealed class NodesController(
     {
         var result = await nodeService.GetNodesAsync(ct);
         return Ok(result);
+    }
+
+    [HttpGet("paged")]
+    [Authorize]
+    [ProducesResponseType(typeof(PagedResult<NodeDto>), 200)]
+    public async Task<IActionResult> GetNodesPaged(
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize   = 50,
+        CancellationToken ct = default)
+    {
+        pageSize = Math.Min(pageSize, 200);
+        return Ok(await nodeService.GetNodesPagedAsync(pageNumber, pageSize, ct));
     }
 
     [HttpGet("{nodeId}")]

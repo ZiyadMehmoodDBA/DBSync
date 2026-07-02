@@ -1,0 +1,8 @@
+namespace MSOSync.Common.Pagination;
+
+public sealed record CursorPageResult<T>(
+    IReadOnlyList<T> Items,
+    string?          NextCursor,
+    bool             HasMore,
+    int?             TotalCount
+);
