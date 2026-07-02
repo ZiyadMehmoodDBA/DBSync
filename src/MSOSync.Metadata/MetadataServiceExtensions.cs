@@ -14,6 +14,7 @@ using MSOSync.Metadata.Metrics;
 using MSOSync.Metadata.Nodes;
 using MSOSync.Metadata.Services;
 using MSOSync.Metadata.Topology;
+using MSOSync.Metadata.Preferences;
 using MSOSync.Metadata.Users;
 
 namespace MSOSync.Metadata;
@@ -70,6 +71,9 @@ public static class MetadataServiceExtensions
 
         // Epic 11D — Audit summary
         services.AddScoped<IAuditSummaryService, AuditSummaryService>();
+
+        // Epic 11E — User preferences
+        services.AddScoped<IUserPreferencesService, UserPreferencesService>();
 
         return services;
     }

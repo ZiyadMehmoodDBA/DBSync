@@ -31,6 +31,7 @@ public class AppDbContext : DbContext
     public DbSet<SyncRole> Roles => Set<SyncRole>();
     public DbSet<SyncUserRole> UserRoles => Set<SyncUserRole>();
     public DbSet<SyncUserRefreshToken> UserRefreshTokens => Set<SyncUserRefreshToken>();
+    public DbSet<SyncUserPreference> UserPreferences => Set<SyncUserPreference>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
