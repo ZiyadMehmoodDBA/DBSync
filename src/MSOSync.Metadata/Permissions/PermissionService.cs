@@ -1,13 +1,14 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
+using MSOSync.Common;
 using MSOSync.Common.Exceptions;
 using MSOSync.Persistence;
 using MSOSync.Persistence.Entities;
 
 namespace MSOSync.Metadata.Permissions;
 
-public sealed class PermissionService(AppDbContext db, IMemoryCache cache, IMediator mediator)
+public sealed class PermissionService(AppDbContext db, IMemoryCache cache, IMediator mediator, ICurrentUserService currentUser)
     : IPermissionService
 {
     private static readonly MemoryCacheEntryOptions CacheOptions =
@@ -177,7 +178,7 @@ public sealed class PermissionService(AppDbContext db, IMemoryCache cache, IMedi
         db.Audits.Add(new SyncAudit
         {
             ActionName  = actionName,
-            Username    = null,        // permission changes are system-level; controller adds context
+            Username    = currentUser.GetCurrentUsername(),
             ObjectName  = $"roles/{roleName}|{objectName}",
             CreateTime  = DateTime.UtcNow,
         });

@@ -74,7 +74,7 @@ export function useSignalR({
       setConnectionState('disconnected');
       connectionRef.current = null;
     }
-  }, [queryClient, onEvent]);
+  }, [queryClient, onEvent, onPermissionEvent]);
 
   const stopConnection = useCallback(async () => {
     if (!connectionRef.current) return;

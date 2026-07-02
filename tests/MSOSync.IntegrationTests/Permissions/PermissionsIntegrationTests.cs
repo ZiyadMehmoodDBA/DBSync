@@ -355,11 +355,25 @@ public sealed class PermissionsIntegrationTests(PermissionsFixture fx)
         await admin.PutAsync("/api/v1/roles/VIEWER/permissions/EXPORT_DATA", null);
 
         // Verify via audit endpoint — uses the real /api/v1/audit paged response
-        var auditResp = await admin.GetAsync("/api/v1/audit?pageSize=5");
+        var auditResp = await admin.GetAsync("/api/v1/audit?pageSize=50");
         auditResp.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        var body = await auditResp.Content.ReadFromJsonAsync<JsonElement>();
-        body.GetProperty("totalCount").GetInt32().Should().BeGreaterThan(0);
+        var opts = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+        var body  = await auditResp.Content.ReadFromJsonAsync<JsonElement>();
+        var items = body.GetProperty("items");
+
+        // Find an audit row for GRANT_PERMISSION on VIEWER/EXPORT_DATA
+        var grantEntry = Enumerable.Range(0, items.GetArrayLength())
+            .Select(i => items[i])
+            .FirstOrDefault(e =>
+                e.GetProperty("actionName").GetString() == "GRANT_PERMISSION" &&
+                e.GetProperty("objectName").GetString()!.Contains("VIEWER") &&
+                e.GetProperty("objectName").GetString()!.Contains("EXPORT_DATA"));
+
+        grantEntry.ValueKind.Should().NotBe(JsonValueKind.Undefined,
+            "an audit row for GRANT_PERMISSION on roles/VIEWER|EXPORT_DATA should exist");
+        grantEntry.GetProperty("username").GetString().Should().NotBeNullOrEmpty(
+            "the acting admin username must be recorded in the audit trail");
 
         // Cleanup
         await admin.PostAsync("/api/v1/roles/VIEWER/reset", null);

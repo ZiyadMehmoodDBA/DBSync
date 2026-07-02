@@ -2,6 +2,7 @@ using FluentAssertions;
 using MediatR;
 using Microsoft.Extensions.Caching.Memory;
 using Moq;
+using MSOSync.Common;
 using MSOSync.Common.Exceptions;
 using MSOSync.Metadata.Permissions;
 using MSOSync.Persistence;
@@ -15,6 +16,7 @@ public sealed class PermissionServiceTests : IDisposable
     private readonly AppDbContext               _db;
     private readonly IMemoryCache               _cache;
     private readonly Mock<IMediator>            _mediator = new();
+    private readonly Mock<ICurrentUserService>  _currentUser = new();
     private readonly PermissionService          _sut;
 
     public PermissionServiceTests()
@@ -83,7 +85,8 @@ public sealed class PermissionServiceTests : IDisposable
             new SyncRolePermission { RoleName = "ADMIN", PermissionKey = "MANAGE_USERS"    });
         _db.SaveChanges();
 
-        _sut = new PermissionService(_db, _cache, _mediator.Object);
+        _currentUser.Setup(c => c.GetCurrentUsername()).Returns("test-user");
+        _sut = new PermissionService(_db, _cache, _mediator.Object, _currentUser.Object);
     }
 
     public void Dispose() => _db.Dispose();
@@ -207,6 +210,7 @@ public sealed class PermissionServiceTests : IDisposable
         var audit = _db.Audits.FirstOrDefault(a => a.ActionName == "GRANT_PERMISSION");
         audit.Should().NotBeNull();
         audit!.ObjectName.Should().Contain("EXPORT_DATA");
+        audit.Username.Should().Be("test-user");
     }
 
     [Fact]
