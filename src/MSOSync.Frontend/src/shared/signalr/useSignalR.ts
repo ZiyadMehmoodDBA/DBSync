@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { HubConnectionBuilder, HubConnectionState } from '@microsoft/signalr';
 import type { QueryClient } from '@tanstack/react-query';
-import type { ConnectionState, OperationsEvent } from './types';
+import type { ConnectionState, OperationsEvent, PermissionEvent } from './types';
 import { RECONNECT_DELAYS } from './types';
 
 interface UseSignalROptions {
@@ -9,6 +9,7 @@ interface UseSignalROptions {
   isAuthenticated: boolean;
   queryClient: QueryClient;
   onEvent: (event: OperationsEvent) => void;
+  onPermissionEvent?: (event: PermissionEvent) => void;
 }
 
 export function useSignalR({
@@ -16,6 +17,7 @@ export function useSignalR({
   isAuthenticated,
   queryClient,
   onEvent,
+  onPermissionEvent,
 }: UseSignalROptions) {
   const [connectionState, setConnectionState] = useState<ConnectionState>('disconnected');
   const [lastConnectedAt, setLastConnectedAt] = useState<Date | undefined>();
@@ -58,6 +60,10 @@ export function useSignalR({
 
     conn.on('OperationsEvent', (event: OperationsEvent) => {
       onEvent(event);
+    });
+
+    conn.on('PermissionEvent', (event: PermissionEvent) => {
+      onPermissionEvent?.(event);
     });
 
     try {

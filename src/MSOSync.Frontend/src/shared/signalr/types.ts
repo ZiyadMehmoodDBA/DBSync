@@ -28,3 +28,9 @@ export const OperationsEventType = {
 } as const;
 
 export type OperationsEventType = (typeof OperationsEventType)[keyof typeof OperationsEventType];
+
+export interface PermissionEvent {
+  roleName: string;
+  action: string;
+  occurredAt: string;
+}

@@ -14,3 +14,4 @@ export * from './audit';
 export * from './locks';
 export * from './audit-summary';
 export * from './preferences';
+export * from './permissions';

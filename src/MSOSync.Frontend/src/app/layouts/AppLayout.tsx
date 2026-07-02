@@ -28,6 +28,7 @@ import { useAuth } from '../../features/auth/useAuth';
 import { cn } from '../../lib/utils';
 import { useSignalRContext } from '../../shared/signalr/context';
 import { usePreferences, usePreference, useSetPreference } from '../../shared/hooks/usePreferences';
+import { usePermissions } from '../../shared/hooks/usePermissions';
 import { PreferenceKeys } from '../../shared/types/preferences';
 import type { Theme } from '../../shared/types/preferences';
 
@@ -132,8 +133,9 @@ export function AppLayout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
-  // Prefetch preferences for the whole session (staleTime: Infinity means one fetch)
+  // Prefetch preferences and permissions for the whole session
   usePreferences();
+  usePermissions();
 
   // Read saved theme preference; fall back to current localStorage value
   const localTheme = (localStorage.getItem('msosync.theme') as Theme | null) ?? 'light';

@@ -1,5 +1,5 @@
 import type { QueryClient } from '@tanstack/react-query';
-import { OperationsEventType, type OperationsEvent } from './types';
+import { OperationsEventType, type OperationsEvent, type PermissionEvent } from './types';
 
 export async function routeToCache(
   queryClient: QueryClient,
@@ -46,5 +46,15 @@ async function invalidateOperational(queryClient: QueryClient): Promise<void> {
     queryClient.invalidateQueries({ queryKey: ['outgoing-batches'] }),
     queryClient.invalidateQueries({ queryKey: ['batch-errors'] }),
     queryClient.invalidateQueries({ queryKey: ['metrics-summary'] }),
+  ]);
+}
+
+export async function routePermissionEvent(
+  queryClient: QueryClient,
+  _event: PermissionEvent,
+): Promise<void> {
+  await Promise.all([
+    queryClient.invalidateQueries({ queryKey: ['permissions'] }),
+    queryClient.invalidateQueries({ queryKey: ['roles'] }),
   ]);
 }

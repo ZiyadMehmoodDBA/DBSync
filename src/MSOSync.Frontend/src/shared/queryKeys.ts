@@ -45,4 +45,9 @@ export const queryKeys = {
   locks: () => ['locks'] as const,
 
   userPreferences: () => ['user-preferences'] as const,
+
+  permissions:      () => ['permissions'] as const,
+  permissionCatalog: () => ['permission-catalog'] as const,
+  roles:             () => ['roles'] as const,
+  role:              (name: string) => ['roles', name] as const,
 };
