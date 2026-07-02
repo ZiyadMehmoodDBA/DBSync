@@ -17,6 +17,7 @@ import {
   FileText,
   Lock,
   User,
+  ShieldCheck,
   Sun,
   Moon,
   LogOut,
@@ -61,7 +62,8 @@ const NAV_GROUPS: { heading: string; items: NavItem[] }[] = [
   {
     heading: 'Administration',
     items: [
-      { label: 'Users',      path: '/users',      icon: Users,     requiredPermission: PermissionKeys.ManageUsers },
+      { label: 'Users',      path: '/users',               icon: Users,       requiredPermission: PermissionKeys.ManageUsers },
+      { label: 'Roles',      path: '/administration/roles', icon: ShieldCheck, requiredPermission: PermissionKeys.ManageUsers },
       { label: 'Parameters', path: '/parameters', icon: Settings },
       { label: 'Audit',      path: '/audit',      icon: FileText,  requiredPermission: PermissionKeys.ViewAudit },
       { label: 'Locks',      path: '/locks',      icon: Lock },

@@ -21,6 +21,7 @@ import { ParametersPage } from '../features/parameters/ParametersPage';
 import { AuditPage } from '../features/audit/AuditPage';
 import { ProfilePage } from '../features/profile/ProfilePage';
 import { LocksPage } from '../features/locks/LocksPage';
+import { RolesPage } from '../features/administration/RolesPage';
 import { PermissionKeys } from '../shared/types/permissions';
 
 export const router = createBrowserRouter([
@@ -53,6 +54,7 @@ export const router = createBrowserRouter([
               { path: 'triggers',         element: <TriggersPage /> },
               { path: 'routers',          element: <RoutersPage /> },
               { path: 'users',            element: <PermissionGuard permissionKey={PermissionKeys.ManageUsers}><UsersPage /></PermissionGuard> },
+              { path: 'administration/roles', element: <PermissionGuard permissionKey={PermissionKeys.ManageUsers}><RolesPage /></PermissionGuard> },
               { path: 'parameters',       element: <ParametersPage /> },
               { path: 'audit',            element: <PermissionGuard permissionKey={PermissionKeys.ViewAudit}><AuditPage /></PermissionGuard> },
               { path: 'locks',            element: <LocksPage /> },
