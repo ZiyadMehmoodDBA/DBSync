@@ -43,4 +43,6 @@ export const queryKeys = {
   auditLog: (filter: AuditFilter) => ['audit', filter] as const,
   auditSummary: (from: string, to: string) => ['audit-summary', from, to] as const,
   locks: () => ['locks'] as const,
+
+  userPreferences: () => ['user-preferences'] as const,
 };
