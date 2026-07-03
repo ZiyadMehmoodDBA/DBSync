@@ -35,7 +35,9 @@ public sealed class NodesController(
     {
         pageSize = Math.Min(pageSize, 200);
         pageNumber = Math.Max(1, pageNumber);
-        return Ok(await nodeService.GetNodesPagedAsync(pageNumber, pageSize, ct));
+        var result = await nodeService.GetNodesPagedAsync(pageNumber, pageSize, ct);
+        var totalPages = (int)Math.Ceiling((double)result.TotalCount / result.PageSize);
+        return Ok(new { data = result.Items, total = result.TotalCount, page = result.Page, pageSize = result.PageSize, totalPages });
     }
 
     [HttpGet("{nodeId}")]
