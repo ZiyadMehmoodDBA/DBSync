@@ -130,10 +130,27 @@ public sealed class ExportJobFixture : WebApplicationFactory<Program>, IAsyncLif
         }
         await db.SaveChangesAsync();
 
+        // Migration seeds EXPORT_DATA for OPERATOR/ADMIN and MANAGE_USERS for ADMIN.
+        // VIEWER needs EXPORT_DATA too so these export tests can create/manage jobs.
+        await GrantIfMissingAsync(db, "VIEWER", "EXPORT_DATA");
+        await db.SaveChangesAsync();
+
         var hasher = new BCryptPasswordHasher();
         await CreateUserAsync(db, hasher, ViewerUsername,  ViewerPassword,  "VIEWER");
         await CreateUserAsync(db, hasher, Viewer2Username, Viewer2Password, "VIEWER");
         await CreateUserAsync(db, hasher, AdminUsername,   AdminPassword,   "ADMIN");
+    }
+
+    private static async Task GrantIfMissingAsync(AppDbContext db, string roleName, string permissionKey)
+    {
+        var exists = await db.RolePermissions.AnyAsync(
+            rp => rp.RoleName == roleName && rp.PermissionKey == permissionKey);
+        if (!exists)
+            db.RolePermissions.Add(new SyncRolePermission
+            {
+                RoleName      = roleName,
+                PermissionKey = permissionKey,
+            });
     }
 
     private static async Task CreateUserAsync(

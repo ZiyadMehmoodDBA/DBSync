@@ -3,6 +3,7 @@ namespace MSOSync.Metadata.Permissions;
 public static class SystemPermissions
 {
     public const string ManageUsers = "MANAGE_USERS";
+    public const string ExportData  = "EXPORT_DATA";
 
     // Default permission sets per role — used by ResetRoleToDefaultsAsync
     public static readonly IReadOnlyDictionary<string, IReadOnlyList<string>> Defaults =

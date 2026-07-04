@@ -21,6 +21,10 @@ public sealed class ExportJobController(
     public async Task<IActionResult> CreateJob(
         [FromBody] CreateExportJobRequest request, CancellationToken ct)
     {
+        var exportPerms = await permissionService.GetEffectivePermissionsAsync(currentUser.GetCurrentUsername(), ct);
+        if (!exportPerms.Permissions.Contains(SystemPermissions.ExportData))
+            return Forbid();
+
         var username = currentUser.GetCurrentUsername();
         var job = await jobService.CreateJobAsync(
             username,
@@ -38,12 +42,14 @@ public sealed class ExportJobController(
         [FromQuery] bool all = false, CancellationToken ct = default)
     {
         var username = currentUser.GetCurrentUsername();
+        var exportPerms = await permissionService.GetEffectivePermissionsAsync(username, ct);
+        if (!exportPerms.Permissions.Contains(SystemPermissions.ExportData))
+            return Forbid();
 
         IReadOnlyList<SyncExportJob> jobs;
         if (all)
         {
-            var perms = await permissionService.GetEffectivePermissionsAsync(username, ct);
-            if (!perms.Permissions.Contains(SystemPermissions.ManageUsers))
+            if (!exportPerms.Permissions.Contains(SystemPermissions.ManageUsers))
                 return Forbid();
             jobs = await jobService.GetAllJobsAsync(ct);
         }
@@ -61,17 +67,17 @@ public sealed class ExportJobController(
     [ProducesResponseType(403)]
     public async Task<IActionResult> Download(Guid id, CancellationToken ct)
     {
+        var username = currentUser.GetCurrentUsername();
+        var perms = await permissionService.GetEffectivePermissionsAsync(username, ct);
+        if (!perms.Permissions.Contains(SystemPermissions.ExportData))
+            return Forbid();
+
         var job = await jobService.GetJobAsync(id, ct);
         if (job is null || job.Status is ExportJobStatus.Deleted or ExportJobStatus.Expired)
             return NotFound();
 
-        var username = currentUser.GetCurrentUsername();
-        if (job.RequestedBy != username)
-        {
-            var perms = await permissionService.GetEffectivePermissionsAsync(username, ct);
-            if (!perms.Permissions.Contains(SystemPermissions.ManageUsers))
-                return Forbid();
-        }
+        if (job.RequestedBy != username && !perms.Permissions.Contains(SystemPermissions.ManageUsers))
+            return Forbid();
 
         if (job.OutputPath is null || !System.IO.File.Exists(job.OutputPath))
             return NotFound();
@@ -87,16 +93,16 @@ public sealed class ExportJobController(
     [ProducesResponseType(404)]
     public async Task<IActionResult> DeleteJob(Guid id, CancellationToken ct)
     {
+        var username = currentUser.GetCurrentUsername();
+        var perms = await permissionService.GetEffectivePermissionsAsync(username, ct);
+        if (!perms.Permissions.Contains(SystemPermissions.ExportData))
+            return Forbid();
+
         var job = await jobService.GetJobAsync(id, ct);
         if (job is null) return NotFound();
 
-        var username = currentUser.GetCurrentUsername();
-        if (job.RequestedBy != username)
-        {
-            var perms = await permissionService.GetEffectivePermissionsAsync(username, ct);
-            if (!perms.Permissions.Contains(SystemPermissions.ManageUsers))
-                return Forbid();
-        }
+        if (job.RequestedBy != username && !perms.Permissions.Contains(SystemPermissions.ManageUsers))
+            return Forbid();
 
         await jobService.SoftDeleteJobAsync(id, ct);
         return NoContent();

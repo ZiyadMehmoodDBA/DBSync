@@ -133,8 +133,12 @@ public sealed class ExportJobService(
     {
         var job = await db.ExportJobs.AsNoTracking()
             .FirstOrDefaultAsync(j => j.JobId == jobId, ct);
-        if (job?.OutputPath is not null && File.Exists(job.OutputPath))
-            File.Delete(job.OutputPath);
+        if (!string.IsNullOrEmpty(job?.OutputPath) && File.Exists(job.OutputPath))
+        {
+            try { File.Delete(job.OutputPath); }
+            catch (IOException) { /* file locked or already gone — proceed with DB update */ }
+            catch (UnauthorizedAccessException) { /* no permission — proceed with DB update */ }
+        }
 
         await db.ExportJobs
             .Where(j => j.JobId == jobId)
@@ -144,20 +148,10 @@ public sealed class ExportJobService(
 
     public async Task ExpireJobsAsync(CancellationToken ct)
     {
-        var expired = await db.ExportJobs
-            .Where(j => j.ExpiresAt <= DateTimeOffset.UtcNow
-                     && (j.Status == ExportJobStatus.Completed || j.Status == ExportJobStatus.Failed))
-            .ToListAsync(ct);
-
-        foreach (var job in expired)
-        {
-            if (job.OutputPath is not null && File.Exists(job.OutputPath))
-                File.Delete(job.OutputPath);
-            job.Status = ExportJobStatus.Expired;
-        }
-
-        if (expired.Count > 0)
-            await db.SaveChangesAsync(ct);
+        await db.ExportJobs
+            .Where(j => j.Status == ExportJobStatus.Pending || j.Status == ExportJobStatus.Running)
+            .Where(j => j.ExpiresAt != null && j.ExpiresAt < DateTimeOffset.UtcNow)
+            .ExecuteUpdateAsync(s => s.SetProperty(j => j.Status, ExportJobStatus.Expired), ct);
     }
 
     private async Task PublishAsync(Guid jobId, CancellationToken ct)
