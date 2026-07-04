@@ -149,7 +149,7 @@ public sealed class ExportJobService(
     public async Task ExpireJobsAsync(CancellationToken ct)
     {
         await db.ExportJobs
-            .Where(j => j.Status == ExportJobStatus.Pending || j.Status == ExportJobStatus.Running)
+            .Where(j => j.Status == ExportJobStatus.Completed || j.Status == ExportJobStatus.Failed)
             .Where(j => j.ExpiresAt != null && j.ExpiresAt < DateTimeOffset.UtcNow)
             .ExecuteUpdateAsync(s => s.SetProperty(j => j.Status, ExportJobStatus.Expired), ct);
     }
