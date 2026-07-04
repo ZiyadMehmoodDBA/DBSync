@@ -102,7 +102,7 @@ export function NodesPage() {
 
   const config = confirmState ? CONFIRM_CONFIG[confirmState.action] : null;
 
-  const rangeStart = (pageNumber - 1) * PAGE_SIZE + 1;
+  const rangeStart = totalCount > 0 ? (pageNumber - 1) * PAGE_SIZE + 1 : 0;
   const rangeEnd = Math.min(pageNumber * PAGE_SIZE, totalCount);
 
   return (
@@ -139,7 +139,7 @@ export function NodesPage() {
         paginationPageSize={savedPageSize}
         canApprove={canApprove}
       />
-      {totalCount > 0 && (
+      {!isLoading && totalCount > 0 && (
         <div className="flex items-center justify-between px-2 py-3 border-t text-sm text-muted-foreground">
           <span>
             Showing {rangeStart}–{rangeEnd} of {totalCount}

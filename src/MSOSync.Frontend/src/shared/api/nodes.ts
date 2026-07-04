@@ -14,6 +14,13 @@ export async function getNodes(
   return data;
 }
 
+export async function getAllNodes(options?: { signal?: AbortSignal }): Promise<NodeDto[]> {
+  const { data } = await client.get<NodeDto[]>('/nodes', {
+    signal: options?.signal,
+  });
+  return data;
+}
+
 export async function enableNode(nodeId: string): Promise<void> {
   await client.post(`/nodes/${encodeURIComponent(nodeId)}/enable`);
 }

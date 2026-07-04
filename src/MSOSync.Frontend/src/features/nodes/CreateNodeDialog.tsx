@@ -26,8 +26,7 @@ import { EntityDialog, FormActions, FormError } from '../../shared/components/fo
 import { getErrorMessage } from '../../shared/utils/error';
 import { useCreateNodeMutation } from './mutations';
 import { useTopologyGroups } from '../topology/hooks';
-import { queryKeys } from '../../shared/queryKeys';
-import { getNodes } from '../../shared/api/nodes';
+import { getAllNodes } from '../../shared/api/nodes';
 
 const createNodeSchema = z
   .object({
@@ -84,13 +83,12 @@ export function CreateNodeDialog({ open, onOpenChange }: CreateNodeDialogProps) 
 
   const mutation = useCreateNodeMutation();
   const { data: groups } = useTopologyGroups();
-  const { data: nodesPage } = useQuery({
-    queryKey: queryKeys.nodes(),
-    queryFn: ({ signal }) => getNodes(1, 50, { signal }),
+  const { data: nodes } = useQuery({
+    queryKey: ['nodes', 'all'],
+    queryFn: ({ signal }) => getAllNodes({ signal }),
     staleTime: 60_000,
     refetchOnWindowFocus: false,
   });
-  const nodes = nodesPage?.data;
 
   const form = useForm<CreateNodeForm>({
     resolver: zodResolver(createNodeSchema) as unknown as Resolver<CreateNodeForm>,
