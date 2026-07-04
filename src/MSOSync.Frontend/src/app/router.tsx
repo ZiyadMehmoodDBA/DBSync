@@ -22,6 +22,7 @@ import { AuditPage } from '../features/audit/AuditPage';
 import { ProfilePage } from '../features/profile/ProfilePage';
 import { LocksPage } from '../features/locks/LocksPage';
 import { RolesPage } from '../features/administration/RolesPage';
+import { DownloadsPage } from '../features/downloads/DownloadsPage';
 import { PermissionKeys } from '../shared/types/permissions';
 
 export const router = createBrowserRouter([
@@ -58,6 +59,7 @@ export const router = createBrowserRouter([
               { path: 'parameters',       element: <ParametersPage /> },
               { path: 'audit',            element: <PermissionGuard permissionKey={PermissionKeys.ViewAudit}><AuditPage /></PermissionGuard> },
               { path: 'locks',            element: <LocksPage /> },
+              { path: 'downloads',        element: <PermissionGuard permissionKey={PermissionKeys.ExportData}><DownloadsPage /></PermissionGuard> },
               { path: 'profile',          element: <ProfilePage /> },
             ],
           },

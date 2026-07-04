@@ -3,9 +3,9 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../features/auth/useAuth';
 import { SignalRContext } from './context';
 import { useSignalR } from './useSignalR';
-import { routeToCache, routePermissionEvent } from './eventRouter';
+import { routeToCache, routePermissionEvent, routeExportJobEvent } from './eventRouter';
 import { routeToToast } from './notifications';
-import type { OperationsEvent, PermissionEvent } from './types';
+import type { OperationsEvent, PermissionEvent, ExportJobEvent } from './types';
 
 interface Props {
   children: ReactNode;
@@ -32,12 +32,20 @@ export function SignalRProvider({ children }: Props) {
     [queryClient],
   );
 
+  const handleExportJobEvent = useCallback(
+    (event: ExportJobEvent) => {
+      void routeExportJobEvent(queryClient, event);
+    },
+    [queryClient],
+  );
+
   const { connectionState, lastConnectedAt, lastDisconnectedAt } = useSignalR({
     getAccessToken,
     isAuthenticated: accessToken !== null,
     queryClient,
     onEvent: handleEvent,
     onPermissionEvent: handlePermissionEvent,
+    onExportJobEvent: handleExportJobEvent,
   });
 
   return (

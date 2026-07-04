@@ -1,4 +1,6 @@
 import { Download } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import { Button } from '../../components/ui/button';
 import {
   DropdownMenu,
@@ -12,6 +14,7 @@ import {
 import { ExportFailureDialog } from './ExportFailureDialog';
 import { useExport, type ExportScope } from '../hooks/useExport';
 import type { ExportResource, ExportFormat } from '../api/export';
+import { useCreateExportJobMutation } from '../hooks/useExportJobs';
 
 interface ExportMenuProps {
   resource: ExportResource;
@@ -37,6 +40,28 @@ export function ExportMenu({
     onExportCurrentViewFallback,
   } = useExport({ resource, currentData, queryParams });
 
+  const navigate = useNavigate();
+  const { mutate: createJob, isPending: isCreatingJob } = useCreateExportJobMutation();
+
+  function handleQueueExport(format: 'csv' | 'json') {
+    createJob(
+      {
+        resourceType: resource,
+        format,
+        filtersJson:  JSON.stringify(queryParams),
+      },
+      {
+        onSuccess: () => {
+          toast.success('Export queued', {
+            description: 'Your download will be ready shortly.',
+            action: { label: 'View Downloads', onClick: () => navigate('/downloads') },
+          });
+        },
+        onError: () => toast.error('Failed to queue export'),
+      }
+    );
+  }
+
   if (!canExport) {
     return (
       <span title="You don't have permission to export data">
@@ -55,7 +80,7 @@ export function ExportMenu({
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm" disabled={isExporting}>
+          <Button variant="outline" size="sm" disabled={isExporting || isCreatingJob}>
             <Download className="mr-2 h-4 w-4" />
             {isExporting ? 'Exporting…' : 'Export'}
           </Button>
@@ -69,10 +94,14 @@ export function ExportMenu({
           {supportsAllRows && (
             <>
               <DropdownMenuSeparator />
-              <DropdownMenuLabel>All Matching Rows</DropdownMenuLabel>
+              <DropdownMenuLabel>All Matching (Background)</DropdownMenuLabel>
               <DropdownMenuGroup>
-                <DropdownMenuItem onClick={handle('all', 'csv')}>CSV</DropdownMenuItem>
-                <DropdownMenuItem onClick={handle('all', 'json')}>JSON</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleQueueExport('csv')} disabled={isCreatingJob}>
+                  {isCreatingJob ? 'Queuing…' : 'CSV'}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleQueueExport('json')} disabled={isCreatingJob}>
+                  {isCreatingJob ? 'Queuing…' : 'JSON'}
+                </DropdownMenuItem>
               </DropdownMenuGroup>
             </>
           )}

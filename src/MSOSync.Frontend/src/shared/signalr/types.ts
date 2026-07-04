@@ -34,3 +34,10 @@ export interface PermissionEvent {
   action: string;
   occurredAt: string;
 }
+
+export interface ExportJobEvent {
+  jobId:           string;
+  status:          string;
+  progressPercent: number;
+  rowCount:        number | null;
+}

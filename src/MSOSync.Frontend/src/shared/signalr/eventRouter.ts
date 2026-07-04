@@ -1,5 +1,6 @@
 import type { QueryClient } from '@tanstack/react-query';
-import { OperationsEventType, type OperationsEvent, type PermissionEvent } from './types';
+import { OperationsEventType, type OperationsEvent, type PermissionEvent, type ExportJobEvent } from './types';
+import type { ExportJobDto } from '../types/export';
 
 export async function routeToCache(
   queryClient: QueryClient,
@@ -57,4 +58,26 @@ export async function routePermissionEvent(
     queryClient.invalidateQueries({ queryKey: ['permissions'] }),
     queryClient.invalidateQueries({ queryKey: ['roles'] }),
   ]);
+}
+
+export async function routeExportJobEvent(
+  queryClient: QueryClient,
+  event: ExportJobEvent,
+): Promise<void> {
+  const terminalStatuses = ['Completed', 'Failed', 'Deleted', 'Expired'];
+
+  if (terminalStatuses.includes(event.status)) {
+    await queryClient.invalidateQueries({ queryKey: ['export-jobs'] });
+    return;
+  }
+
+  // Patch progress in-place for Running status (smooth progress bar)
+  queryClient.setQueryData<ExportJobDto[]>(['export-jobs'], (old) => {
+    if (!old) return old;
+    return old.map((job) =>
+      job.jobId === event.jobId
+        ? { ...job, status: event.status as ExportJobDto['status'], progressPercent: event.progressPercent, rowCount: event.rowCount }
+        : job
+    );
+  });
 }

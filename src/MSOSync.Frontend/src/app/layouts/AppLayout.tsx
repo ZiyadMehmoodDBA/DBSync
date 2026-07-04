@@ -18,6 +18,7 @@ import {
   Lock,
   User,
   ShieldCheck,
+  Download,
   Sun,
   Moon,
   LogOut,
@@ -70,6 +71,12 @@ const NAV_GROUPS: { heading: string; items: NavItem[] }[] = [
     ],
   },
   {
+    heading: 'Downloads',
+    items: [
+      { label: 'Downloads', path: '/downloads', icon: Download, requiredPermission: PermissionKeys.ExportData },
+    ],
+  },
+  {
     heading: 'Account',
     items: [
       { label: 'Profile', path: '/profile', icon: User },
@@ -111,14 +118,15 @@ function NavGroup({ heading, items }: { heading: string; items: NavItem[] }) {
   const canViewTopology = useHasPermission(PermissionKeys.ViewTopology);
   const canViewAudit    = useHasPermission(PermissionKeys.ViewAudit);
   const canManageUsers  = useHasPermission(PermissionKeys.ManageUsers);
+  const canExportData   = useHasPermission(PermissionKeys.ExportData);
 
   const permMap: Record<PermissionKey, boolean> = {
     [PermissionKeys.ViewMetrics]:    canViewMetrics,
     [PermissionKeys.ViewTopology]:   canViewTopology,
     [PermissionKeys.ViewAudit]:      canViewAudit,
     [PermissionKeys.ManageUsers]:    canManageUsers,
+    [PermissionKeys.ExportData]:     canExportData,
     [PermissionKeys.ViewEvents]:     true,
-    [PermissionKeys.ExportData]:     true,
     [PermissionKeys.RetryBatches]:   true,
     [PermissionKeys.ApproveNodes]:   true,
     [PermissionKeys.ReleaseLocks]:   true,
