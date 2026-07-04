@@ -82,7 +82,7 @@ export function ExportMenu({
         <DropdownMenuTrigger asChild>
           <Button variant="outline" size="sm" disabled={isExporting || isCreatingJob}>
             <Download className="mr-2 h-4 w-4" />
-            {isExporting ? 'Exporting…' : 'Export'}
+            {isExporting ? 'Exporting…' : isCreatingJob ? 'Queuing…' : 'Export'}
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-48">

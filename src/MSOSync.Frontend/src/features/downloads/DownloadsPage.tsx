@@ -78,7 +78,7 @@ export function DownloadsPage() {
           <TableBody>
             {jobs.map((job) => (
               <TableRow key={job.jobId}>
-                <TableCell className="capitalize">{job.resourceType.replace('-', ' ')}</TableCell>
+                <TableCell className="capitalize">{job.resourceType.replace(/-/g, ' ')}</TableCell>
                 <TableCell className="uppercase text-xs">{job.format}</TableCell>
                 <TableCell>
                   <Badge variant={statusVariant(job.status)}>{job.status}</Badge>
