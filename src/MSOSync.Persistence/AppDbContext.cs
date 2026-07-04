@@ -34,6 +34,7 @@ public class AppDbContext : DbContext
     public DbSet<SyncUserPreference> UserPreferences  => Set<SyncUserPreference>();
     public DbSet<SyncPermission>     Permissions      => Set<SyncPermission>();
     public DbSet<SyncRolePermission> RolePermissions  => Set<SyncRolePermission>();
+    public DbSet<SyncExportJob>      ExportJobs       => Set<SyncExportJob>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

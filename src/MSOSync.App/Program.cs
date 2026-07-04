@@ -4,11 +4,14 @@ using FluentValidation.AspNetCore;
 using MSOSync.Api.Controllers.Auth;
 using MSOSync.Api.Exceptions;
 using MSOSync.App;
+using MSOSync.App.Export;
+using MSOSync.App.Workers;
 using MSOSync.Batch;
 using MSOSync.Common;
 using MSOSync.Engine;
 using MSOSync.Event;
 using MSOSync.Metadata;
+using MSOSync.Metadata.Export;
 using MSOSync.Persistence;
 using MSOSync.Routing;
 using MSOSync.Scheduler;
@@ -89,6 +92,12 @@ try
         cfg.RegisterServicesFromAssemblyContaining<MSOSync.App.SignalR.NodeOperationsPublisher>());
 
     builder.Services.AddHostedService<AdminBootstrapper>();
+
+    // Export jobs
+    builder.Services.Configure<ExportOptions>(builder.Configuration.GetSection("Export"));
+    builder.Services.AddScoped<IExportJobService, ExportJobService>();
+    builder.Services.AddHostedService<ExportJobWorker>();
+    builder.Services.AddHostedService<ExportCleanupWorker>();
 
     var app = builder.Build();
 

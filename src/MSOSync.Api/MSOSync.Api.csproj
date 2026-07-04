@@ -10,6 +10,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MSOSync.Common\MSOSync.Common.csproj" />
+    <ProjectReference Include="..\MSOSync.Persistence\MSOSync.Persistence.csproj" />
     <ProjectReference Include="..\MSOSync.Configuration\MSOSync.Configuration.csproj" />
     <ProjectReference Include="..\MSOSync.Security\MSOSync.Security.csproj" />
     <ProjectReference Include="..\MSOSync.Metadata\MSOSync.Metadata.csproj" />
