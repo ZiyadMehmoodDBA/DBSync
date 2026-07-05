@@ -1,6 +1,6 @@
 // tests/MSOSync.IntegrationTests/OperationalRead/IncomingBatchesTests.cs
 using FluentAssertions;
-using MSOSync.Metadata.Common;
+using MSOSync.Common.Pagination;
 using MSOSync.Metadata.IncomingBatches;
 using MSOSync.Persistence;
 using System.Net;
@@ -27,8 +27,8 @@ public sealed class IncomingBatchesTests(OperationalReadFixture fixture)
     {
         var client = await AuthenticatedClientAsync();
 
-        var result = await client.GetFromJsonAsync<PagedResult<IncomingBatchSummaryDto>>(
-            "api/v1/incoming-batches");
+        var result = await client.GetFromJsonAsync<CursorPageResult<IncomingBatchSummaryDto>>(
+            "api/v1/incoming-batches?includeTotalCount=true");
 
         result!.TotalCount.Should().Be(3);
     }
@@ -38,8 +38,8 @@ public sealed class IncomingBatchesTests(OperationalReadFixture fixture)
     {
         var client = await AuthenticatedClientAsync();
 
-        var result = await client.GetFromJsonAsync<PagedResult<IncomingBatchSummaryDto>>(
-            "api/v1/incoming-batches?status=Error");
+        var result = await client.GetFromJsonAsync<CursorPageResult<IncomingBatchSummaryDto>>(
+            "api/v1/incoming-batches?status=Error&includeTotalCount=true");
 
         result!.TotalCount.Should().Be(1);
         result.Items.Single().Status.Should().Be(IncomingBatchStatus.Error);

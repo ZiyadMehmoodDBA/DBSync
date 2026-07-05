@@ -43,15 +43,19 @@ public sealed class DashboardTests(DashboardFixture fixture)
     {
         var client = await AuthenticatedClientAsync();
 
-        var resp = await client.GetAsync("api/v1/dashboard/activity");
+        // Audit entries are always present (LOGIN_SUCCESS accumulates)
+        var auditResp  = await client.GetAsync("api/v1/dashboard/activity?type=audit");
+        auditResp.StatusCode.Should().Be(HttpStatusCode.OK);
+        var auditItems = (await auditResp.Content.ReadFromJsonAsync<JsonElement>()).EnumerateArray().ToList();
+        auditItems.Should().NotBeEmpty();
+        auditItems.Should().AllSatisfy(i => i.GetProperty("type").GetString().Should().Be("audit"));
 
-        resp.StatusCode.Should().Be(HttpStatusCode.OK);
-        var body = await resp.Content.ReadFromJsonAsync<JsonElement>();
-        var items = body.EnumerateArray().ToList();
-        // AuditService writes LOGIN_SUCCESS on every login, so audit rows accumulate beyond the 3 seeded
-        items.Count.Should().BeGreaterThanOrEqualTo(4); // at least 3 audit + 1 batch_error
-        items.Should().Contain(i => i.GetProperty("type").GetString() == "audit");
-        items.Should().Contain(i => i.GetProperty("type").GetString() == "batch_error");
+        // batch_error was seeded and must be visible via type filter regardless of audit volume
+        var errorResp  = await client.GetAsync("api/v1/dashboard/activity?type=batch_error");
+        errorResp.StatusCode.Should().Be(HttpStatusCode.OK);
+        var errorItems = (await errorResp.Content.ReadFromJsonAsync<JsonElement>()).EnumerateArray().ToList();
+        errorItems.Should().NotBeEmpty();
+        errorItems.Should().AllSatisfy(i => i.GetProperty("type").GetString().Should().Be("batch_error"));
     }
 
     [Fact]

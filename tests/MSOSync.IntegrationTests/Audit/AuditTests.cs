@@ -35,7 +35,7 @@ public sealed class AuditTests(AuditFixture fixture)
     {
         var client = await ViewerClientAsync();
 
-        var resp = await client.GetAsync("api/v1/audit");
+        var resp = await client.GetAsync("api/v1/audit?includeTotalCount=true");
 
         resp.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await resp.Content.ReadFromJsonAsync<JsonElement>();
@@ -50,7 +50,7 @@ public sealed class AuditTests(AuditFixture fixture)
     {
         var client = await ViewerClientAsync();
 
-        var resp = await client.GetAsync("api/v1/audit?username=alice");
+        var resp = await client.GetAsync("api/v1/audit?username=alice&includeTotalCount=true");
 
         resp.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await resp.Content.ReadFromJsonAsync<JsonElement>();
