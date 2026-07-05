@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Download, Loader2, RefreshCw, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '../../components/ui/button';
@@ -7,8 +8,24 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '../../components/ui/table';
 import { useExportJobs, useDeleteExportJobMutation, useCreateExportJobMutation } from '../../shared/hooks/useExportJobs';
-import { getDownloadUrl } from '../../shared/api/exportJobs';
+import { getClientToken } from '../../shared/api/client';
 import { ExportJobStatus, type ExportJobDto } from '../../shared/types/export';
+
+async function downloadFile(jobId: string, filename: string, token: string): Promise<void> {
+  const response = await fetch(`/api/v1/export-jobs/${jobId}/download`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!response.ok) throw new Error('Download failed');
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
 
 function statusVariant(status: string): 'default' | 'secondary' | 'destructive' | 'outline' {
   switch (status) {
@@ -33,12 +50,30 @@ function formatRelative(iso: string | null): string {
 export function DownloadsPage() {
   const { data: jobs = [], isLoading } = useExportJobs();
   const { mutate: deleteJob } = useDeleteExportJobMutation();
+  const [downloadingIds, setDownloadingIds] = useState<Set<string>>(new Set());
 
   function handleDelete(job: ExportJobDto) {
     deleteJob(job.jobId, {
       onSuccess: () => toast.success('Export deleted'),
       onError:   () => toast.error('Failed to delete export'),
     });
+  }
+
+  async function handleDownload(job: ExportJobDto) {
+    const token = getClientToken() ?? '';
+    const filename = `${job.resourceType}-export-${job.jobId}.${job.format}`;
+    setDownloadingIds(prev => new Set(prev).add(job.jobId));
+    try {
+      await downloadFile(job.jobId, filename, token);
+    } catch {
+      toast.error('Download failed');
+    } finally {
+      setDownloadingIds(prev => {
+        const next = new Set(prev);
+        next.delete(job.jobId);
+        return next;
+      });
+    }
   }
 
   if (isLoading) {
@@ -104,11 +139,16 @@ export function DownloadsPage() {
                 <TableCell>
                   <div className="flex items-center gap-1 justify-end">
                     {job.status === ExportJobStatus.Completed && (
-                      <a href={getDownloadUrl(job.jobId)} download>
-                        <Button variant="outline" size="sm">
-                          <Download className="h-4 w-4" />
-                        </Button>
-                      </a>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={downloadingIds.has(job.jobId)}
+                        onClick={() => handleDownload(job)}
+                      >
+                        {downloadingIds.has(job.jobId)
+                          ? <Loader2 className="h-4 w-4 animate-spin" />
+                          : <Download className="h-4 w-4" />}
+                      </Button>
                     )}
                     {job.status === ExportJobStatus.Failed && (
                       <RetryButton job={job} />

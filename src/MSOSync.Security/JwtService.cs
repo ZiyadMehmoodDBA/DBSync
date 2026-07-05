@@ -39,6 +39,7 @@ public sealed class JwtService
         {
             new(JwtRegisteredClaimNames.Sub, username),
             new(ClaimTypes.Name, username),
+            new(ClaimTypes.NameIdentifier, username),
             new("userId", userId.ToString()),
             new(JwtRegisteredClaimNames.Iat,
                 DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(),

@@ -124,7 +124,8 @@ public sealed class ExportJobService(
             .ExecuteUpdateAsync(s => s
                 .SetProperty(j => j.Status,       ExportJobStatus.Failed)
                 .SetProperty(j => j.ErrorMessage, errorMessage)
-                .SetProperty(j => j.CompletedAt,  DateTimeOffset.UtcNow), ct);
+                .SetProperty(j => j.CompletedAt,  DateTimeOffset.UtcNow)
+                .SetProperty(j => j.ExpiresAt,    DateTimeOffset.UtcNow.AddHours(opts.Value.RetentionHours)), ct);
         s_failed.Add(1);
         await PublishAsync(jobId, ct);
     }
