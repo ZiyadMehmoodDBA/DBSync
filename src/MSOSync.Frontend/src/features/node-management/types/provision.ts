@@ -28,7 +28,6 @@ export interface ProvisionResult {
 
 export interface ProvisionPackageRequest {
   nodeId: string;
-  token:  string;
 }
 
 export interface NodeManagementOverviewDto {

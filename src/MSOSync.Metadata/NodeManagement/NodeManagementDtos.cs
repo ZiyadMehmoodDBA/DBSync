@@ -73,4 +73,4 @@ public sealed record ApproveRegistrationRequest(string? Notes);
 public sealed record RejectRegistrationRequest(string? Reason);
 public sealed record BulkApproveRequest(IReadOnlyList<long> Ids);
 public sealed record BulkRejectRequest(IReadOnlyList<long> Ids, string? Reason);
-public sealed record ProvisionPackageRequest(string NodeId, string Token);
+public sealed record ProvisionPackageRequest(string NodeId);

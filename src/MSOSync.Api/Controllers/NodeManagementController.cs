@@ -188,7 +188,7 @@ public sealed class NodeManagementController(
         Response.Headers["Content-Disposition"] =
             $"attachment; filename=\"msosync-node-{request.NodeId}.zip\"";
         await provisionPackage.StreamPackageAsync(
-            request.NodeId, request.Token, currentUser.GetCurrentUsername(), Response.Body, ct);
+            request.NodeId, currentUser.GetCurrentUsername(), Response.Body, ct);
         return new EmptyResult();
     }
 }

@@ -21,9 +21,8 @@ export function Step5Complete({ nodeId, token, onRestart }: Props) {
   }
 
   async function handleDownload() {
-    if (!token) return;
     try {
-      await pkgMutation.mutateAsync({ nodeId, token });
+      await pkgMutation.mutateAsync({ nodeId });
       toast.success('Provision package downloaded');
     } catch {
       toast.error('Failed to download provision package');

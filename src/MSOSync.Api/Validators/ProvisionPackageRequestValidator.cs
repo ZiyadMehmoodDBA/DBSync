@@ -8,6 +8,5 @@ public sealed class ProvisionPackageRequestValidator : AbstractValidator<Provisi
     public ProvisionPackageRequestValidator()
     {
         RuleFor(x => x.NodeId).NotEmpty();
-        RuleFor(x => x.Token).NotEmpty();
     }
 }

@@ -377,11 +377,13 @@ public sealed record ProvisionRequestDto(
 
 ```
 POST /api/v1/node-management/provision-package
-Body: { "nodeId": "string", "token": "string" }
+Body: { "nodeId": "string" }
 
 Response: 200 application/zip
 Content-Disposition: attachment; filename="msosync-node-{nodeId}.zip"
 ```
+
+The provision token is a one-time bootstrap credential returned only by `POST /provision`; it is not required to download the package, which is gated by `MANAGE_USERS`.
 
 Package contents:
 
@@ -640,7 +642,7 @@ After approve/reject mutations: invalidate `registrations` + `overview` query ke
 
 Standard fixture (Testcontainers MsSql 4.4.0):
 
-- **Happy path:** register → queue appears → approve → node activated
+- **Happy path:** register → queue appears → approve → registration approved. Node activation is handled by the Node Lifecycle workflow introduced in Epic 12B.
 - **Re-registration diff:** second registration for same externalId → diff computed
 - **Bulk approve/reject:** 3 registrations → bulk approve 2 + 1 already-approved → 207 with mixed statuses
 - **Provision:** POST provision → 201 with token → POST provision-package → 200 zip

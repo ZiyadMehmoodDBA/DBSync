@@ -105,7 +105,7 @@ public sealed class ProvisionTests(NodeManagementFixture fixture)
     {
         var client = await fixture.AdminClientAsync();
 
-        // First provision a node to get a valid nodeId + token
+        // First provision a node to get a valid nodeId
         var provResp = await client.PostAsJsonAsync("api/v1/node-management/provision", new
         {
             nodeName   = "pkg-test-node",
@@ -115,14 +115,13 @@ public sealed class ProvisionTests(NodeManagementFixture fixture)
             dbName     = "PkgDB",
         });
         provResp.StatusCode.Should().Be(HttpStatusCode.Created);
-        var prov    = await provResp.Content.ReadFromJsonAsync<JsonElement>();
-        var nodeId  = prov.GetProperty("nodeId").GetString()!;
-        var token   = prov.GetProperty("token").GetString()!;
+        var prov   = await provResp.Content.ReadFromJsonAsync<JsonElement>();
+        var nodeId = prov.GetProperty("nodeId").GetString()!;
 
-        // Download the package
+        // Download the package — token is not required, endpoint is gated by MANAGE_USERS
         var pkgResp = await client.PostAsJsonAsync(
             "api/v1/node-management/provision-package",
-            new { nodeId, token });
+            new { nodeId });
 
         pkgResp.StatusCode.Should().Be(HttpStatusCode.OK);
         pkgResp.Content.Headers.ContentType?.MediaType.Should().Be("application/zip");
@@ -145,13 +144,13 @@ public sealed class ProvisionTests(NodeManagementFixture fixture)
     }
 
     [Fact]
-    public async Task ProvisionPackage_MissingToken_Returns400()
+    public async Task ProvisionPackage_MissingNodeId_Returns400()
     {
         var client = await fixture.AdminClientAsync();
 
         var resp = await client.PostAsJsonAsync(
             "api/v1/node-management/provision-package",
-            new { nodeId = "some-node" }); // token omitted
+            new { nodeId = "" }); // nodeId empty → validator rejects
 
         resp.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
@@ -163,7 +162,7 @@ public sealed class ProvisionTests(NodeManagementFixture fixture)
 
         var resp = await client.PostAsJsonAsync(
             "api/v1/node-management/provision-package",
-            new { nodeId = "some-node", token = "some-token" });
+            new { nodeId = "some-node" });
 
         resp.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }

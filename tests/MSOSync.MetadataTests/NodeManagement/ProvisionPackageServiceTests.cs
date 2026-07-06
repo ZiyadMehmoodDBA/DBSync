@@ -47,7 +47,7 @@ public sealed class ProvisionPackageServiceTests : IDisposable
     {
         await SeedNodeAsync();
         var ms = new MemoryStream();
-        await _sut.StreamPackageAsync("node-1", "tok-abc", "test-actor", ms);
+        await _sut.StreamPackageAsync("node-1", "test-actor", ms);
         ms.Position = 0;
 
         using var zip = new ZipArchive(ms, ZipArchiveMode.Read);
@@ -59,7 +59,7 @@ public sealed class ProvisionPackageServiceTests : IDisposable
     {
         await SeedNodeAsync();
         var ms = new MemoryStream();
-        await _sut.StreamPackageAsync("node-1", "tok-abc", "test-actor", ms);
+        await _sut.StreamPackageAsync("node-1", "test-actor", ms);
         ms.Position = 0;
 
         using var zip = new ZipArchive(ms, ZipArchiveMode.Read);
@@ -76,7 +76,7 @@ public sealed class ProvisionPackageServiceTests : IDisposable
     {
         await SeedNodeAsync();
         var ms = new MemoryStream();
-        await _sut.StreamPackageAsync("node-1", "tok-abc", "test-actor", ms);
+        await _sut.StreamPackageAsync("node-1", "test-actor", ms);
         ms.Position = 0;
 
         using var zip = new ZipArchive(ms, ZipArchiveMode.Read);
@@ -95,7 +95,7 @@ public sealed class ProvisionPackageServiceTests : IDisposable
     {
         await SeedNodeAsync();
         var ms = new MemoryStream();
-        await _sut.StreamPackageAsync("node-1", "tok-abc", "test-actor", ms);
+        await _sut.StreamPackageAsync("node-1", "test-actor", ms);
         ms.Position = 0;
 
         using var zip    = new ZipArchive(ms, ZipArchiveMode.Read);
@@ -112,7 +112,7 @@ public sealed class ProvisionPackageServiceTests : IDisposable
     {
         await SeedNodeAsync("audit-node");
         var ms = new MemoryStream();
-        await _sut.StreamPackageAsync("audit-node", "tok-secret", "actor-user", ms);
+        await _sut.StreamPackageAsync("audit-node", "actor-user", ms);
 
         var audit = _db.Audits
             .Where(a => a.ActionName == NodeManagementAuditActions.ProvisionPackageDownloaded)
@@ -121,7 +121,6 @@ public sealed class ProvisionPackageServiceTests : IDisposable
         audit.Should().NotBeNull();
         audit!.ActionName.Should().Be("PROVISION_PACKAGE_DOWNLOADED");
         audit.ObjectName.Should().Contain("audit-node");
-        audit.ObjectName.Should().NotContain("tok-secret");
         audit.Username.Should().Be("actor-user");
     }
 }

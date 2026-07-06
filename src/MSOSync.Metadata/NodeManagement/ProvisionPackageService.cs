@@ -16,13 +16,13 @@ public sealed class ProvisionPackageService(AppDbContext db, IAuditService audit
     private const string AgentVersion = "1.0.0";
 
     public async Task StreamPackageAsync(
-        string nodeId, string token, string actorUsername, Stream destination, CancellationToken ct = default)
+        string nodeId, string actorUsername, Stream destination, CancellationToken ct = default)
     {
         var node = await db.Nodes.AsNoTracking()
             .FirstOrDefaultAsync(n => n.NodeId == nodeId, ct)
             ?? throw new NotFoundException($"Node '{nodeId}' not found.");
 
-        var provision = new ProvisionResultDto(nodeId, token);
+        var provision = new ProvisionResultDto(nodeId, string.Empty);
 
         var sw = Stopwatch.StartNew();
         try
