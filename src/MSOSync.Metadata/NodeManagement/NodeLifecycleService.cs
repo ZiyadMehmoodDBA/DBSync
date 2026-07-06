@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using MSOSync.Common.Exceptions;
 using MSOSync.Metadata.Audit;
 using MSOSync.Persistence;
 using MSOSync.Persistence.Entities;
@@ -75,7 +76,7 @@ public sealed class NodeLifecycleService(
                 ? $"Registration {request.RequestId} received for node {dto.ExternalId}"
                 : $"Registration {request.RequestId} received for node {dto.ExternalId}. Diff: {diffSummary}";
 
-            await auditSvc.WriteAsync("NODE_REGISTERED", auditDetail, "system", ct);
+            await auditSvc.WriteAsync("registration:received", auditDetail, "system", ct);
 
             NodeManagementMetrics.RegistrationRequestsTotal.Add(1,
                 new KeyValuePair<string, object?>("type", regType.ToString()),
@@ -106,13 +107,16 @@ public sealed class NodeLifecycleService(
         req.ProcessedBy = actorUsername;
         req.Approved    = true;
 
-        await db.SaveChangesAsync(ct);
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            throw new ConcurrencyException("Registration was modified concurrently.");
+        }
 
-        var auditAction = req.RegistrationType == RegistrationType.ReRegistration
-            ? "NODE_RE_REGISTERED"
-            : "NODE_APPROVED";
-
-        await auditSvc.WriteAsync(auditAction,
+        await auditSvc.WriteAsync("registration:approved",
             $"Registration {id} approved by {actorUsername}. Notes: {notes}",
             actorUsername, ct);
 
@@ -130,9 +134,16 @@ public sealed class NodeLifecycleService(
         req.ProcessedAt = DateTime.UtcNow;
         req.ProcessedBy = actorUsername;
 
-        await db.SaveChangesAsync(ct);
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            throw new ConcurrencyException("Registration was modified concurrently.");
+        }
 
-        await auditSvc.WriteAsync("NODE_REJECTED",
+        await auditSvc.WriteAsync("registration:rejected",
             $"Registration {id} rejected by {actorUsername}. Reason: {reason}",
             actorUsername, ct);
 
@@ -162,7 +173,7 @@ public sealed class NodeLifecycleService(
                     req.Approved    = true;
                     await db.SaveChangesAsync(ct);
 
-                    await auditSvc.WriteAsync("NODE_APPROVED",
+                    await auditSvc.WriteAsync("registration:approved",
                         $"Bulk: Registration {id} approved by {actorUsername}", actorUsername, ct);
 
                     NodeManagementMetrics.ApprovalsTotal.Add(1);
@@ -191,23 +202,30 @@ public sealed class NodeLifecycleService(
         {
             foreach (var id in ids)
             {
-                var req = await db.RegistrationRequests
-                    .FirstOrDefaultAsync(r => r.RequestId == id, ct);
-                if (req is null) { results.Add(new BulkResultItemDto(id, "NotFound")); continue; }
-                if (req.Status == RegistrationStatus.Rejected)
-                { results.Add(new BulkResultItemDto(id, "AlreadyRejected")); continue; }
+                try
+                {
+                    var req = await db.RegistrationRequests
+                        .FirstOrDefaultAsync(r => r.RequestId == id, ct);
+                    if (req is null) { results.Add(new BulkResultItemDto(id, "NotFound")); continue; }
+                    if (req.Status == RegistrationStatus.Rejected)
+                    { results.Add(new BulkResultItemDto(id, "AlreadyRejected")); continue; }
 
-                req.Status      = RegistrationStatus.Rejected;
-                req.ProcessedAt = DateTime.UtcNow;
-                req.ProcessedBy = actorUsername;
-                await db.SaveChangesAsync(ct);
+                    req.Status      = RegistrationStatus.Rejected;
+                    req.ProcessedAt = DateTime.UtcNow;
+                    req.ProcessedBy = actorUsername;
+                    await db.SaveChangesAsync(ct);
 
-                await auditSvc.WriteAsync("NODE_REJECTED",
-                    $"Bulk: Registration {id} rejected by {actorUsername}. Reason: {reason}",
-                    actorUsername, ct);
+                    await auditSvc.WriteAsync("registration:rejected",
+                        $"Bulk: Registration {id} rejected by {actorUsername}. Reason: {reason}",
+                        actorUsername, ct);
 
-                NodeManagementMetrics.RejectionsTotal.Add(1);
-                results.Add(new BulkResultItemDto(id, "Rejected"));
+                    NodeManagementMetrics.RejectionsTotal.Add(1);
+                    results.Add(new BulkResultItemDto(id, "Rejected"));
+                }
+                catch (DbUpdateConcurrencyException)
+                {
+                    results.Add(new BulkResultItemDto(id, "Conflict"));
+                }
             }
         }
         finally
@@ -242,7 +260,7 @@ public sealed class NodeLifecycleService(
         await db.SaveChangesAsync(ct);
 
         // Audit: write "token:issued" — never the token value
-        await auditSvc.WriteAsync("NODE_PROVISIONED",
+        await auditSvc.WriteAsync("node:provisioned",
             $"Node {nodeId} provisioned by {actorUsername}. token:issued",
             actorUsername, ct);
 

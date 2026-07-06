@@ -11,7 +11,7 @@ public sealed class ProvisionPackageService : IProvisionPackageService
 {
     private const string AgentVersion = "1.0.0";
 
-    public async Task WriteAsync(
+    public async Task StreamPackageAsync(
         ProvisionResultDto provision, SyncNode node, Stream destination, CancellationToken ct = default)
     {
         var sw = Stopwatch.StartNew();

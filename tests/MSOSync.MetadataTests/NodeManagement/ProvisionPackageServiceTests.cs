@@ -21,7 +21,7 @@ public sealed class ProvisionPackageServiceTests
     public async Task WriteAsync_ZipContainsExactlyFiveFiles()
     {
         var ms = new MemoryStream();
-        await _sut.WriteAsync(MakeProvision(), MakeNode(), ms);
+        await _sut.StreamPackageAsync(MakeProvision(), MakeNode(), ms);
         ms.Position = 0;
 
         using var zip = new ZipArchive(ms, ZipArchiveMode.Read);
@@ -32,7 +32,7 @@ public sealed class ProvisionPackageServiceTests
     public async Task WriteAsync_ZipContainsAllExpectedFiles()
     {
         var ms = new MemoryStream();
-        await _sut.WriteAsync(MakeProvision(), MakeNode(), ms);
+        await _sut.StreamPackageAsync(MakeProvision(), MakeNode(), ms);
         ms.Position = 0;
 
         using var zip = new ZipArchive(ms, ZipArchiveMode.Read);
@@ -48,7 +48,7 @@ public sealed class ProvisionPackageServiceTests
     public async Task WriteAsync_ChecksumsContainsAllFiles()
     {
         var ms = new MemoryStream();
-        await _sut.WriteAsync(MakeProvision(), MakeNode(), ms);
+        await _sut.StreamPackageAsync(MakeProvision(), MakeNode(), ms);
         ms.Position = 0;
 
         using var zip = new ZipArchive(ms, ZipArchiveMode.Read);
@@ -66,7 +66,7 @@ public sealed class ProvisionPackageServiceTests
     public async Task WriteAsync_NodeConfigContainsNodeId()
     {
         var ms = new MemoryStream();
-        await _sut.WriteAsync(MakeProvision(), MakeNode(), ms);
+        await _sut.StreamPackageAsync(MakeProvision(), MakeNode(), ms);
         ms.Position = 0;
 
         using var zip    = new ZipArchive(ms, ZipArchiveMode.Read);
