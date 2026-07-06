@@ -96,6 +96,8 @@ src/MSOSync.Metadata/NodeManagement/
   RegistrationMetadataDto.cs
   RegistrationDiffDto.cs
   RegistrationDiffService.cs
+  INodeLifecycleService.cs          ← orchestrator interface (NEW)
+  NodeLifecycleService.cs           ← orchestrator impl (NEW)
   INodeManagementService.cs
   NodeManagementService.cs
   ProvisionPackageService.cs
@@ -122,9 +124,13 @@ EF Core migration class: `M020_AddRegistrationMetadata`.
 
 ### 3.2 Entity Changes
 
-`SyncRegistrationRequest` gains two properties:
+`SyncRegistrationRequest` gains four properties:
 - `string? MetadataJson` — structured JSON, nullable for legacy rows
-- `string RegistrationType` — stored as string, surfaced as enum
+- `RegistrationType RegistrationType` — enum property; EF Core converts to/from `nvarchar(20)` string column via `HasConversion<string>()`
+- `RegistrationStatus Status` — enum property; EF Core converts to/from `nvarchar(20)` string column via `HasConversion<string>()`
+- `byte[] RowVersion` — SQL Server `rowversion` column for optimistic concurrency; mapped with `IsRowVersion()`
+
+All three enum properties use string converters, not raw `string` fields — eliminates string comparisons throughout the backend while preserving the existing column type.
 
 ---
 
@@ -143,7 +149,15 @@ Backend derives the value when a registration request is received:
 - Existing node, status `Active` → `ReRegistration`
 - Existing node, status `Offline`/`Error` → `Recovery`
 
-### 4.2 RegistrationMetadataDto
+### 4.2 RegistrationStatus Enum
+
+```csharp
+public enum RegistrationStatus { Pending, Approved, Rejected }
+```
+
+Serialized as string (`"Pending"`, `"Approved"`, `"Rejected"`). Replaces all literal string comparisons in service/query code.
+
+### 4.3 RegistrationMetadataDto
 
 ```csharp
 public sealed record RegistrationMetadataDto(
@@ -182,7 +196,7 @@ public sealed record HardwareMetadata(
 
 Validation on inbound POST: deserialize → validate `SchemaVersion >= 1` → persist. Unknown fields silently ignored. Missing sub-records allowed (all nullable).
 
-### 4.3 RegistrationDiffDto
+### 4.4 RegistrationDiffDto
 
 ```csharp
 public sealed record RegistrationDiffDto(
@@ -237,14 +251,14 @@ Response: CursorPageResult<RegistrationSummaryDto>
 
 ```csharp
 public sealed record RegistrationSummaryDto(
-    long             Id,
-    string           NodeExternalId,
-    string           NodeName,
-    RegistrationType RegistrationType,
-    string           Status,              // "Pending" | "Approved" | "Rejected"
-    DateTime         ReceivedAt,
-    DateTime?        ProcessedAt,
-    string?          ProcessedBy
+    long               Id,
+    string             NodeExternalId,
+    string             NodeName,
+    RegistrationType   RegistrationType,
+    RegistrationStatus Status,
+    DateTime           ReceivedAt,
+    DateTime?          ProcessedAt,
+    string?            ProcessedBy
 );
 ```
 
@@ -258,16 +272,16 @@ Response: RegistrationDetailDto
 
 ```csharp
 public sealed record RegistrationDetailDto(
-    long                    Id,
-    string                  NodeExternalId,
-    string                  NodeName,
-    RegistrationType        RegistrationType,
-    string                  Status,
-    DateTime                ReceivedAt,
-    DateTime?               ProcessedAt,
-    string?                 ProcessedBy,
+    long                     Id,
+    string                   NodeExternalId,
+    string                   NodeName,
+    RegistrationType         RegistrationType,
+    RegistrationStatus       Status,
+    DateTime                 ReceivedAt,
+    DateTime?                ProcessedAt,
+    string?                  ProcessedBy,
     RegistrationMetadataDto? Metadata,
-    RegistrationDiffDto?    Diff            // null for New registrations
+    RegistrationDiffDto?     Diff            // null for New registrations
 );
 ```
 
@@ -318,13 +332,16 @@ Response: NodeManagementOverviewDto
 
 ```csharp
 public sealed record NodeManagementOverviewDto(
-    int PendingRegistrations,
-    int TotalNodes,
-    int ActiveNodes,
-    int OfflineNodes,
-    int DegradedNodes,
-    int TotalGroups,
-    DateTime GeneratedAt
+    int       PendingRegistrations,
+    int       PendingRecoveries,          // subset of PendingRegistrations where RegistrationType == Recovery
+    int       TotalNodes,
+    int       ActiveNodes,
+    int       OfflineNodes,
+    int       DegradedNodes,
+    int       TotalGroups,
+    DateTime? LastRegistrationAt,         // UTC timestamp of most recent inbound registration
+    DateTime? LastApprovalAt,             // UTC timestamp of most recent approval
+    DateTime  GeneratedAt
 );
 ```
 
@@ -366,7 +383,7 @@ Response: 200 application/zip
 Content-Disposition: attachment; filename="msosync-node-{nodeId}.zip"
 ```
 
-Package contents (in-memory `ZipArchive`, streamed):
+Package contents:
 
 | File | Description |
 |------|-------------|
@@ -375,6 +392,8 @@ Package contents (in-memory `ZipArchive`, streamed):
 | `README.md` | Setup instructions |
 | `manifest.json` | Package metadata: nodeId, agentVersion, generatedAt, fileCount |
 | `checksums.txt` | SHA-256 hash per file, one line each |
+
+**Streaming:** `ProvisionPackageService` writes directly to `HttpResponse.Body` via a `ZipArchive` opened over the response stream — no intermediate `MemoryStream`. `Content-Length` header is omitted (chunked transfer). This scales to larger packages in future epics without buffering.
 
 Audit action `PROVISION_PACKAGE_DOWNLOADED` written on every download.
 
@@ -402,9 +421,27 @@ Validation pipeline:
 5. Publish MediatR notification (no handler in 12A — reserved for future SignalR push)
 6. Audit action `NODE_REGISTERED`
 
-### 5.9 RegistrationDiffService
+### 5.9 INodeLifecycleService
 
-Standalone service — not embedded in `NodeManagementService`.
+Thin orchestrator — controller calls this, not individual services directly.
+
+```csharp
+public interface INodeLifecycleService
+{
+    Task<long>   RegisterAsync(InboundRegistrationDto dto, CancellationToken ct);
+    Task         ApproveAsync(long id, string? notes, string actorUsername, CancellationToken ct);
+    Task         RejectAsync(long id, string? reason, string actorUsername, CancellationToken ct);
+    Task<IReadOnlyList<BulkResultItemDto>> BulkApproveAsync(IReadOnlyList<long> ids, string actorUsername, CancellationToken ct);
+    Task<IReadOnlyList<BulkResultItemDto>> BulkRejectAsync(IReadOnlyList<long> ids, string? reason, string actorUsername, CancellationToken ct);
+    Task<ProvisionResultDto> ProvisionAsync(ProvisionRequestDto dto, string actorUsername, CancellationToken ct);
+}
+```
+
+Collaborators: `IRegistrationDiffService`, `ProvisionPackageService`, `IAuditService`, metrics.
+
+### 5.10 RegistrationDiffService
+
+Standalone service — not embedded in `INodeLifecycleService`.
 
 ```csharp
 public interface IRegistrationDiffService
@@ -418,7 +455,7 @@ public interface IRegistrationDiffService
 
 Used in two places:
 1. `GET /registrations/{id}` — preview (read-only)
-2. `POST /registrations/{id}/approve` — audit write (logs changed fields)
+2. `INodeLifecycleService.ApproveAsync` — audit write (logs changed fields)
 
 ---
 
@@ -511,15 +548,17 @@ Prefetch registration detail on registration row hover (via `queryClient.prefetc
 // features/node-management/shared/components/DiffViewer.tsx
 interface DiffViewerProps {
   items: RegistrationDiffItemDto[];
-  showUnchanged?: boolean;
+  defaultView?: 'changes' | 'all';   // default: 'changes'
 }
 ```
 
-Renders a table with color-coded rows:
+Renders a 4-column table (Field / Current / Incoming / Change) with:
 - `Modified` → yellow/amber row
 - `Added` → green row (current empty, incoming has value)
 - `Removed` → red row (current has value, incoming empty)
-- `Unchanged` → gray, shown only when `showUnchanged=true`
+- `Unchanged` → gray, shown only in `'all'` view
+
+Toggle button in the component header: **"Only Changed"** ↔ **"Show All"** — toggling remembers the choice in local state. Operators can switch repeatedly during review without losing their scroll position.
 
 Reusable across future epics (e.g., Epic 12B node config comparison).
 
@@ -542,9 +581,17 @@ Reusable across future epics (e.g., Epic 12B node config comparison).
 - Token never sent to any SignalR channel; never written to any log
 
 **sessionStorage resilience:**
+
+Draft stored under key `"msosync:wizard:provision"` as a versioned envelope:
+
+```json
+{ "version": 1, "draft": { "step": 2, "nodeType": "target", ... } }
+```
+
+- `version` is the wizard schema version (increment in Epic 12B+ if wizard fields change)
+- On mount: read envelope; if `version` does not match current, discard silently and start fresh; if `version` matches and `draft` exists, offer "Resume draft?" toast
 - Draft saved on every wizard step advance
 - Draft cleared on: Step 5 completion (success), explicit Cancel, or navigating away from Provision tab
-- On mount: if `sessionStorage` has draft, offer "Resume draft?" toast
 
 ### 8.7 Hooks
 
@@ -608,6 +655,11 @@ Standard fixture (Testcontainers MsSql 4.4.0):
 | `msosync_registrations_approved_total` | Counter | — |
 | `msosync_registrations_rejected_total` | Counter | — |
 | `msosync_provision_packages_downloaded_total` | Counter | — |
+| `msosync_registration_duration_seconds` | Histogram | `type` |
+| `msosync_bulk_registration_duration_seconds` | Histogram | `operation` (`approve`/`reject`) |
+| `msosync_provision_package_generation_seconds` | Histogram | — |
+
+Histograms expose `_sum`, `_count`, and `_bucket` automatically via `prometheus-net`. They are more actionable than counters alone: a spike in `_sum / _count` reveals slow approvals before they become user-visible.
 
 ---
 
@@ -624,13 +676,35 @@ Standard fixture (Testcontainers MsSql 4.4.0):
 - No new npm packages
 - Permissions stored as `SystemPermissions` string constants: `VIEW_TOPOLOGY`, `APPROVE_NODES`, `MANAGE_USERS`
 - `RegistrationType` serialized as PascalCase string (`"New"`, `"ReRegistration"`, `"Recovery"`)
+- `RegistrationStatus` serialized as PascalCase string (`"Pending"`, `"Approved"`, `"Rejected"`)
 - `RegistrationChangeType` serialized as PascalCase string
+- All three enums stored as `nvarchar(20)` via EF Core `HasConversion<string>()` — no raw string properties on entity
+- `SyncRegistrationRequest.RowVersion` → `byte[]`, mapped with `IsRowVersion()` in EF config
+- `INodeLifecycleService` is the single orchestration point for the controller — never call `IRegistrationDiffService` or `ProvisionPackageService` directly from the controller
+- ZIP streamed directly to `HttpResponse.Body` — no intermediate `MemoryStream`; omit `Content-Length` header
+- Wizard draft envelope: `{ "version": 1, "draft": {...} }` where current schema version = 1
 - ZIP MIME type: `application/zip`
 - Token: 32-byte cryptographically random, base64url encoded, returned once in 201 body only
 
 ---
 
-## 12. Out of Scope (12B+)
+## 12. Implementation Sequencing
+
+Tasks execute in this order. Backend and frontend are not mixed within a task.
+
+| Task | Scope | Deliverable |
+|------|-------|-------------|
+| 1 | Database + DTOs + Services | M020 migration, enums, entity, `RegistrationDiffService`, `INodeLifecycleService` + impl, unit tests |
+| 2 | Registration APIs | `NodeManagementController` registration endpoints (list, detail, inbound POST, approve/reject, bulk), validators, integration tests |
+| 3 | Overview + Provision APIs | overview endpoint, provision endpoint, `ProvisionPackageService` streaming, integration tests |
+| 4 | Frontend shell + routing | Feature folder scaffold, `NodeManagementPage`, `NodeManagementProvider`, `NODE_MANAGEMENT_TABS`, lazy tabs, sidebar wiring |
+| 5 | Registration queue | `RegistrationsTab`, `RegistrationQueue`, `RegistrationDetailPanel`, `DiffViewer`, `BulkActionToolbar`, hooks, query keys |
+| 6 | Provision wizard | `ProvisionTab`, `ProvisionWizard` (5 steps), sessionStorage draft with versioning, `useProvisionPackage` |
+| 7 | Testing + cleanup | Complete integration test suite, authorization tests, concurrency tests, metrics wiring, build clean |
+
+---
+
+## 13. Out of Scope (12B+)
 
 - Node config editing (12B)
 - Group management CRUD (12B)
