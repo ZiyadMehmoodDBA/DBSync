@@ -1,4 +1,5 @@
 import { createContext, useContext, useState } from 'react';
+import type { ReactNode } from 'react';
 import type { TabId } from './types/tabs';
 import type { RegistrationSummaryDto } from './types/registration';
 import type { ProvisionWizardDraft } from './types/provision';
@@ -10,7 +11,7 @@ interface NodeManagementContextValue {
   selectedRegistration:    RegistrationSummaryDto | null;
   setSelectedRegistration: (r: RegistrationSummaryDto | null) => void;
   bulkSelection:           Set<number>;
-  toggleBulkSelect:        (id: number) => void;
+  toggleBulkSelection:     (id: number) => void;
   clearBulkSelection:      () => void;
   wizardDraft:             ProvisionWizardDraft | null;
   setWizardDraft:          (d: ProvisionWizardDraft | null) => void;
@@ -21,7 +22,7 @@ export const NodeManagementContext = createContext<NodeManagementContextValue | 
 export function NodeManagementProvider({
   children,
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   const [activeTab, setActiveTab] =
     useState<TabId>(NODE_MANAGEMENT_TABS.OVERVIEW);
@@ -31,7 +32,7 @@ export function NodeManagementProvider({
   const [wizardDraft, setWizardDraft] =
     useState<ProvisionWizardDraft | null>(null);
 
-  function toggleBulkSelect(id: number) {
+  function toggleBulkSelection(id: number) {
     setBulkSelection(prev => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
@@ -52,7 +53,7 @@ export function NodeManagementProvider({
         selectedRegistration,
         setSelectedRegistration,
         bulkSelection,
-        toggleBulkSelect,
+        toggleBulkSelection,
         clearBulkSelection,
         wizardDraft,
         setWizardDraft,
