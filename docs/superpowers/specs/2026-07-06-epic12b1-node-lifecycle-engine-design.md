@@ -39,7 +39,7 @@ Epic 12A remains the administrative onboarding experience (registration queue, p
 ```csharp
 public enum NodeLifecycleState
 {
-    PendingApproval,      // awaiting admin approval (migrated legacy PENDING; manual-create path)
+    PendingApproval,      // awaiting admin approval (post-cutover reachable only via migrated legacy PENDING rows)
     PendingRegistration,  // SyncNode exists, awaiting /activate handshake
     Active,
     Recovery,             // identity replacement under review / awaiting re-activation
@@ -171,6 +171,7 @@ Exhaustively unit-tested: every (from, to) pair asserted allowed or denied.
 | `ConnectivityReason` | nvarchar, nullable | current evaluator reason (diagnostics) |
 | `LastProbeUtc` | datetimeoffset, nullable | probe telemetry (add if missing) |
 | `LastProbeError` | nvarchar, nullable | probe telemetry (add if missing) |
+| `ConsecutiveProbeFailures` | int, default 0 | maintained by ProbeWorker; input to connectivity rule 6 |
 | `RowVersion` | rowversion | optimistic concurrency for lifecycle commands |
 
 ### 3.2 New table: `sync_node_lifecycle_history`
@@ -273,6 +274,7 @@ Authorize
 - **Approve** now creates the SyncNode from registration metadata, state `PendingRegistration`. This lands the 12A deferred item.
 - **Provision** no longer creates a SyncNode when an approve-created one exists: it generates the package + bootstrap token for a node in `PendingRegistration`. The direct-provision wizard path (no prior registration) still creates the node — also `PendingRegistration`.
 - Bootstrap token model unchanged from 12A: one-time, hash-stored, returned once, never logged.
+- **Manual admin node creation** (`NodeMetadataService.CreateNodeAsync`, currently writes `PENDING`) now creates nodes in `PendingRegistration` — a manually created node still requires provisioning + activation, but not registration approval (the admin creating it IS the approval). `PendingApproval` is not reachable for new nodes post-cutover.
 
 ### 4.5 Activation handshake
 
@@ -325,7 +327,7 @@ Known ExternalId re-registers (node lost / VM rebuilt / credentials lost)
 `Decommissioning` is an **orchestrated drain state**:
 
 1. **Freeze new work** — `INodeSyncPolicy` returns not-eligible (state ≠ Active); no new batches scheduled or routed; new sync sessions rejected.
-2. **Drain** — in-flight batches complete or the grace period (`gracePeriodMinutes`, configurable default) expires.
+2. **Drain** — in-flight batches complete or the grace period expires (`gracePeriodMinutes`, request-optional; default 60 minutes from options config).
 3. **Revoke trust** — bootstrap + node auth tokens revoked at decommission start; no new activation possible.
 4. **Notify node** — best-effort `NODE_DECOMMISSIONING` notification if reachable.
 5. **Auto-complete** — `DecommissionWorker` finalizes on drain-complete or grace expiry; no second admin action needed. `ForceCompleteDecommissionAsync` allows manual override.
@@ -487,7 +489,7 @@ public sealed record NodeStateDto(
     DateTimeOffset? DecommissionGraceUntil);
 ```
 
-**Transitions preview** — frontend never hardcodes transition rules; backend owns the workflow contract:
+**Allowed-actions preview** — the endpoint returns allowed *actions* (state transitions plus maintenance operations, which are not transitions); frontend never hardcodes rules — backend owns the workflow contract:
 
 ```json
 {
@@ -679,7 +681,8 @@ Pre-deployment: backup sync_node (+ new table DDL is additive)
   → Permission seed: MANAGE_NODE_LIFECYCLE + PROVISION→PROVISION_NODES role remap
   → Delete legacy: INodeStateMachine/NodeStateMachine, NodeStatusWorker,
       NodeMetadataService.ApproveRegistrationAsync + endpoint + frontend callers,
-      all SyncEnabled readers → INodeSyncPolicy
+      all SyncEnabled readers → INodeSyncPolicy,
+      NodeMetadataService.CreateNodeAsync PENDING write → PendingRegistration (§4.4)
   → Startup validation (fail fast)
   → Open traffic
 ```
