@@ -155,4 +155,16 @@ public sealed class ProvisionTests(NodeManagementFixture fixture)
 
         resp.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
+
+    [Fact]
+    public async Task ProvisionPackage_ViewerRole_Returns403()
+    {
+        var client = await fixture.ViewerClientAsync();
+
+        var resp = await client.PostAsJsonAsync(
+            "api/v1/node-management/provision-package",
+            new { nodeId = "some-node", token = "some-token" });
+
+        resp.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
 }

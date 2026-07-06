@@ -16,6 +16,11 @@ public sealed class SyncNode
     public int? LastProbeLatencyMs { get; set; }
     public ConnectivityStatus ConnectivityStatus { get; set; } = ConnectivityStatus.Unknown;
 
+    // Node classification fields (admin-provisioned)
+    public string NodeType { get; set; } = string.Empty;
+    public string ExternalId { get; set; } = string.Empty;
+    public string NodeName { get; set; } = string.Empty;
+
     // DB connection fields (admin-provisioned)
     public string? DbServer { get; set; }
     public string? DbName { get; set; }

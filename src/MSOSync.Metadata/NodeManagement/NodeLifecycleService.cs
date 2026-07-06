@@ -251,12 +251,15 @@ public sealed class NodeLifecycleService(
         // Create SyncNode
         var node = new SyncNode
         {
-            NodeId   = nodeId,
-            GroupId  = dto.GroupId ?? "default",
-            SyncUrl  = $"https://{dto.NodeName}.local:8080",
-            Status   = "PROVISIONED",
-            DbServer = dto.DbServer,
-            DbName   = dto.DbName,
+            NodeId     = nodeId,
+            GroupId    = dto.GroupId ?? "default",
+            SyncUrl    = $"https://{dto.NodeName}.local:8080",
+            Status     = "PROVISIONED",
+            NodeType   = dto.NodeType,
+            ExternalId = dto.ExternalId,
+            NodeName   = dto.NodeName,
+            DbServer   = dto.DbServer,
+            DbName     = dto.DbName,
         };
 
         db.Nodes.Add(node);

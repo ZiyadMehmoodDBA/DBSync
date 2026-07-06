@@ -76,9 +76,9 @@ public sealed class ProvisionPackageService(AppDbContext db) : IProvisionPackage
         var obj = new
         {
             nodeId     = p.NodeId,
-            externalId = n.NodeId,
-            name       = n.NodeId,
-            type       = "target",
+            externalId = n.ExternalId,
+            name       = n.NodeName,
+            type       = n.NodeType,
             groupId    = n.GroupId,
             serverUrl  = n.SyncUrl,
             created    = DateTime.UtcNow.ToString("o"),

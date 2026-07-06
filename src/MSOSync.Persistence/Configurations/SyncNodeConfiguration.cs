@@ -52,6 +52,23 @@ public sealed class SyncNodeConfiguration : IEntityTypeConfiguration<SyncNode>
             .HasDefaultValue(ConnectivityStatus.Unknown)
             .ValueGeneratedNever();
 
+        builder.Property(e => e.NodeType)
+            .HasColumnName("node_type")
+            .HasMaxLength(50)
+            .IsRequired();
+
+        builder.Property(e => e.ExternalId)
+            .HasColumnName("external_id")
+            .HasMaxLength(100)
+            .IsRequired(false)
+            .HasDefaultValue("");
+
+        builder.Property(e => e.NodeName)
+            .HasColumnName("node_name")
+            .HasMaxLength(256)
+            .IsRequired(false)
+            .HasDefaultValue("");
+
         builder.Property(e => e.DbServer)
             .HasColumnName("db_server")
             .HasColumnType("nvarchar(255)")

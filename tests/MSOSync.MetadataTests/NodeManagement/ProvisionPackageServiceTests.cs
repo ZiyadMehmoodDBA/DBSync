@@ -1,8 +1,6 @@
 using System.IO.Compression;
 using FluentAssertions;
-using Microsoft.EntityFrameworkCore;
 using MSOSync.Metadata.NodeManagement;
-using MSOSync.Persistence;
 using MSOSync.Persistence.Entities;
 using Xunit;
 
@@ -10,23 +8,17 @@ namespace MSOSync.MetadataTests.NodeManagement;
 
 public sealed class ProvisionPackageServiceTests : IDisposable
 {
-    private readonly AppDbContext _db;
+    private readonly MSOSync.Persistence.AppDbContext _db;
     private readonly ProvisionPackageService _sut;
 
     public ProvisionPackageServiceTests()
     {
-        var opts = new DbContextOptionsBuilder<AppDbContext>()
-            .UseSqlite($"Data Source=:memory:")
-            .Options;
-        _db  = new AppDbContext(opts);
-        _db.Database.OpenConnection();
-        _db.Database.EnsureCreated();
+        _db  = TestDbContext.Create();
         _sut = new ProvisionPackageService(_db);
     }
 
     public void Dispose()
     {
-        _db.Database.CloseConnection();
         _db.Dispose();
     }
 
@@ -34,12 +26,15 @@ public sealed class ProvisionPackageServiceTests : IDisposable
     {
         _db.Nodes.Add(new SyncNode
         {
-            NodeId  = nodeId,
-            GroupId = "g1",
-            SyncUrl = "http://n1",
-            Status  = "PROVISIONED",
-            DbServer = "srv",
-            DbName   = "db",
+            NodeId     = nodeId,
+            GroupId    = "g1",
+            SyncUrl    = "http://n1",
+            Status     = "PROVISIONED",
+            NodeType   = "target",
+            ExternalId = "ext-node-1",
+            NodeName   = "node-display-name",
+            DbServer   = "srv",
+            DbName     = "db",
         });
         await _db.SaveChangesAsync();
     }

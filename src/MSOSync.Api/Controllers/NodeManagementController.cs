@@ -189,6 +189,6 @@ public sealed class NodeManagementController(
             $"attachment; filename=\"msosync-node-{request.NodeId}.zip\"";
         await provisionPackage.StreamPackageAsync(
             request.NodeId, request.Token, Response.Body, ct);
-        return new Microsoft.AspNetCore.Mvc.EmptyResult();
+        return new EmptyResult();
     }
 }
