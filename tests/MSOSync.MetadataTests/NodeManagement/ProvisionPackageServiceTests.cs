@@ -40,7 +40,7 @@ public sealed class ProvisionPackageServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task WriteAsync_ZipContainsExactlyFiveFiles()
+    public async Task StreamPackageAsync_ZipContainsExactlyFiveFiles()
     {
         await SeedNodeAsync();
         var ms = new MemoryStream();
@@ -52,7 +52,7 @@ public sealed class ProvisionPackageServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task WriteAsync_ZipContainsAllExpectedFiles()
+    public async Task StreamPackageAsync_ZipContainsAllExpectedFiles()
     {
         await SeedNodeAsync();
         var ms = new MemoryStream();
@@ -69,7 +69,7 @@ public sealed class ProvisionPackageServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task WriteAsync_ChecksumsContainsAllFiles()
+    public async Task StreamPackageAsync_ChecksumsContainsAllFiles()
     {
         await SeedNodeAsync();
         var ms = new MemoryStream();
@@ -88,7 +88,7 @@ public sealed class ProvisionPackageServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task WriteAsync_NodeConfigContainsNodeId()
+    public async Task StreamPackageAsync_NodeConfigContainsNodeId()
     {
         await SeedNodeAsync();
         var ms = new MemoryStream();
