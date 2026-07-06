@@ -3,17 +3,26 @@ using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
+using MSOSync.Common.Exceptions;
+using MSOSync.Persistence;
 using MSOSync.Persistence.Entities;
 
 namespace MSOSync.Metadata.NodeManagement;
 
-public sealed class ProvisionPackageService : IProvisionPackageService
+public sealed class ProvisionPackageService(AppDbContext db) : IProvisionPackageService
 {
     private const string AgentVersion = "1.0.0";
 
     public async Task StreamPackageAsync(
-        ProvisionResultDto provision, SyncNode node, Stream destination, CancellationToken ct = default)
+        string nodeId, string token, Stream destination, CancellationToken ct = default)
     {
+        var node = await db.Nodes.AsNoTracking()
+            .FirstOrDefaultAsync(n => n.NodeId == nodeId, ct)
+            ?? throw new NotFoundException($"Node '{nodeId}' not found.");
+
+        var provision = new ProvisionResultDto(nodeId, token);
+
         var sw = Stopwatch.StartNew();
         try
         {
@@ -37,14 +46,22 @@ public sealed class ProvisionPackageService : IProvisionPackageService
             }
             files["checksums.txt"] = Encoding.UTF8.GetBytes(checksums.ToString());
 
-            // Stream directly to destination — no intermediate MemoryStream
-            using var zip = new ZipArchive(destination, ZipArchiveMode.Create, leaveOpen: true);
-            foreach (var (name, content) in files)
+            // Build the ZIP in a MemoryStream first so ZipArchive.Dispose() flushes the
+            // central-directory synchronously without touching the HTTP response stream
+            // (ASP.NET Core TestHost and Kestrel with default settings disallow synchronous writes).
+            using var ms = new MemoryStream();
+            using (var zip = new ZipArchive(ms, ZipArchiveMode.Create, leaveOpen: true))
             {
-                var entry  = zip.CreateEntry(name, CompressionLevel.Fastest);
-                using var s = entry.Open();
-                await s.WriteAsync(content, ct);
-            }
+                foreach (var (name, content) in files)
+                {
+                    var entry  = zip.CreateEntry(name, CompressionLevel.Fastest);
+                    using var s = entry.Open();
+                    s.Write(content);
+                }
+            }  // zip.Dispose() finalises the central-directory into ms (all in-memory, sync is fine)
+
+            ms.Position = 0;
+            await ms.CopyToAsync(destination, ct);
 
             NodeManagementMetrics.PackageDownloadsTotal.Add(1);
         }

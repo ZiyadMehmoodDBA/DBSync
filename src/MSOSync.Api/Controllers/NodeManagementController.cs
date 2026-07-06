@@ -14,6 +14,7 @@ namespace MSOSync.Api.Controllers;
 public sealed class NodeManagementController(
     INodeManagementService             nodeManagement,
     INodeLifecycleService              lifecycle,
+    IProvisionPackageService           provisionPackage,
     IPermissionService                 permissionService,
     ICurrentUserService                currentUser,
     IValidator<RegistrationFilter>     listValidator)
@@ -136,5 +137,58 @@ public sealed class NodeManagementController(
         var results = await lifecycle.BulkRejectAsync(
             request.Ids, request.Reason, currentUser.GetCurrentUsername(), ct);
         return StatusCode(207, results);
+    }
+
+    // ── Overview ───────────────────────────────────────────────────────────────
+
+    [HttpGet("overview")]
+    [ProducesResponseType(200)]
+    [ProducesResponseType(typeof(ProblemDetails), 403)]
+    public async Task<IActionResult> GetOverview(CancellationToken ct)
+    {
+        var perms = await permissionService.GetEffectivePermissionsAsync(
+            currentUser.GetCurrentUsername(), ct);
+        if (!perms.Permissions.Contains(SystemPermissions.ViewTopology))
+            return Forbid();
+
+        return Ok(await nodeManagement.GetOverviewAsync(ct));
+    }
+
+    // ── Provision ─────────────────────────────────────────────────────────────
+
+    [HttpPost("provision")]
+    [ProducesResponseType(201)]
+    [ProducesResponseType(typeof(ProblemDetails), 400)]
+    [ProducesResponseType(typeof(ProblemDetails), 403)]
+    public async Task<IActionResult> Provision(
+        [FromBody] ProvisionRequestDto dto, CancellationToken ct)
+    {
+        var perms = await permissionService.GetEffectivePermissionsAsync(
+            currentUser.GetCurrentUsername(), ct);
+        if (!perms.Permissions.Contains(SystemPermissions.ManageUsers))
+            return Forbid();
+
+        var result = await lifecycle.ProvisionAsync(dto, currentUser.GetCurrentUsername(), ct);
+        return StatusCode(201, new { nodeId = result.NodeId, token = result.Token });
+    }
+
+    [HttpPost("provision-package")]
+    [ProducesResponseType(200)]
+    [ProducesResponseType(typeof(ProblemDetails), 400)]
+    [ProducesResponseType(typeof(ProblemDetails), 403)]
+    public async Task<IActionResult> GetProvisionPackage(
+        [FromBody] ProvisionPackageRequest request, CancellationToken ct)
+    {
+        var perms = await permissionService.GetEffectivePermissionsAsync(
+            currentUser.GetCurrentUsername(), ct);
+        if (!perms.Permissions.Contains(SystemPermissions.ManageUsers))
+            return Forbid();
+
+        Response.ContentType = "application/zip";
+        Response.Headers["Content-Disposition"] =
+            $"attachment; filename=\"msosync-node-{request.NodeId}.zip\"";
+        await provisionPackage.StreamPackageAsync(
+            request.NodeId, request.Token, Response.Body, ct);
+        return new Microsoft.AspNetCore.Mvc.EmptyResult();
     }
 }

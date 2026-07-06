@@ -1,27 +1,55 @@
 using System.IO.Compression;
 using FluentAssertions;
+using Microsoft.EntityFrameworkCore;
 using MSOSync.Metadata.NodeManagement;
+using MSOSync.Persistence;
 using MSOSync.Persistence.Entities;
 using Xunit;
 
 namespace MSOSync.MetadataTests.NodeManagement;
 
-public sealed class ProvisionPackageServiceTests
+public sealed class ProvisionPackageServiceTests : IDisposable
 {
-    private readonly ProvisionPackageService _sut = new();
+    private readonly AppDbContext _db;
+    private readonly ProvisionPackageService _sut;
 
-    private static SyncNode MakeNode() =>
-        new() { NodeId = "node-1", GroupId = "g1", SyncUrl = "http://n1", Status = "PROVISIONED",
-                DbServer = "srv", DbName = "db" };
+    public ProvisionPackageServiceTests()
+    {
+        var opts = new DbContextOptionsBuilder<AppDbContext>()
+            .UseSqlite($"Data Source=:memory:")
+            .Options;
+        _db  = new AppDbContext(opts);
+        _db.Database.OpenConnection();
+        _db.Database.EnsureCreated();
+        _sut = new ProvisionPackageService(_db);
+    }
 
-    private static ProvisionResultDto MakeProvision() =>
-        new("node-1", "tok-abc");
+    public void Dispose()
+    {
+        _db.Database.CloseConnection();
+        _db.Dispose();
+    }
+
+    private async Task SeedNodeAsync(string nodeId = "node-1")
+    {
+        _db.Nodes.Add(new SyncNode
+        {
+            NodeId  = nodeId,
+            GroupId = "g1",
+            SyncUrl = "http://n1",
+            Status  = "PROVISIONED",
+            DbServer = "srv",
+            DbName   = "db",
+        });
+        await _db.SaveChangesAsync();
+    }
 
     [Fact]
     public async Task WriteAsync_ZipContainsExactlyFiveFiles()
     {
+        await SeedNodeAsync();
         var ms = new MemoryStream();
-        await _sut.StreamPackageAsync(MakeProvision(), MakeNode(), ms);
+        await _sut.StreamPackageAsync("node-1", "tok-abc", ms);
         ms.Position = 0;
 
         using var zip = new ZipArchive(ms, ZipArchiveMode.Read);
@@ -31,8 +59,9 @@ public sealed class ProvisionPackageServiceTests
     [Fact]
     public async Task WriteAsync_ZipContainsAllExpectedFiles()
     {
+        await SeedNodeAsync();
         var ms = new MemoryStream();
-        await _sut.StreamPackageAsync(MakeProvision(), MakeNode(), ms);
+        await _sut.StreamPackageAsync("node-1", "tok-abc", ms);
         ms.Position = 0;
 
         using var zip = new ZipArchive(ms, ZipArchiveMode.Read);
@@ -47,8 +76,9 @@ public sealed class ProvisionPackageServiceTests
     [Fact]
     public async Task WriteAsync_ChecksumsContainsAllFiles()
     {
+        await SeedNodeAsync();
         var ms = new MemoryStream();
-        await _sut.StreamPackageAsync(MakeProvision(), MakeNode(), ms);
+        await _sut.StreamPackageAsync("node-1", "tok-abc", ms);
         ms.Position = 0;
 
         using var zip = new ZipArchive(ms, ZipArchiveMode.Read);
@@ -65,8 +95,9 @@ public sealed class ProvisionPackageServiceTests
     [Fact]
     public async Task WriteAsync_NodeConfigContainsNodeId()
     {
+        await SeedNodeAsync();
         var ms = new MemoryStream();
-        await _sut.StreamPackageAsync(MakeProvision(), MakeNode(), ms);
+        await _sut.StreamPackageAsync("node-1", "tok-abc", ms);
         ms.Position = 0;
 
         using var zip    = new ZipArchive(ms, ZipArchiveMode.Read);
