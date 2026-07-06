@@ -54,7 +54,7 @@ const NAV_GROUPS: { heading: string; items: NavItem[] }[] = [
     heading: 'Topology',
     items: [
       { label: 'Topology',  path: '/topology',  icon: Network, requiredPermission: PermissionKeys.ViewTopology },
-      { label: 'Nodes',     path: '/nodes',     icon: Server },
+      { label: 'Node Management', path: '/node-management', icon: Server, requiredPermission: PermissionKeys.ViewTopology },
       { label: 'Channels',  path: '/channels',  icon: Cable },
       { label: 'Triggers',  path: '/triggers',  icon: Zap },
       { label: 'Routers',   path: '/routers',   icon: GitBranch },

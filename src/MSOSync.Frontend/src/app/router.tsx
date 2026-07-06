@@ -7,7 +7,6 @@ import { AuthLayout } from './layouts/AuthLayout';
 import { AppLayout } from './layouts/AppLayout';
 import { DashboardPage } from '../features/dashboard/DashboardPage';
 import { TopologyPage } from '../features/topology/TopologyPage';
-import { NodesPage } from '../features/nodes/NodesPage';
 import { ChannelsPage } from '../features/channels/ChannelsPage';
 import { TriggersPage } from '../features/triggers/TriggersPage';
 import { RoutersPage } from '../features/routers/RoutersPage';
@@ -23,6 +22,7 @@ import { ProfilePage } from '../features/profile/ProfilePage';
 import { LocksPage } from '../features/locks/LocksPage';
 import { RolesPage } from '../features/administration/RolesPage';
 import { DownloadsPage } from '../features/downloads/DownloadsPage';
+import { NodeManagementPage } from '../features/node-management/NodeManagementPage';
 import { PermissionKeys } from '../shared/types/permissions';
 
 export const router = createBrowserRouter([
@@ -50,7 +50,8 @@ export const router = createBrowserRouter([
               { path: 'batch-errors',     element: <BatchErrorsPage /> },
               { path: 'metrics',          element: <PermissionGuard permissionKey={PermissionKeys.ViewMetrics}><MetricsPage /></PermissionGuard> },
               { path: 'topology',         element: <PermissionGuard permissionKey={PermissionKeys.ViewTopology}><TopologyPage /></PermissionGuard> },
-              { path: 'nodes',            element: <NodesPage /> },
+              { path: 'nodes',            element: <Navigate to="/node-management" replace /> },
+              { path: 'node-management',  element: <PermissionGuard permissionKey={PermissionKeys.ViewTopology}><NodeManagementPage /></PermissionGuard> },
               { path: 'channels',         element: <ChannelsPage /> },
               { path: 'triggers',         element: <TriggersPage /> },
               { path: 'routers',          element: <RoutersPage /> },
