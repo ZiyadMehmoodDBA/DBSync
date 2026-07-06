@@ -70,6 +70,9 @@ export interface RegistrationListFilter {
   includeTotalCount?: boolean;
 }
 
+/** Alias used by useInfiniteQuery cursor pagination hooks. */
+export type RegistrationFilter = RegistrationListFilter;
+
 export interface CursorPageResult<T> {
   items:       T[];
   nextCursor:  string | null;

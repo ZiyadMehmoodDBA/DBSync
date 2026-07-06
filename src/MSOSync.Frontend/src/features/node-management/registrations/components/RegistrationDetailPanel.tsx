@@ -1,15 +1,18 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { useHasPermission } from '../../../../shared/hooks/usePermissions';
 import { PermissionKeys } from '../../../../shared/types/permissions';
 import { useNodeManagement } from '../../NodeManagementProvider';
 import { useRegistrationDetail } from '../../hooks/useRegistrationDetail';
 import { useApproveRegistration } from '../../hooks/useApproveRegistration';
 import { useRejectRegistration } from '../../hooks/useRejectRegistration';
+import { nodeManagementKeys } from '../../hooks/queryKeys';
 import { DiffTable } from './DiffTable';
 import { Button } from '../../../../components/ui/button';
 import { CheckCheck, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 export function RegistrationDetailPanel() {
+  const qc = useQueryClient();
   const { selectedRegistration, setSelectedRegistration } = useNodeManagement();
   const canApprove = useHasPermission(PermissionKeys.ApproveNodes);
   const { data: detail, isLoading } = useRegistrationDetail(selectedRegistration?.id ?? null);
@@ -25,15 +28,27 @@ export function RegistrationDetailPanel() {
   }
 
   async function handleApprove() {
-    await approve.mutateAsync({ id: selectedRegistration!.id });
-    toast.success('Registration approved');
-    setSelectedRegistration(null);
+    try {
+      await approve.mutateAsync({ id: selectedRegistration!.id });
+      await qc.invalidateQueries({ queryKey: ['node-management', 'registrations'] });
+      await qc.invalidateQueries({ queryKey: nodeManagementKeys.overview() });
+      toast.success('Registration approved');
+      setSelectedRegistration(null);
+    } catch {
+      toast.error('Failed to approve registration');
+    }
   }
 
   async function handleReject() {
-    await reject.mutateAsync({ id: selectedRegistration!.id });
-    toast.success('Registration rejected');
-    setSelectedRegistration(null);
+    try {
+      await reject.mutateAsync({ id: selectedRegistration!.id });
+      await qc.invalidateQueries({ queryKey: ['node-management', 'registrations'] });
+      await qc.invalidateQueries({ queryKey: nodeManagementKeys.overview() });
+      toast.success('Registration rejected');
+      setSelectedRegistration(null);
+    } catch {
+      toast.error('Failed to reject registration');
+    }
   }
 
   return (

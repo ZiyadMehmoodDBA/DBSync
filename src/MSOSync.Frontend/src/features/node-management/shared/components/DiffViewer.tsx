@@ -61,8 +61,8 @@ export function DiffViewer({ items, defaultView = 'changes' }: DiffViewerProps) 
             </tr>
           </thead>
           <tbody>
-            {visible.map((item, i) => (
-              <tr key={i} className={cn('border-t', changeClass(item.changeType))}>
+            {visible.map((item) => (
+              <tr key={item.field} className={cn('border-t', changeClass(item.changeType))}>
                 <td className="px-3 py-2 font-medium text-neutral-700 dark:text-neutral-300">
                   {item.field}
                 </td>

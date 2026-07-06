@@ -21,10 +21,16 @@ export function RegistrationQueue() {
     bulkSelection,
   } = useNodeManagement();
 
-  const { data, isLoading, isError } = useNodeManagementRegistrations({
+  const {
+    data,
+    isLoading,
+    isError,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useNodeManagementRegistrations({
     status:            'Pending',
     includeTotalCount: true,
-    pageSize:          100,
   });
 
   function handleHover(id: number) {
@@ -38,12 +44,13 @@ export function RegistrationQueue() {
   if (isLoading) return <div className="p-4 text-sm text-neutral-400">Loading…</div>;
   if (isError)   return <div className="p-4 text-sm text-red-500">Failed to load registrations.</div>;
 
-  const items = data?.items ?? [];
+  const items = data?.pages.flatMap(p => p.items) ?? [];
+  const totalCount = data?.pages[0]?.totalCount;
 
   return (
     <div className="flex flex-col h-full overflow-y-auto">
       <div className="px-3 py-2 text-xs text-neutral-500 border-b dark:border-neutral-800">
-        {data?.totalCount ?? items.length} pending
+        {totalCount ?? items.length} pending
       </div>
       {items.map(r => (
         <div
@@ -78,6 +85,17 @@ export function RegistrationQueue() {
       ))}
       {items.length === 0 && (
         <div className="p-4 text-center text-sm text-neutral-400">No pending registrations.</div>
+      )}
+      {!isFetchingNextPage && hasNextPage && (
+        <button
+          onClick={() => { void fetchNextPage(); }}
+          className="mx-3 my-2 py-1.5 text-xs text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 rounded hover:bg-blue-50 dark:hover:bg-blue-950/20 transition-colors"
+        >
+          Load more
+        </button>
+      )}
+      {isFetchingNextPage && (
+        <div className="p-2 text-center text-xs text-neutral-400">Loading more…</div>
       )}
     </div>
   );

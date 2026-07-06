@@ -1,11 +1,14 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '../../../../components/ui/button';
 import { CheckCheck, XCircle, X } from 'lucide-react';
 import { useNodeManagement } from '../../NodeManagementProvider';
 import { useBulkApproveRegistrations } from '../../hooks/useBulkApproveRegistrations';
 import { useBulkRejectRegistrations } from '../../hooks/useBulkRejectRegistrations';
+import { nodeManagementKeys } from '../../hooks/queryKeys';
 import { toast } from 'sonner';
 
 export function BulkActionToolbar() {
+  const qc = useQueryClient();
   const { bulkSelection, clearBulkSelection } = useNodeManagement();
   const bulkApprove = useBulkApproveRegistrations();
   const bulkReject  = useBulkRejectRegistrations();
@@ -14,15 +17,27 @@ export function BulkActionToolbar() {
   if (count === 0) return null;
 
   async function handleBulkApprove() {
-    await bulkApprove.mutateAsync({ ids: Array.from(bulkSelection) });
-    clearBulkSelection();
-    toast.success(`Approved ${count} registration${count !== 1 ? 's' : ''}`);
+    try {
+      await bulkApprove.mutateAsync({ ids: Array.from(bulkSelection) });
+      await qc.invalidateQueries({ queryKey: ['node-management', 'registrations'] });
+      await qc.invalidateQueries({ queryKey: nodeManagementKeys.overview() });
+      clearBulkSelection();
+      toast.success(`Approved ${count} registration${count !== 1 ? 's' : ''}`);
+    } catch {
+      toast.error('Failed to approve registrations');
+    }
   }
 
   async function handleBulkReject() {
-    await bulkReject.mutateAsync({ ids: Array.from(bulkSelection) });
-    clearBulkSelection();
-    toast.success(`Rejected ${count} registration${count !== 1 ? 's' : ''}`);
+    try {
+      await bulkReject.mutateAsync({ ids: Array.from(bulkSelection) });
+      await qc.invalidateQueries({ queryKey: ['node-management', 'registrations'] });
+      await qc.invalidateQueries({ queryKey: nodeManagementKeys.overview() });
+      clearBulkSelection();
+      toast.success(`Rejected ${count} registration${count !== 1 ? 's' : ''}`);
+    } catch {
+      toast.error('Failed to reject registrations');
+    }
   }
 
   return (

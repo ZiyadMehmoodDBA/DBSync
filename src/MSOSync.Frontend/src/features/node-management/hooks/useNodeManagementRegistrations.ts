@@ -1,12 +1,14 @@
-import { useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery } from '@tanstack/react-query';
 import { getRegistrations } from '../api/nodeManagementApi';
 import { nodeManagementKeys } from './queryKeys';
-import type { RegistrationListFilter } from '../types/registration';
+import type { RegistrationFilter } from '../types/registration';
 
-export function useNodeManagementRegistrations(filter: RegistrationListFilter) {
-  return useQuery({
+export function useNodeManagementRegistrations(filter: RegistrationFilter) {
+  return useInfiniteQuery({
     queryKey: nodeManagementKeys.registrations(filter),
-    queryFn:  ({ signal }) => getRegistrations(filter, signal),
-    staleTime: 15_000,
+    queryFn: ({ pageParam }) =>
+      getRegistrations({ ...filter, cursor: pageParam as string | undefined }),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
   });
 }
