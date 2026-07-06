@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Button } from '../../../../components/ui/button';
 import type { ProvisionWizardDraft } from '../../types/provision';
 
@@ -17,9 +17,11 @@ function toExternalId(name: string): string {
 }
 
 export function Step3Network({ draft, onChange, onNext, onBack }: Props) {
+  const externalIdEdited = useRef(false);
   const canProceed = !!(draft.nodeName?.trim() && draft.externalId?.trim());
 
   useEffect(() => {
+    if (externalIdEdited.current) return;
     if (draft.nodeName) {
       onChange({ externalId: toExternalId(draft.nodeName) });
     }
@@ -50,7 +52,10 @@ export function Step3Network({ draft, onChange, onNext, onBack }: Props) {
           <input
             className="w-full rounded-md border px-3 py-2 text-sm dark:bg-neutral-900 dark:border-neutral-700"
             value={draft.externalId ?? ''}
-            onChange={e => onChange({ externalId: e.target.value })}
+            onChange={e => {
+              externalIdEdited.current = true;
+              onChange({ externalId: e.target.value });
+            }}
           />
         </div>
         <div className="space-y-1">

@@ -139,6 +139,7 @@ export function ProvisionWizard() {
   function restart() {
     setDraft(EMPTY_DRAFT);
     setResult(null);
+    setWizardDraft(null);
     setStep(1);
   }
 
