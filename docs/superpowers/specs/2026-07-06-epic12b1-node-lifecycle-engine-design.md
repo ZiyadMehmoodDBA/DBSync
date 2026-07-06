@@ -59,7 +59,7 @@ Two further dimensions are **never** part of this enum:
 
 ### 2.2 Transition table (exhaustive)
 
-The state machine encodes exactly this table. Anything not listed is an invalid transition.
+The state machine encodes exactly this table — the **single canonical authority**. Controllers, workers, UI, and tests all derive from it; no component defines independent transition logic.
 
 | From | To | Trigger |
 |---|---|---|
@@ -118,7 +118,8 @@ These are binding rules, enforced in code and asserted by tests:
 7. ProbeWorker never changes `LifecycleState`.
 8. `LifecycleState` never changes from connectivity observations.
 9. `ConnectivityStatus` is derived only from telemetry. It is never mutated by lifecycle transitions, operator actions, or registration events.
-10. Lifecycle history is immutable append-only.
+10. Lifecycle history is immutable append-only: rows are never updated, never deleted; migration seed rows remain permanently.
+11. Lifecycle commands are retry-safe: a duplicate command (repeated activation, enable, maintenance-start) is rejected by transition validation or no-ops idempotently — never double-applies.
 
 ### 2.5 NodeLifecycleStateMachine
 
@@ -231,14 +232,15 @@ Authorize
   → Load node
   → Acquire lifecycle lock (optimistic: RowVersion + per-node in-process serialization)
   → Validate transition (state machine) — revalidated at execution time, never trusting pre-loaded state
-  → Persist state
-  → Write lifecycle history
-  → Write audit
-  → Publish MediatR notification
+  → Persist state + lifecycle history + audit (single transaction)
+  → Commit
+  → Publish MediatR notification (AFTER commit — never before; reconnecting clients
+    must never observe events for data that later rolls back)
   → Release lock / return
 ```
 
-- Each command generates a `CorrelationId` (Guid) at entry; it flows into the history row, audit detail, notification, and error responses.
+- Each command generates a `CorrelationId` (Guid) at entry; it flows into the history row, audit detail, notification, error responses, and log scopes — one identifier across the entire flow.
+- Commands are retry-safe (Invariant 11): re-sending a command after a timeout either fails transition validation (state already advanced) or no-ops — never double-applies.
 - Concurrency conflict → existing `ConcurrencyException` → 409 (GlobalExceptionHandler mapping unchanged).
 - Invalid transition → new `InvalidLifecycleTransitionException` → 409 (§7.4).
 - Concurrent races prevented by the lock: Disable vs Decommission, Recovery-approve vs Disable, Enable vs DecommissionWorker finalize — one wins, one gets 409.
@@ -422,7 +424,19 @@ Deterministic rules, in order:
 - Probes only nodes with lifecycle ∈ {Active, Recovery, Decommissioning}.
 - Maintenance: probing during maintenance is configurable — `MaintenancePolicy.ContinueProbing` (default `true`).
 
-### 5.5 Suppression is a consumer concern
+### 5.5 Worker ownership summary
+
+| Worker | Cadence | Writes | Notes |
+|---|---|---|---|
+| HeartbeatWorker (client) | 30s (config) | nothing hub-side — POSTs heartbeat | unchanged |
+| Heartbeat endpoint | on request | `LastHeartbeatUtc` only | telemetry only |
+| ProbeWorker | probe interval (config) | `LastProbeUtc`, `LastProbeError`, `ConsecutiveProbeFailures` | telemetry only |
+| ConnectivityEvaluator | 30s (config) | `ConnectivityStatus`, `ConnectivityReason`, connectivity history (+prune) | sole status writer; skips cycle if previous still running |
+| DecommissionWorker | worker cadence (config) | lifecycle via `NodeLifecycleService.FinalizeDecommissionAsync` only | never writes state directly |
+
+All workers: honor CancellationToken, prevent overlapping execution, shut down gracefully (existing BackgroundService pattern).
+
+### 5.6 Suppression is a consumer concern
 
 The evaluator owns truth; UI owns presentation. Events always publish; SignalR always broadcasts. The toast/alert layer checks `MaintenanceMode` and suppresses notifications — never data.
 
@@ -555,7 +569,7 @@ Rules:
 
 - Events are **idempotent**: duplicate delivery produces no duplicate toasts and no cache corruption (invalidation is naturally idempotent; toasts deduplicate by CorrelationId).
 - Toasts only for: Activated, Enabled, Disabled, Maintenance Started/Ended, Decommission Started/Completed, Recovery Approved. Connectivity changes = silent badge updates.
-- MaintenanceMode suppresses connectivity toasts client-side (§5.5).
+- MaintenanceMode suppresses connectivity toasts client-side (§5.6).
 
 ---
 
@@ -659,6 +673,7 @@ Controllers stay thin: `[Authorize]` + delegate.
 - Heartbeat: PendingRegistration → 403; Disabled → 403; Decommissioned → 410; Active accepted.
 - Authorization matrix: MANAGE_NODE_LIFECYCLE required on all mutating lifecycle endpoints; VIEW_TOPOLOGY cannot mutate; unauthenticated → 401.
 - Concurrency: parallel disable + decommission on same node → exactly one 204/202, one 409.
+- Retry safety: duplicate activation request after success → 401 (token consumed); duplicate enable → 409 (already Active); duplicate maintenance-start → 409 or idempotent no-op — asserted explicitly.
 
 ### Frontend
 
