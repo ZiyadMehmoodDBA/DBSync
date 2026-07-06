@@ -97,7 +97,7 @@ public sealed class NodeLifecycleService(
     {
         var req = await db.RegistrationRequests
             .FirstOrDefaultAsync(r => r.RequestId == id, ct)
-            ?? throw new KeyNotFoundException($"Registration {id} not found.");
+            ?? throw new NotFoundException($"Registration {id} not found.");
 
         if (req.Status == RegistrationStatus.Approved)
             throw new ConcurrencyException("Registration is already approved.");
@@ -128,7 +128,10 @@ public sealed class NodeLifecycleService(
     {
         var req = await db.RegistrationRequests
             .FirstOrDefaultAsync(r => r.RequestId == id, ct)
-            ?? throw new KeyNotFoundException($"Registration {id} not found.");
+            ?? throw new NotFoundException($"Registration {id} not found.");
+
+        if (req.Status == RegistrationStatus.Rejected)
+            throw new ConcurrencyException("Registration is already rejected.");
 
         req.Status      = RegistrationStatus.Rejected;
         req.ProcessedAt = DateTime.UtcNow;

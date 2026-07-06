@@ -81,15 +81,7 @@ public sealed class NodeManagementController(
         if (!perms.Permissions.Contains(SystemPermissions.ApproveNodes))
             return Forbid();
 
-        try
-        {
-            await lifecycle.ApproveAsync(id, request.Notes, currentUser.GetCurrentUsername(), ct);
-        }
-        catch (KeyNotFoundException ex)
-        {
-            throw new NotFoundException(ex.Message);
-        }
-
+        await lifecycle.ApproveAsync(id, request.Notes, currentUser.GetCurrentUsername(), ct);
         return NoContent();
     }
 
@@ -106,15 +98,7 @@ public sealed class NodeManagementController(
         if (!perms.Permissions.Contains(SystemPermissions.ApproveNodes))
             return Forbid();
 
-        try
-        {
-            await lifecycle.RejectAsync(id, request.Reason, currentUser.GetCurrentUsername(), ct);
-        }
-        catch (KeyNotFoundException ex)
-        {
-            throw new NotFoundException(ex.Message);
-        }
-
+        await lifecycle.RejectAsync(id, request.Reason, currentUser.GetCurrentUsername(), ct);
         return NoContent();
     }
 

@@ -97,6 +97,20 @@ public sealed class NodeLifecycleServiceTests
     }
 
     [Fact]
+    public async Task RejectAsync_AlreadyRejected_ThrowsConcurrencyException()
+    {
+        var svc = MakeService(out var db);
+
+        var id = await svc.RegisterAsync(new InboundRegistrationDto(
+            "ext-5a", "Node5a", "target", null));
+        await svc.RejectAsync(id, "not valid", "admin");
+
+        var act = () => svc.RejectAsync(id, "not valid", "admin");
+
+        await act.Should().ThrowAsync<ConcurrencyException>();
+    }
+
+    [Fact]
     public async Task BulkApproveAsync_MixedIds_ReturnsCorrectStatuses()
     {
         var svc = MakeService(out var db);
