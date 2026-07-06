@@ -1,5 +1,6 @@
 using System.IO.Compression;
 using FluentAssertions;
+using MSOSync.Metadata.Audit;
 using MSOSync.Metadata.NodeManagement;
 using MSOSync.Persistence.Entities;
 using Xunit;
@@ -9,12 +10,14 @@ namespace MSOSync.MetadataTests.NodeManagement;
 public sealed class ProvisionPackageServiceTests : IDisposable
 {
     private readonly MSOSync.Persistence.AppDbContext _db;
-    private readonly ProvisionPackageService _sut;
+    private readonly AuditService                     _auditSvc;
+    private readonly ProvisionPackageService          _sut;
 
     public ProvisionPackageServiceTests()
     {
-        _db  = TestDbContext.Create();
-        _sut = new ProvisionPackageService(_db);
+        _db       = TestDbContext.Create();
+        _auditSvc = new AuditService(_db);
+        _sut      = new ProvisionPackageService(_db, _auditSvc);
     }
 
     public void Dispose()
@@ -44,7 +47,7 @@ public sealed class ProvisionPackageServiceTests : IDisposable
     {
         await SeedNodeAsync();
         var ms = new MemoryStream();
-        await _sut.StreamPackageAsync("node-1", "tok-abc", ms);
+        await _sut.StreamPackageAsync("node-1", "tok-abc", "test-actor", ms);
         ms.Position = 0;
 
         using var zip = new ZipArchive(ms, ZipArchiveMode.Read);
@@ -56,7 +59,7 @@ public sealed class ProvisionPackageServiceTests : IDisposable
     {
         await SeedNodeAsync();
         var ms = new MemoryStream();
-        await _sut.StreamPackageAsync("node-1", "tok-abc", ms);
+        await _sut.StreamPackageAsync("node-1", "tok-abc", "test-actor", ms);
         ms.Position = 0;
 
         using var zip = new ZipArchive(ms, ZipArchiveMode.Read);
@@ -73,7 +76,7 @@ public sealed class ProvisionPackageServiceTests : IDisposable
     {
         await SeedNodeAsync();
         var ms = new MemoryStream();
-        await _sut.StreamPackageAsync("node-1", "tok-abc", ms);
+        await _sut.StreamPackageAsync("node-1", "tok-abc", "test-actor", ms);
         ms.Position = 0;
 
         using var zip = new ZipArchive(ms, ZipArchiveMode.Read);
@@ -92,7 +95,7 @@ public sealed class ProvisionPackageServiceTests : IDisposable
     {
         await SeedNodeAsync();
         var ms = new MemoryStream();
-        await _sut.StreamPackageAsync("node-1", "tok-abc", ms);
+        await _sut.StreamPackageAsync("node-1", "tok-abc", "test-actor", ms);
         ms.Position = 0;
 
         using var zip    = new ZipArchive(ms, ZipArchiveMode.Read);
@@ -102,5 +105,23 @@ public sealed class ProvisionPackageServiceTests : IDisposable
 
         json.Should().Contain("\"nodeId\"");
         json.Should().Contain("node-1");
+    }
+
+    [Fact]
+    public async Task StreamPackageAsync_WritesProvisionPackageDownloadedAudit()
+    {
+        await SeedNodeAsync("audit-node");
+        var ms = new MemoryStream();
+        await _sut.StreamPackageAsync("audit-node", "tok-secret", "actor-user", ms);
+
+        var audit = _db.Audits
+            .Where(a => a.ActionName == NodeManagementAuditActions.ProvisionPackageDownloaded)
+            .SingleOrDefault();
+
+        audit.Should().NotBeNull();
+        audit!.ActionName.Should().Be("PROVISION_PACKAGE_DOWNLOADED");
+        audit.ObjectName.Should().Contain("audit-node");
+        audit.ObjectName.Should().NotContain("tok-secret");
+        audit.Username.Should().Be("actor-user");
     }
 }

@@ -1,8 +1,9 @@
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { TabId } from './types/tabs';
 import type { RegistrationSummaryDto } from './types/registration';
 import type { ProvisionWizardDraft } from './types/provision';
+import { clearWizardDraft } from './types/provision';
 import { NODE_MANAGEMENT_TABS } from './types/tabs';
 
 interface NodeManagementContextValue {
@@ -31,6 +32,28 @@ export function NodeManagementProvider({
   const [bulkSelection, setBulkSelection] = useState<Set<number>>(new Set());
   const [wizardDraft, setWizardDraft] =
     useState<ProvisionWizardDraft | null>(null);
+
+  // Track previous tab so we can detect a transition away from 'provision'.
+  // useRef avoids triggering re-renders and is immune to StrictMode double-mount.
+  const prevTabRef = useRef<TabId | null>(null);
+
+  useEffect(() => {
+    const prev = prevTabRef.current;
+    prevTabRef.current = activeTab;
+
+    // Only clear on an actual transition away from provision (not on mount/first render).
+    if (prev === NODE_MANAGEMENT_TABS.PROVISION && activeTab !== NODE_MANAGEMENT_TABS.PROVISION) {
+      clearWizardDraft();
+      setWizardDraft(null);
+    }
+  }, [activeTab]);
+
+  // Unmount cleanup: clears draft when leaving /node-management entirely.
+  useEffect(() => {
+    return () => {
+      clearWizardDraft();
+    };
+  }, []);
 
   function toggleBulkSelection(id: number) {
     setBulkSelection(prev => {

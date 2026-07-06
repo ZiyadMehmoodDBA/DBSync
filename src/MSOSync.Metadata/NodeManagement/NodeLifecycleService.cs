@@ -76,7 +76,7 @@ public sealed class NodeLifecycleService(
                 ? $"Registration {request.RequestId} received for node {dto.ExternalId}"
                 : $"Registration {request.RequestId} received for node {dto.ExternalId}. Diff: {diffSummary}";
 
-            await auditSvc.WriteAsync("registration:received", auditDetail, "system", ct);
+            await auditSvc.WriteAsync(NodeManagementAuditActions.NodeRegistered, auditDetail, "system", ct);
 
             NodeManagementMetrics.RegistrationRequestsTotal.Add(1,
                 new KeyValuePair<string, object?>("type", regType.ToString()),
@@ -116,7 +116,10 @@ public sealed class NodeLifecycleService(
             throw new ConcurrencyException("Registration was modified concurrently.");
         }
 
-        await auditSvc.WriteAsync("registration:approved",
+        var approveAction = req.RegistrationType == RegistrationType.ReRegistration
+            ? NodeManagementAuditActions.NodeReRegistered
+            : NodeManagementAuditActions.NodeApproved;
+        await auditSvc.WriteAsync(approveAction,
             $"Registration {id} approved by {actorUsername}. Notes: {notes}",
             actorUsername, ct);
 
@@ -146,7 +149,7 @@ public sealed class NodeLifecycleService(
             throw new ConcurrencyException("Registration was modified concurrently.");
         }
 
-        await auditSvc.WriteAsync("registration:rejected",
+        await auditSvc.WriteAsync(NodeManagementAuditActions.NodeRejected,
             $"Registration {id} rejected by {actorUsername}. Reason: {reason}",
             actorUsername, ct);
 
@@ -176,7 +179,10 @@ public sealed class NodeLifecycleService(
                     req.Approved    = true;
                     await db.SaveChangesAsync(ct);
 
-                    await auditSvc.WriteAsync("registration:approved",
+                    var bulkApproveAction = req.RegistrationType == RegistrationType.ReRegistration
+                        ? NodeManagementAuditActions.NodeReRegistered
+                        : NodeManagementAuditActions.NodeApproved;
+                    await auditSvc.WriteAsync(bulkApproveAction,
                         $"Bulk: Registration {id} approved by {actorUsername}", actorUsername, ct);
 
                     NodeManagementMetrics.ApprovalsTotal.Add(1);
@@ -218,7 +224,7 @@ public sealed class NodeLifecycleService(
                     req.ProcessedBy = actorUsername;
                     await db.SaveChangesAsync(ct);
 
-                    await auditSvc.WriteAsync("registration:rejected",
+                    await auditSvc.WriteAsync(NodeManagementAuditActions.NodeRejected,
                         $"Bulk: Registration {id} rejected by {actorUsername}. Reason: {reason}",
                         actorUsername, ct);
 

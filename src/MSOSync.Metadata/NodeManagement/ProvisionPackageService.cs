@@ -5,17 +5,18 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using MSOSync.Common.Exceptions;
+using MSOSync.Metadata.Audit;
 using MSOSync.Persistence;
 using MSOSync.Persistence.Entities;
 
 namespace MSOSync.Metadata.NodeManagement;
 
-public sealed class ProvisionPackageService(AppDbContext db) : IProvisionPackageService
+public sealed class ProvisionPackageService(AppDbContext db, IAuditService auditSvc) : IProvisionPackageService
 {
     private const string AgentVersion = "1.0.0";
 
     public async Task StreamPackageAsync(
-        string nodeId, string token, Stream destination, CancellationToken ct = default)
+        string nodeId, string token, string actorUsername, Stream destination, CancellationToken ct = default)
     {
         var node = await db.Nodes.AsNoTracking()
             .FirstOrDefaultAsync(n => n.NodeId == nodeId, ct)
@@ -62,6 +63,13 @@ public sealed class ProvisionPackageService(AppDbContext db) : IProvisionPackage
 
             ms.Position = 0;
             await ms.CopyToAsync(destination, ct);
+
+            // Audit: never include the token value in the audit detail
+            await auditSvc.WriteAsync(
+                NodeManagementAuditActions.ProvisionPackageDownloaded,
+                $"nodeId={nodeId}",
+                actorUsername,
+                ct);
 
             NodeManagementMetrics.PackageDownloadsTotal.Add(1);
         }
