@@ -39,6 +39,7 @@ public sealed class NodeMetadataServiceTests
         db.RegistrationRequests.Add(new SyncRegistrationRequest
         {
             NodeId = "node-1",
+            NodeName = "node-1",
             NodeGroup = "default",
             SyncUrl = "http://node1:8080",
             RequestTime = DateTime.UtcNow
@@ -61,6 +62,7 @@ public sealed class NodeMetadataServiceTests
         db.RegistrationRequests.Add(new SyncRegistrationRequest
         {
             NodeId = "node-2",
+            NodeName = "node-2",
             RequestTime = DateTime.UtcNow
         });
         await db.SaveChangesAsync();
@@ -79,6 +81,7 @@ public sealed class NodeMetadataServiceTests
         db.RegistrationRequests.Add(new SyncRegistrationRequest
         {
             NodeId = "node-3",
+            NodeName = "node-3",
             RequestTime = DateTime.UtcNow
         });
         await db.SaveChangesAsync();
@@ -159,6 +162,7 @@ public sealed class NodeMetadataServiceTests
         db.RegistrationRequests.Add(new SyncRegistrationRequest
         {
             NodeId = "node-7",
+            NodeName = "node-7",
             RequestTime = DateTime.UtcNow
         });
         await db.SaveChangesAsync();

@@ -15,6 +15,7 @@ using MSOSync.Metadata.Nodes;
 using MSOSync.Metadata.Services;
 using MSOSync.Metadata.Topology;
 using MSOSync.Metadata.Permissions;
+using MSOSync.Metadata.NodeManagement;
 using MSOSync.Metadata.Preferences;
 using MSOSync.Metadata.Users;
 
@@ -78,6 +79,13 @@ public static class MetadataServiceExtensions
 
         // Epic 11F — Fine-grained RBAC
         services.AddScoped<IPermissionService, PermissionService>();
+
+        // Epic 12A — Node Management
+        services.AddScoped<IRegistrationDiffService, RegistrationDiffService>();
+        services.AddScoped<INodeManagementService, NodeManagementService>();
+        services.AddScoped<INodeLifecycleService, NodeLifecycleService>();
+        services.AddScoped<IProvisionPackageService, ProvisionPackageService>();
+        services.AddScoped<IAuditService, AuditService>();
 
         return services;
     }
