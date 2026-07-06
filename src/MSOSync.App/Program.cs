@@ -61,7 +61,10 @@ try
     builder.Services.AddScoped<ICurrentUserService, HttpContextCurrentUserService>();
 
     builder.Services.AddControllers()
-        .AddApplicationPart(typeof(AuthController).Assembly);
+        .AddApplicationPart(typeof(AuthController).Assembly)
+        .AddJsonOptions(opts =>
+            opts.JsonSerializerOptions.Converters.Add(
+                new System.Text.Json.Serialization.JsonStringEnumConverter()));
 
     builder.Services.AddFluentValidationAutoValidation();
     builder.Services.AddValidatorsFromAssemblyContaining<AuthController>();

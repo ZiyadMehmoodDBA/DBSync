@@ -100,7 +100,7 @@ public sealed class NodeLifecycleService(
             ?? throw new KeyNotFoundException($"Registration {id} not found.");
 
         if (req.Status == RegistrationStatus.Approved)
-            throw new InvalidOperationException($"Registration {id} is already approved.");
+            throw new ConcurrencyException("Registration is already approved.");
 
         req.Status      = RegistrationStatus.Approved;
         req.ProcessedAt = DateTime.UtcNow;

@@ -97,6 +97,7 @@ public sealed class NodeManagementController(
     [ProducesResponseType(204)]
     [ProducesResponseType(typeof(ProblemDetails), 403)]
     [ProducesResponseType(typeof(ProblemDetails), 404)]
+    [ProducesResponseType(typeof(ProblemDetails), 409)]
     public async Task<IActionResult> RejectRegistration(
         long id, [FromBody] RejectRegistrationRequest request, CancellationToken ct)
     {

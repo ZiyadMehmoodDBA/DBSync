@@ -1,6 +1,7 @@
 using FluentAssertions;
 using Moq;
 using MediatR;
+using MSOSync.Common.Exceptions;
 using MSOSync.Metadata.Audit;
 using MSOSync.Metadata.NodeManagement;
 using MSOSync.Persistence.Entities;
@@ -78,7 +79,7 @@ public sealed class NodeLifecycleServiceTests
 
         var act = () => svc.ApproveAsync(id, null, "admin");
 
-        await act.Should().ThrowAsync<InvalidOperationException>();
+        await act.Should().ThrowAsync<ConcurrencyException>();
     }
 
     [Fact]
