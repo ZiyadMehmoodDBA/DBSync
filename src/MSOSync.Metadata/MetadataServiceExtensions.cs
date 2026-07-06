@@ -86,6 +86,7 @@ public static class MetadataServiceExtensions
         services.AddScoped<INodeLifecycleService, NodeLifecycleService>();
         services.AddScoped<IProvisionPackageService, ProvisionPackageService>();
         services.AddScoped<IAuditService, AuditService>();
+        services.AddScoped<IValidator<NodeManagement.RegistrationFilter>, NodeManagement.RegistrationListFilterValidator>();
 
         return services;
     }
