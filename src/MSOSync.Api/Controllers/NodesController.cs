@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using MSOSync.Api.Dtos.Nodes;
 using MSOSync.Common;
@@ -112,12 +113,27 @@ public sealed class NodesController(
 
         var node = await nodeService.GetNodeAsync(nodeId, ct);
         if (node == null) return NotFound();
-        if (node.LifecycleState == NodeLifecycleState.Disabled) return Forbid();
 
-        // Task 3 installs the full lifecycle accept/reject matrix; this task only removes the lifecycle write.
-        // Update LastHeartbeat
+        // Lifecycle accept/reject matrix (spec §5.3). No lifecycle write anywhere in this action.
+        switch (node.LifecycleState)
+        {
+            case NodeLifecycleState.Active:
+            case NodeLifecycleState.Recovery:
+            case NodeLifecycleState.Decommissioning:
+                break;   // accepted — draining/recovering nodes still report telemetry
+            case NodeLifecycleState.PendingRegistration:
+            case NodeLifecycleState.PendingApproval:
+                return Forbid();                    // 403 — activation is the readiness proof
+            case NodeLifecycleState.Disabled:
+                return Forbid();                    // 403
+            case NodeLifecycleState.Decommissioned:
+            case NodeLifecycleState.Rejected:
+                return StatusCode(StatusCodes.Status410Gone);   // agent should stop
+            default:
+                return Forbid();
+        }
+
         await nodeService.RecordHeartbeatAsync(nodeId, clock.UtcNow, ct);
-
         return NoContent();
     }
 }

@@ -48,6 +48,7 @@ public static class MetadataServiceExtensions
         services.AddSingleton<NodeLifecycleLockRegistry>();
         services.AddScoped<IBootstrapTokenService, BootstrapTokenService>();
         services.AddScoped<INodeLifecycleHistoryService, NodeLifecycleHistoryService>();
+        services.AddScoped<IDecommissionEvaluator, DecommissionEvaluator>();
         services.AddScoped<IUsersManagementService, UsersManagementService>();
 
         // Epic 9A — Operational Read APIs
