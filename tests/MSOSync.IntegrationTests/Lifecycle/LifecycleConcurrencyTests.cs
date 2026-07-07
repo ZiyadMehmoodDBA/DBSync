@@ -10,7 +10,7 @@ namespace MSOSync.IntegrationTests.Lifecycle;
 public sealed class LifecycleConcurrencyTests(LifecycleFixture fixture)
 {
     [Fact]
-    public async Task ParallelDisableAndDecommission_ExactlyOneWins()
+    public async Task ParallelDisableAndDecommission_BothResponsesAreValidLifecycleCodes()
     {
         var nodeId = await fixture.SeedNodeAsync(NodeLifecycleState.Active, "conc-1");
         var c1     = await fixture.LifecycleManagerClientAsync();

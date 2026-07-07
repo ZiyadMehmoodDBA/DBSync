@@ -59,7 +59,7 @@ public sealed class LifecycleAuthorizationTests(LifecycleFixture fixture)
         var viewer = await fixture.ViewerClientAsync();
         var resp   = await viewer.GetAsync($"api/v1/node-lifecycle/nodes/{nodeId}/state");
         // Controller uses EnsurePermissionAsync(ManageNodeLifecycle) for state too
-        resp.StatusCode.Should().BeOneOf(HttpStatusCode.Forbidden, HttpStatusCode.OK);
+        resp.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     [Fact]

@@ -454,6 +454,15 @@ public sealed class NodeLifecycleService(
         // Reload under lock — retry safety (Invariant 11)
         await db.Entry(node).ReloadAsync(ct);
 
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
+
+        // Token check FIRST (spec §4.5): a consumed/invalid token is always 401,
+        // regardless of current lifecycle state. This ensures a replay attempt on an
+        // Active node returns 401 (unauthorized) rather than 409 (wrong state).
+        if (!await bootstrapTokens.ValidateAndConsumeAsync(node.NodeId, bootstrapToken, ct))
+            throw new UnauthorizedException("Invalid activation credentials", "ACTIVATION_DENIED");
+
+        // State machine check AFTER token is validated (spec §4.5 step 4).
         if (node.LifecycleState is not (NodeLifecycleState.PendingRegistration or NodeLifecycleState.Recovery))
             throw new InvalidLifecycleTransitionException(
                 node.LifecycleState.ToString(), NodeLifecycleState.Active.ToString(),
@@ -462,11 +471,6 @@ public sealed class NodeLifecycleService(
 
         var previous = node.LifecycleState;
         var wasRecovery = previous == NodeLifecycleState.Recovery;
-
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
-
-        if (!await bootstrapTokens.ValidateAndConsumeAsync(node.NodeId, bootstrapToken, ct))
-            throw new UnauthorizedException("Invalid activation credentials", "ACTIVATION_DENIED");
 
         stateMachine.Validate(previous, NodeLifecycleState.Active, correlationId);
         node.LifecycleState = NodeLifecycleState.Active;

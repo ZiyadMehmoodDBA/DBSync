@@ -36,20 +36,18 @@ public sealed class ActivationTests(LifecycleFixture fixture)
     [Fact]
     public async Task Activate_ConsumedTokenReplay_DeniesReactivation()   // retry safety
     {
-        // After successful activation the node is Active; a replay of the same bootstrap token
-        // is denied. The service checks node state before token validity, so an Active node
-        // returns 409 (state guard fires first) rather than 401.
+        // After successful activation the token is consumed. A replay attempt on the now-Active
+        // node returns 401 because ValidateAndConsumeAsync runs BEFORE the state machine check
+        // (spec §4.5): a consumed token is always unauthorized, regardless of current state.
         var nodeId = await fixture.SeedNodeAsync(NodeLifecycleState.PendingRegistration, "act-replay");
         var token  = await fixture.IssueBootstrapTokenAsync(nodeId);
         var anon   = fixture.AnonymousClient();
 
         (await anon.PostAsJsonAsync("api/v1/nodes/activate", Body("act-replay", token)))
             .StatusCode.Should().Be(HttpStatusCode.OK);
-        var replayStatus = (int)(await anon.PostAsJsonAsync("api/v1/nodes/activate", Body("act-replay", token)))
-            .StatusCode;
-        // State guard (409) fires before token check (401) for already-Active nodes;
-        // both deny activation — either is acceptable.
-        replayStatus.Should().BeOneOf(401, 409);
+        var replayResp = await anon.PostAsJsonAsync("api/v1/nodes/activate", Body("act-replay", token));
+        // Token was consumed on first activation; replay must return 401 (token-before-state order).
+        replayResp.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]

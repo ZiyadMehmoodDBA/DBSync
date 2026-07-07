@@ -20,8 +20,8 @@ public sealed class RecoveryEndToEndTests(LifecycleFixture fixture)
     {
         const string externalId = "rec-e2e";
 
-        // 1. Seed Disabled node + operational node token (non-Active → Recovery registration type)
-        var nodeId = await fixture.SeedNodeAsync(NodeLifecycleState.Disabled, externalId);
+        // 1. Seed Active node + operational node token (non-PendingRegistration → Recovery registration type)
+        var nodeId = await fixture.SeedNodeAsync(NodeLifecycleState.Active, externalId);
         var preRecoveryNodeToken = await fixture.IssueNodeTokenAsync(nodeId);
 
         // 2. POST api/v1/node-management/registrations → 202 (triggers Recovery transition)
@@ -36,7 +36,7 @@ public sealed class RecoveryEndToEndTests(LifecycleFixture fixture)
         var regBody = await regResp.Content.ReadFromJsonAsync<JsonElement>();
         var regId   = regBody.GetProperty("registrationId").GetInt64();
 
-        // 3. Node state → Recovery; DB check PreviousLifecycleState == Active
+        // 3. Node state → Recovery; DB check PreviousLifecycleState == Active (captured at Recovery entry)
         var state = await fixture.GetNodeStateViaApiAsync(nodeId);
         state.GetProperty("lifecycleState").GetString().Should().Be("Recovery");
 
@@ -44,7 +44,7 @@ public sealed class RecoveryEndToEndTests(LifecycleFixture fixture)
         {
             var db   = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var node = await db.Nodes.AsNoTracking().FirstAsync(n => n.NodeId == nodeId);
-            node.PreviousLifecycleState.Should().Be(NodeLifecycleState.Disabled);
+            node.PreviousLifecycleState.Should().Be(NodeLifecycleState.Active);
         }
 
         // 4. GET api/v1/node-management/registrations/{id} → registrationType Recovery, diff present

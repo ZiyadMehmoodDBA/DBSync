@@ -199,10 +199,14 @@ public sealed class NodeLifecycleServiceCommandTests
     [Fact]
     public async Task Activate_WrongState_Disabled_ThrowsInvalidLifecycleTransition()
     {
+        // Token check runs FIRST; a valid token + wrong state → InvalidLifecycleTransitionException (409).
+        // Issue a real bootstrap token so validation passes, then let the state guard fire.
         var f = new Fixture();
-        await f.SeedNodeAsync("n1", NodeLifecycleState.Disabled, externalId: "ext-1");
+        var node = await f.SeedNodeAsync("n1", NodeLifecycleState.Disabled, externalId: "ext-1");
+        var rawToken = await f.BootstrapTokens.IssueAsync(node.NodeId, "admin");
+        await f.Db.SaveChangesAsync();
 
-        var act = () => f.Svc.ActivateAsync("ext-1", "whatever", "1.2.3");
+        var act = () => f.Svc.ActivateAsync("ext-1", rawToken, "1.2.3");
 
         await act.Should().ThrowAsync<InvalidLifecycleTransitionException>();
     }
