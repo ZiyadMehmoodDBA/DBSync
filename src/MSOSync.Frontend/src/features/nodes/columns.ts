@@ -17,19 +17,13 @@ export function makeNodeColumns(
     { field: 'groupId', headerName: 'Group', width: 150 },
     { field: 'syncUrl', headerName: 'Sync URL', flex: 1, minWidth: 150 },
     {
-      field: 'status',
+      field: 'lifecycleState',
       headerName: 'Status',
       width: 130,
       cellRenderer: (p: ICellRendererParams<NodeDto>) =>
         p.value
           ? StatusBadge({ status: p.value as string, variant: nodeStatusVariant(p.value as string) })
           : null,
-    },
-    {
-      field: 'syncEnabled',
-      headerName: 'Sync',
-      width: 90,
-      valueFormatter: (p) => (p.value ? 'Yes' : 'No'),
     },
     {
       field: 'transportMode',

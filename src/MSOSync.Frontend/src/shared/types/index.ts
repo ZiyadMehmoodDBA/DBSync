@@ -1,4 +1,5 @@
 export * from './common';
+export * from './lifecycle';
 export * from './dashboard';
 export * from './events';
 export * from './batches';

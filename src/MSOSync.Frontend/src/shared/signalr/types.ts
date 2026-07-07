@@ -16,15 +16,19 @@ export interface OperationsEvent {
   currentStatus: string | null;
   occurredAt: string; // ISO 8601
   groupId: string | null;
+  correlationId?: string | null;
+  trigger?: string | null;
 }
 
 export const OperationsEventType = {
-  NodeHealthChanged:  'NodeHealthChanged',
-  NodeApproved:       'NodeApproved',
-  NodeRejected:       'NodeRejected',
-  NodeDisabled:       'NodeDisabled',
-  NodeEnabled:        'NodeEnabled',
-  SyncCycleCompleted: 'SyncCycleCompleted',
+  NodeHealthChanged:   'NodeHealthChanged',
+  NodeApproved:        'NodeApproved',
+  NodeRejected:        'NodeRejected',
+  NodeDisabled:        'NodeDisabled',
+  NodeEnabled:         'NodeEnabled',
+  SyncCycleCompleted:  'SyncCycleCompleted',
+  NodeLifecycleChanged:   'NodeLifecycleChanged',
+  NodeMaintenanceChanged: 'NodeMaintenanceChanged',
 } as const;
 
 export type OperationsEventType = (typeof OperationsEventType)[keyof typeof OperationsEventType];

@@ -60,4 +60,9 @@ export const queryKeys = {
   role:              (name: string) => ['roles', name] as const,
 
   exportJobs: () => ['export-jobs'] as const,
+
+  nodeState:            (id: string) => ['node-state', id] as const,
+  nodeTransitions:      (id: string) => ['node-transitions', id] as const,
+  nodeLifecycleHistory: (id: string, filter?: unknown) =>
+    filter ? ['node-lifecycle-history', id, filter] as const : ['node-lifecycle-history', id] as const,
 };

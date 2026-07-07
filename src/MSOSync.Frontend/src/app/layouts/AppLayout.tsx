@@ -121,18 +121,20 @@ function NavGroup({ heading, items }: { heading: string; items: NavItem[] }) {
   const canExportData   = useHasPermission(PermissionKeys.ExportData);
 
   const permMap: Record<PermissionKey, boolean> = {
-    [PermissionKeys.ViewMetrics]:    canViewMetrics,
-    [PermissionKeys.ViewTopology]:   canViewTopology,
-    [PermissionKeys.ViewAudit]:      canViewAudit,
-    [PermissionKeys.ManageUsers]:    canManageUsers,
-    [PermissionKeys.ExportData]:     canExportData,
-    [PermissionKeys.ViewEvents]:     true,
-    [PermissionKeys.RetryBatches]:   true,
-    [PermissionKeys.ApproveNodes]:   true,
-    [PermissionKeys.ReleaseLocks]:   true,
-    [PermissionKeys.EditParameters]: true,
-    [PermissionKeys.ManageTriggers]: true,
-    [PermissionKeys.ManageRouters]:  true,
+    [PermissionKeys.ViewMetrics]:         canViewMetrics,
+    [PermissionKeys.ViewTopology]:        canViewTopology,
+    [PermissionKeys.ViewAudit]:           canViewAudit,
+    [PermissionKeys.ManageUsers]:         canManageUsers,
+    [PermissionKeys.ExportData]:          canExportData,
+    [PermissionKeys.ViewEvents]:          true,
+    [PermissionKeys.RetryBatches]:        true,
+    [PermissionKeys.ApproveNodes]:        true,
+    [PermissionKeys.ReleaseLocks]:        true,
+    [PermissionKeys.EditParameters]:      true,
+    [PermissionKeys.ManageTriggers]:      true,
+    [PermissionKeys.ManageRouters]:       true,
+    [PermissionKeys.ProvisionNodes]:      true,
+    [PermissionKeys.ManageNodeLifecycle]: true,
   };
 
   const visibleItems = items.filter(
