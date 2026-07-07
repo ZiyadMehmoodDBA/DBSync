@@ -99,6 +99,13 @@ public static class MetadataServiceExtensions
         services.AddScoped<IAuditService, AuditService>();
         services.AddScoped<IValidator<NodeManagement.RegistrationFilter>, NodeManagement.RegistrationListFilterValidator>();
 
+        // Epic 12B-1 — Lifecycle request validators + transition metadata provider
+        services.AddSingleton<ITransitionMetadataProvider, TransitionMetadataProvider>();
+        services.AddScoped<IValidator<Lifecycle.MaintenanceStartRequest>, Lifecycle.MaintenanceStartRequestValidator>();
+        services.AddScoped<IValidator<Lifecycle.DecommissionRequest>, Lifecycle.DecommissionRequestValidator>();
+        services.AddScoped<IValidator<Lifecycle.DisableRequest>, Lifecycle.DisableRequestValidator>();
+        services.AddScoped<IValidator<Lifecycle.ActivateRequest>, Lifecycle.ActivateRequestValidator>();
+
         return services;
     }
 }

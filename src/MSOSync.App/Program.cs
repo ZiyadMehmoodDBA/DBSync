@@ -1,6 +1,7 @@
 using System.Text.Json.Serialization;
 using FluentValidation;
 using FluentValidation.AspNetCore;
+using MSOSync.Api.Authorization;
 using MSOSync.Api.Controllers.Auth;
 using MSOSync.Api.Exceptions;
 using MSOSync.App;
@@ -59,6 +60,7 @@ try
     builder.Services.AddSecurity(builder.Configuration);
     builder.Services.AddHttpContextAccessor();
     builder.Services.AddScoped<ICurrentUserService, HttpContextCurrentUserService>();
+    builder.Services.AddScoped<INodeAuthorizationService, NodeAuthorizationService>();
 
     builder.Services.AddControllers()
         .AddApplicationPart(typeof(AuthController).Assembly)

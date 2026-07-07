@@ -166,7 +166,7 @@ public sealed class NodeManagementController(
     {
         var perms = await permissionService.GetEffectivePermissionsAsync(
             currentUser.GetCurrentUsername(), ct);
-        if (!perms.Permissions.Contains(SystemPermissions.ManageUsers))
+        if (!perms.Permissions.Contains(SystemPermissions.ProvisionNodes))
             return Forbid();
 
         var result = await lifecycle.ProvisionAsync(dto, currentUser.GetCurrentUsername(), ct);
@@ -182,7 +182,7 @@ public sealed class NodeManagementController(
     {
         var perms = await permissionService.GetEffectivePermissionsAsync(
             currentUser.GetCurrentUsername(), ct);
-        if (!perms.Permissions.Contains(SystemPermissions.ManageUsers))
+        if (!perms.Permissions.Contains(SystemPermissions.ProvisionNodes))
             return Forbid();
 
         Response.ContentType = "application/zip";

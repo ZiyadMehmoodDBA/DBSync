@@ -7,5 +7,7 @@ public enum OperationsEventType
     NodeRejected,
     NodeDisabled,
     NodeEnabled,
-    SyncCycleCompleted
+    SyncCycleCompleted,
+    NodeLifecycleChanged,
+    NodeMaintenanceChanged,
 }

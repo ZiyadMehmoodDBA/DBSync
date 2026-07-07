@@ -7,6 +7,8 @@ using MSOSync.Common;
 using MSOSync.Metadata.Common;
 using MSOSync.Metadata.Dtos;
 using MSOSync.Metadata.Interfaces;
+using MSOSync.Metadata.Lifecycle;
+using MSOSync.Metadata.NodeManagement;
 using MSOSync.Persistence.Entities;
 
 namespace MSOSync.Api.Controllers;
@@ -15,7 +17,8 @@ namespace MSOSync.Api.Controllers;
 [Route("api/v1/nodes")]
 public sealed class NodesController(
     INodeMetadataService nodeService,
-    IClock               clock) : ControllerBase
+    IClock               clock,
+    INodeLifecycleService lifecycleService) : ControllerBase
 {
     [HttpGet]
     [Authorize]
@@ -96,6 +99,16 @@ public sealed class NodesController(
     {
         var result = await nodeService.CreateNodeAsync(req, ct);
         return CreatedAtAction(nameof(GetNode), new { nodeId = result.NodeId }, result);
+    }
+
+    [HttpPost("activate")]
+    [AllowAnonymous]
+    public async Task<ActionResult<ActivateResultDto>> Activate(
+        [FromBody] ActivateRequest request, CancellationToken ct)
+    {
+        var result = await lifecycleService.ActivateAsync(
+            request.ExternalId, request.BootstrapToken, request.AgentVersion, ct);
+        return Ok(result);
     }
 
     [HttpPost("{nodeId}/heartbeat")]

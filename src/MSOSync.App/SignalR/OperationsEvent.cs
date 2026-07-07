@@ -7,4 +7,8 @@ public sealed record OperationsEvent(
     string? PreviousStatus,
     string? CurrentStatus,
     DateTimeOffset OccurredAt,
-    string? GroupId = null);
+    string? GroupId = null)
+{
+    public Guid? CorrelationId { get; init; }
+    public string? Trigger { get; init; }
+}
