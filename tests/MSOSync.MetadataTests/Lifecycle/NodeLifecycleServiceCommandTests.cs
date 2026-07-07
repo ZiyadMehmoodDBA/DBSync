@@ -313,6 +313,54 @@ public sealed class NodeLifecycleServiceCommandTests
         f.Audits.Should().ContainSingle(a => a.Action == NodeManagementAuditActions.NodeRecoveryRejected);
     }
 
+    [Fact]
+    public async Task RejectRecovery_NodeAlreadyLeftRecovery_SkipsTransition_StillRejects()
+    {
+        // Retry safety: a prior attempt's transition committed but the registration save
+        // failed — the node is already back in its previous state. Retry must skip the
+        // transition and just mark the registration rejected.
+        var f = new Fixture();
+        await f.SeedNodeAsync("n1", NodeLifecycleState.Disabled, externalId: "ext-1");
+        var id = await f.Svc.RegisterAsync(new InboundRegistrationDto("ext-1", "Node1", "target", null));
+
+        // Simulate the node having already been returned to its previous state.
+        var node = await f.Db.Nodes.FindAsync("n1");
+        node!.LifecycleState = NodeLifecycleState.Disabled;
+        node.PreviousLifecycleState = null;
+        await f.Db.SaveChangesAsync();
+        var historyCountBefore = f.Db.NodeLifecycleHistories.Count();
+
+        await f.Svc.RejectAsync(id, "retry after partial failure", "admin");
+
+        f.Db.RegistrationRequests.Find(id)!.Status.Should().Be(RegistrationStatus.Rejected);
+        var reloaded = await f.Db.Nodes.FindAsync("n1");
+        reloaded!.LifecycleState.Should().Be(NodeLifecycleState.Disabled);          // untouched
+        f.Db.NodeLifecycleHistories.Count().Should().Be(historyCountBefore);        // no transition fired
+        f.Audits.Should().NotContain(a => a.Action == NodeManagementAuditActions.NodeRecoveryRejected);
+        f.Audits.Should().ContainSingle(a => a.Action == NodeManagementAuditActions.NodeRejected);
+    }
+
+    [Fact]
+    public async Task RejectRecovery_NodeMissing_ThrowsNotFound_LeavesRegistrationPending()
+    {
+        // Retry safety: the lookup/transition failing must NOT leave the request Rejected.
+        var f = new Fixture();
+        await f.SeedNodeAsync("n1", NodeLifecycleState.Disabled, externalId: "ext-1");
+        var id = await f.Svc.RegisterAsync(new InboundRegistrationDto("ext-1", "Node1", "target", null));
+
+        // Simulate a concurrent decommission finalize freeing the ExternalId.
+        var node = await f.Db.Nodes.FindAsync("n1");
+        node!.ExternalId = string.Empty;
+        await f.Db.SaveChangesAsync();
+
+        var act = () => f.Svc.RejectAsync(id, "gone", "admin");
+
+        (await act.Should().ThrowAsync<NotFoundException>())
+            .Which.Message.Should().Contain("ext-1");
+        f.Db.RegistrationRequests.Find(id)!.Status
+            .Should().Be(RegistrationStatus.Pending);   // NOT rejected — retryable
+    }
+
     // ── Maintenance ────────────────────────────────────────────────────────────
 
     [Fact]

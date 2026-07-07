@@ -287,6 +287,26 @@ public sealed class NodeLifecycleService(
     private async Task RejectCoreAsync(
         SyncRegistrationRequest req, string? reason, string actorUsername, bool bulk, CancellationToken ct)
     {
+        // Retry safety (Invariant 11): run the node lifecycle transition FIRST and only
+        // mark the registration Rejected once it has succeeded. ExecuteTransitionAsync
+        // owns its own transaction, so ordering the durable side-effect last means a
+        // failed transition leaves the request Pending and rejectable again on retry.
+        if (req.RegistrationType == RegistrationType.Recovery)
+        {
+            var node = await db.Nodes.FirstOrDefaultAsync(n => n.ExternalId == req.NodeId, ct)
+                ?? throw new NotFoundException($"Node with ExternalId {req.NodeId} not found", "NODE_NOT_FOUND");
+            if (node.LifecycleState == NodeLifecycleState.Recovery)
+            {
+                var target = node.PreviousLifecycleState
+                    ?? NodeLifecycleState.Disabled;   // defensive: never happens per Invariant 4
+                await ExecuteTransitionAsync(node.NodeId, target, LifecycleTrigger.Recovery,
+                    actorUsername, reason, NodeManagementAuditActions.NodeRecoveryRejected,
+                    mutate: (n, _) => { n.PreviousLifecycleState = null; return Task.CompletedTask; }, ct: ct);
+            }
+            // else: node already left Recovery (e.g. a prior attempt's transition committed
+            // but the registration save failed) — skip the transition and just mark rejected.
+        }
+
         req.Status      = RegistrationStatus.Rejected;
         req.ProcessedAt = DateTime.UtcNow;
         req.ProcessedBy = actorUsername;
@@ -298,19 +318,6 @@ public sealed class NodeLifecycleService(
         catch (DbUpdateConcurrencyException)
         {
             throw new ConcurrencyException("Registration was modified concurrently.");
-        }
-
-        if (req.RegistrationType == RegistrationType.Recovery)
-        {
-            var node = await db.Nodes.FirstAsync(n => n.ExternalId == req.NodeId, ct);
-            if (node.LifecycleState == NodeLifecycleState.Recovery)
-            {
-                var target = node.PreviousLifecycleState
-                    ?? NodeLifecycleState.Disabled;   // defensive: never happens per Invariant 4
-                await ExecuteTransitionAsync(node.NodeId, target, LifecycleTrigger.Recovery,
-                    actorUsername, reason, NodeManagementAuditActions.NodeRecoveryRejected,
-                    mutate: (n, _) => { n.PreviousLifecycleState = null; return Task.CompletedTask; }, ct: ct);
-            }
         }
 
         var detail = bulk
