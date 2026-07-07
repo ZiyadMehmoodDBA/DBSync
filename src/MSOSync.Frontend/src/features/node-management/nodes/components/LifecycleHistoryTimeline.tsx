@@ -40,7 +40,7 @@ export function TimelineEntry({ entry }: { entry: LifecycleHistoryDto }) {
             {expanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
             details
           </button>
-          <span className={expanded ? 'ml-2 font-mono text-xs' : 'hidden ml-2 font-mono text-xs'} hidden={!expanded}>
+          <span hidden={!expanded} className="ml-2 font-mono text-xs">
             {entry.correlationId}
           </span>
         </div>

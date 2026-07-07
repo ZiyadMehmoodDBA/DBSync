@@ -64,7 +64,12 @@ public sealed class ConnectivityEvaluator(
         var probeInterval     = TimeSpan.FromSeconds(config.GetValue<int>("Heartbeat:ProbeIntervalSeconds", 60));
         var now = DateTime.UtcNow;
 
-        var nodes = await db.Nodes.ToListAsync(ct);
+        // Exclude terminal states — Decommissioned and Rejected nodes never send heartbeats
+        // or receive probes; skipping them avoids unnecessary DB work (Task 7 minor fix).
+        var nodes = await db.Nodes
+            .Where(n => n.LifecycleState != NodeLifecycleState.Decommissioned
+                     && n.LifecycleState != NodeLifecycleState.Rejected)
+            .ToListAsync(ct);
         var changes = new List<NodeConnectivityChangedEvent>();
 
         foreach (var node in nodes)

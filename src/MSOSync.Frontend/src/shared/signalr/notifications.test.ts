@@ -32,7 +32,7 @@ function makeEvent(
 describe('routeToToast', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Reset the dedup map between tests by varying timestamps
+    _resetDedupeForTests();
   });
 
   it('NodeHealthChanged Reachable → shows success toast', () => {
@@ -175,6 +175,11 @@ describe('routeToToast', () => {
 });
 
 describe('lifecycleToastMessage', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    _resetDedupeForTests();
+  });
+
   it('lifecycleToastMessage_ActivationTrigger_SaysActivated', () => {
     const event = makeEvent(OperationsEventType.NodeLifecycleChanged, {
       currentStatus: 'Active',
