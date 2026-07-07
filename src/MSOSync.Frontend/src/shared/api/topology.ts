@@ -21,6 +21,7 @@ export interface TopologyGraphNodeDto {
   groupId: string;
   label: string;
   status: number;
+  lifecycleState?: string;
   memberCount: number;
   triggerCount: number;
   channelCount: number;

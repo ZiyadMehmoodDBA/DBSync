@@ -1,35 +1,22 @@
 import type { ColDef, ICellRendererParams } from 'ag-grid-community';
 import type { NodeDto } from '../../shared/types';
 import { formatRelativeTime } from '../../shared/utils/date';
-import { nodeStatusVariant } from '../../shared/utils/status';
-import { StatusBadge } from '../../shared/components/data-display/StatusBadge';
+import { LifecycleBadge } from '../../shared/components/node/LifecycleBadge';
 import { ActionMenu } from '../../shared/components/actions';
 
-type NodeAction = 'enable' | 'disable' | 'approve';
-
 export function makeNodeColumns(
-  onAction: (nodeId: string, action: NodeAction) => void,
   onEdit: (node: NodeDto) => void,
-  canApprove = true,
 ): ColDef<NodeDto>[] {
   return [
     { field: 'nodeId', headerName: 'Node ID', width: 180 },
     { field: 'groupId', headerName: 'Group', width: 150 },
     { field: 'syncUrl', headerName: 'Sync URL', flex: 1, minWidth: 150 },
     {
-      field: 'status',
-      headerName: 'Status',
-      width: 130,
+      field: 'lifecycleState',
+      headerName: 'Lifecycle',
+      width: 160,
       cellRenderer: (p: ICellRendererParams<NodeDto>) =>
-        p.value
-          ? StatusBadge({ status: p.value as string, variant: nodeStatusVariant(p.value as string) })
-          : null,
-    },
-    {
-      field: 'syncEnabled',
-      headerName: 'Sync',
-      width: 90,
-      valueFormatter: (p) => (p.value ? 'Yes' : 'No'),
+        p.data ? LifecycleBadge({ state: p.data.lifecycleState }) : null,
     },
     {
       field: 'transportMode',
@@ -48,18 +35,10 @@ export function makeNodeColumns(
       sortable: false,
       cellRenderer: (p: ICellRendererParams<NodeDto>) => {
         if (!p.data) return null;
-        const { nodeId } = p.data;
         const node = p.data;
         return ActionMenu({
           items: [
             { label: 'Edit', onClick: () => onEdit(node) },
-            { label: 'Enable', onClick: () => onAction(nodeId, 'enable') },
-            {
-              label: 'Disable',
-              onClick: () => onAction(nodeId, 'disable'),
-              variant: 'destructive',
-            },
-            { label: 'Approve Registration', onClick: () => onAction(nodeId, 'approve'), disabled: !canApprove, disabledTitle: "You don't have permission to approve node registrations" },
           ],
         });
       },

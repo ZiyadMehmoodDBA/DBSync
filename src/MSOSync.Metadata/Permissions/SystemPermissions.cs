@@ -2,10 +2,12 @@ namespace MSOSync.Metadata.Permissions;
 
 public static class SystemPermissions
 {
-    public const string ManageUsers   = "MANAGE_USERS";
-    public const string ExportData    = "EXPORT_DATA";
-    public const string ViewTopology  = "VIEW_TOPOLOGY";
-    public const string ApproveNodes  = "APPROVE_NODES";
+    public const string ManageUsers        = "MANAGE_USERS";
+    public const string ExportData         = "EXPORT_DATA";
+    public const string ViewTopology       = "VIEW_TOPOLOGY";
+    public const string ApproveNodes       = "APPROVE_NODES";
+    public const string ProvisionNodes     = "PROVISION_NODES";
+    public const string ManageNodeLifecycle = "MANAGE_NODE_LIFECYCLE";
 
     // Default permission sets per role — used by ResetRoleToDefaultsAsync
     public static readonly IReadOnlyDictionary<string, IReadOnlyList<string>> Defaults =
@@ -14,9 +16,11 @@ public static class SystemPermissions
             ["VIEWER"]   = ["VIEW_EVENTS", "VIEW_METRICS", "VIEW_AUDIT", "VIEW_TOPOLOGY"],
             ["OPERATOR"] = ["VIEW_EVENTS", "VIEW_METRICS", "VIEW_AUDIT", "VIEW_TOPOLOGY",
                             "EXPORT_DATA", "RETRY_BATCHES", "APPROVE_NODES", "RELEASE_LOCKS",
-                            "EDIT_PARAMETERS", "MANAGE_TRIGGERS", "MANAGE_ROUTERS"],
+                            "EDIT_PARAMETERS", "MANAGE_TRIGGERS", "MANAGE_ROUTERS",
+                            "MANAGE_NODE_LIFECYCLE"],
             ["ADMIN"]    = ["VIEW_EVENTS", "VIEW_METRICS", "VIEW_AUDIT", "VIEW_TOPOLOGY",
                             "EXPORT_DATA", "RETRY_BATCHES", "APPROVE_NODES", "RELEASE_LOCKS",
-                            "EDIT_PARAMETERS", "MANAGE_TRIGGERS", "MANAGE_ROUTERS", "MANAGE_USERS"],
+                            "EDIT_PARAMETERS", "MANAGE_TRIGGERS", "MANAGE_ROUTERS", "MANAGE_USERS",
+                            "PROVISION_NODES", "MANAGE_NODE_LIFECYCLE"],
         };
 }

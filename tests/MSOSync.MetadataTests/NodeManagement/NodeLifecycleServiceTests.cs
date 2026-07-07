@@ -1,10 +1,15 @@
 using FluentAssertions;
 using Moq;
 using MediatR;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using MSOSync.Common.Exceptions;
 using MSOSync.Metadata.Audit;
+using MSOSync.Metadata.Lifecycle;
 using MSOSync.Metadata.NodeManagement;
 using MSOSync.Persistence.Entities;
+using MSOSync.Security;
 using Xunit;
 
 namespace MSOSync.MetadataTests.NodeManagement;
@@ -17,7 +22,21 @@ public sealed class NodeLifecycleServiceTests
         var diffSvc   = new RegistrationDiffService();
         var auditSvc  = new Mock<IAuditService>();
         var mediator  = new Mock<IMediator>();
-        return new NodeLifecycleService(db, diffSvc, auditSvc.Object, mediator.Object);
+        var options   = Options.Create(new LifecycleOptions());
+        var hasher    = new BCryptPasswordHasher();
+        return new NodeLifecycleService(
+            db,
+            diffSvc,
+            auditSvc.Object,
+            mediator.Object,
+            new NodeLifecycleStateMachine(),
+            new NodeLifecycleHistoryService(db),
+            new BootstrapTokenService(db, hasher, options),
+            new NodeSecurityService(db, hasher),
+            new NodeLifecycleLockRegistry(),
+            options,
+            new ConfigurationBuilder().Build(),
+            NullLogger<NodeLifecycleService>.Instance);
     }
 
     [Fact]
@@ -41,7 +60,8 @@ public sealed class NodeLifecycleServiceTests
 
         db.Nodes.Add(new SyncNode
         {
-            NodeId  = "ext-2", GroupId = "g1", SyncUrl = "http://n", Status = "REGISTERED"
+            NodeId  = "ext-2", GroupId = "g1", SyncUrl = "http://n",
+            ExternalId = "ext-2", LifecycleState = NodeLifecycleState.Active
         });
         await db.SaveChangesAsync();
 
@@ -143,6 +163,6 @@ public sealed class NodeLifecycleServiceTests
         result.Token.Length.Should().BeGreaterThan(20);
 
         var node = db.Nodes.Find("ext-8")!;
-        node.Status.Should().Be("PROVISIONED");
+        node.LifecycleState.Should().Be(NodeLifecycleState.PendingRegistration);
     }
 }

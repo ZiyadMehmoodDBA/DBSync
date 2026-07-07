@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
-using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -8,6 +7,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MSOSync.Common;
+using MSOSync.Metadata.Lifecycle;
 using MSOSync.Persistence;
 using MSOSync.Persistence.Entities;
 using MSOSync.Topology;
@@ -15,12 +15,15 @@ using MSOSync.Transport;
 
 namespace MSOSync.Scheduler.Workers;
 
+/// Telemetry-only probe worker — writes LastProbeTime/Latency/Error/ConsecutiveProbeFailures via
+/// ExecuteUpdateAsync (bypasses RowVersion token). Does NOT write ConnectivityStatus or publish
+/// NodeConnectivityChangedEvent — that is owned by ConnectivityEvaluator (Invariant 3, spec §5.1).
 public sealed class ProbeWorker(
-    IServiceScopeFactory     scopeFactory,
-    IPublisher               publisher,
-    IOptions<NodeProperties> nodeProps,
-    IConfiguration           config,
-    ILogger<ProbeWorker>     logger) : BackgroundService
+    IServiceScopeFactory      scopeFactory,
+    IOptions<NodeProperties>  nodeProps,
+    IOptions<LifecycleOptions> lifecycleOptions,
+    IConfiguration            config,
+    ILogger<ProbeWorker>      logger) : BackgroundService
 {
     private static readonly Meter         Meter   = new("MSOSync.Probe", "1.0.0");
     private static readonly Counter<long> Success = Meter.CreateCounter<long>("msosync_probe_success_total");
@@ -57,51 +60,50 @@ public sealed class ProbeWorker(
         var db         = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var httpClient = scope.ServiceProvider.GetRequiredService<INodeHttpClient>();
 
-        var children = await db.Nodes.AsNoTracking()
-            .Where(n => n.UpstreamNodeId == localNodeId && n.SyncEnabled)
-            .ToListAsync(ct);
+        var probeStates = new[] { NodeLifecycleState.Active, NodeLifecycleState.Recovery, NodeLifecycleState.Decommissioning };
+        var query = db.Nodes.AsNoTracking()
+            .Where(n => n.UpstreamNodeId == localNodeId && probeStates.Contains(n.LifecycleState));
+        if (!lifecycleOptions.Value.MaintenanceContinueProbing)
+            query = query.Where(n => !n.MaintenanceMode);
+
+        var children = await query.ToListAsync(ct);
 
         foreach (var child in children)
         {
-            var previousStatus = child.ConnectivityStatus;
-            var sw             = Stopwatch.StartNew();
-            ConnectivityStatus status;
+            var sw  = Stopwatch.StartNew();
+            var now = DateTime.UtcNow;
 
             try
             {
                 await httpClient.PostAsync<object, object>(
                     $"{child.SyncUrl}/api/v1/sync/ping", new { }, child.NodeId, string.Empty, ct);
                 sw.Stop();
+                var latencyMs = (int)sw.ElapsedMilliseconds;
 
-                status = sw.ElapsedMilliseconds switch
-                {
-                    < 500  => ConnectivityStatus.Reachable,
-                    < 2000 => ConnectivityStatus.Degraded,
-                    _      => ConnectivityStatus.Unreachable
-                };
+                await db.Nodes.Where(n => n.NodeId == child.NodeId).ExecuteUpdateAsync(s => s
+                    .SetProperty(n => n.LastProbeTime, now)
+                    .SetProperty(n => n.LastProbeLatencyMs, latencyMs)
+                    .SetProperty(n => n.LastProbeError, (string?)null)
+                    .SetProperty(n => n.ConsecutiveProbeFailures, 0), ct);
+
                 Success.Add(1);
+                logger.LogDebug("ProbeWorker: {NodeId} reachable ({Ms}ms)", child.NodeId, latencyMs);
             }
-            catch
+            catch (Exception ex)
             {
                 sw.Stop();
-                status = ConnectivityStatus.Unreachable;
+                var errorMessage = ex.Message;
+                var trimmed = errorMessage.Length > 512 ? errorMessage[..512] : errorMessage;
+
+                await db.Nodes.Where(n => n.NodeId == child.NodeId).ExecuteUpdateAsync(s => s
+                    .SetProperty(n => n.LastProbeTime, now)
+                    .SetProperty(n => n.LastProbeLatencyMs, (int?)null)
+                    .SetProperty(n => n.LastProbeError, trimmed)
+                    .SetProperty(n => n.ConsecutiveProbeFailures, n => n.ConsecutiveProbeFailures + 1), ct);
+
                 Failure.Add(1);
+                logger.LogDebug("ProbeWorker: {NodeId} probe failed — {Error}", child.NodeId, trimmed);
             }
-
-            await db.Nodes
-                .Where(n => n.NodeId == child.NodeId)
-                .ExecuteUpdateAsync(s =>
-                    s.SetProperty(n => n.ConnectivityStatus, status)
-                     .SetProperty(n => n.LastProbeTime,      DateTime.UtcNow)
-                     .SetProperty(n => n.LastProbeLatencyMs, (int)sw.ElapsedMilliseconds),
-                    ct);
-
-            logger.LogDebug("ProbeWorker: {NodeId} → {Status} ({Ms}ms)",
-                child.NodeId, status, sw.ElapsedMilliseconds);
-
-            if (status != previousStatus)
-                await publisher.Publish(
-                    new NodeConnectivityChangedEvent(child.NodeId, previousStatus, status), ct);
         }
     }
 }

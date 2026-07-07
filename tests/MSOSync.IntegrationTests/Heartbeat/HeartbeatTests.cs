@@ -5,6 +5,7 @@ using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using MSOSync.Persistence;
+using MSOSync.Persistence.Entities;
 using Xunit;
 
 namespace MSOSync.IntegrationTests.Heartbeat;
@@ -52,17 +53,9 @@ public sealed class HeartbeatTests(HeartbeatFixture fx)
     }
 
     [Fact]
-    public async Task Heartbeat_OfflineNode_RecoveredToRegistered()
+    public async Task Heartbeat_ActiveNode_RecordsHeartbeatAndReturns204()
     {
-        // Force node to OFFLINE
-        await using (var scope = fx.Services.CreateAsyncScope())
-        {
-            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            await db.Nodes
-                .Where(n => n.NodeId == fx.NodeId)
-                .ExecuteUpdateAsync(s => s.SetProperty(n => n.Status, "OFFLINE"));
-        }
-
+        // Heartbeat on an Active node records heartbeat and returns 204; lifecycle state is unchanged.
         var resp = await NodeClient().PostAsJsonAsync(
             $"/api/v1/nodes/{fx.NodeId}/heartbeat",
             new { NodeId = fx.NodeId, UptimeSeconds = 200L });
@@ -73,7 +66,8 @@ public sealed class HeartbeatTests(HeartbeatFixture fx)
         {
             var db   = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var node = await db.Nodes.AsNoTracking().FirstAsync(n => n.NodeId == fx.NodeId);
-            node.Status.Should().Be("REGISTERED");
+            node.LifecycleState.Should().Be(NodeLifecycleState.Active);
+            node.LastHeartbeat.Should().NotBeNull();
         }
     }
 }

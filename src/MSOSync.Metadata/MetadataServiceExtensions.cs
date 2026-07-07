@@ -11,7 +11,7 @@ using MSOSync.Metadata.IncomingBatches;
 using MSOSync.Metadata.Interfaces;
 using MSOSync.Metadata.Locks;
 using MSOSync.Metadata.Metrics;
-using MSOSync.Metadata.Nodes;
+using MSOSync.Metadata.Lifecycle;
 using MSOSync.Metadata.Services;
 using MSOSync.Metadata.Topology;
 using MSOSync.Metadata.Permissions;
@@ -25,7 +25,7 @@ public static class MetadataServiceExtensions
 {
     public static IServiceCollection AddMetadata(
         this IServiceCollection services,
-        IConfiguration _)
+        IConfiguration configuration)
     {
         services.AddMemoryCache();
         services.AddMediatR(cfg =>
@@ -37,7 +37,18 @@ public static class MetadataServiceExtensions
         services.AddScoped<ITriggerMetadataService, TriggerMetadataService>();
         services.AddScoped<IRouterMetadataService, RouterMetadataService>();
         services.AddScoped<IChannelMetadataService, ChannelMetadataService>();
-        services.AddScoped<INodeStateMachine, NodeStateMachine>();
+        // Epic 12B-1 — Lifecycle policies
+        services.AddSingleton<INodeSyncPolicy, NodeSyncPolicy>();
+        services.AddSingleton<IConnectivityPolicy, ConnectivityPolicy>();
+        services.AddHostedService<LifecycleStartupValidator>();
+
+        // Epic 12B-1 — Lifecycle state machine + services
+        services.Configure<LifecycleOptions>(configuration.GetSection(LifecycleOptions.Section));
+        services.AddSingleton<INodeLifecycleStateMachine, NodeLifecycleStateMachine>();
+        services.AddSingleton<NodeLifecycleLockRegistry>();
+        services.AddScoped<IBootstrapTokenService, BootstrapTokenService>();
+        services.AddScoped<INodeLifecycleHistoryService, NodeLifecycleHistoryService>();
+        services.AddScoped<IDecommissionEvaluator, DecommissionEvaluator>();
         services.AddScoped<IUsersManagementService, UsersManagementService>();
 
         // Epic 9A — Operational Read APIs
@@ -87,6 +98,13 @@ public static class MetadataServiceExtensions
         services.AddScoped<IProvisionPackageService, ProvisionPackageService>();
         services.AddScoped<IAuditService, AuditService>();
         services.AddScoped<IValidator<NodeManagement.RegistrationFilter>, NodeManagement.RegistrationListFilterValidator>();
+
+        // Epic 12B-1 — Lifecycle request validators + transition metadata provider
+        services.AddSingleton<ITransitionMetadataProvider, TransitionMetadataProvider>();
+        services.AddScoped<IValidator<Lifecycle.MaintenanceStartRequest>, Lifecycle.MaintenanceStartRequestValidator>();
+        services.AddScoped<IValidator<Lifecycle.DecommissionRequest>, Lifecycle.DecommissionRequestValidator>();
+        services.AddScoped<IValidator<Lifecycle.DisableRequest>, Lifecycle.DisableRequestValidator>();
+        services.AddScoped<IValidator<Lifecycle.ActivateRequest>, Lifecycle.ActivateRequestValidator>();
 
         return services;
     }

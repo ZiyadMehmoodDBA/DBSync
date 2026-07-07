@@ -41,11 +41,17 @@ export async function getRegistrationDetail(
   return data;
 }
 
+export interface ApproveResultDto {
+  registrationId: number;
+  bootstrapToken: string | null;
+}
+
 export async function approveRegistration(
   id: number,
   notes?: string,
-): Promise<void> {
-  await client.post(`${BASE}/registrations/${id}/approve`, { notes });
+): Promise<ApproveResultDto> {
+  const { data } = await client.post<ApproveResultDto>(`${BASE}/registrations/${id}/approve`, { notes });
+  return data;
 }
 
 export async function rejectRegistration(

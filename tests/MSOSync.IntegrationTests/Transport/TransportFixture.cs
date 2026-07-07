@@ -124,12 +124,11 @@ public sealed class TransportFixture : WebApplicationFactory<Program>, IAsyncLif
         if (!await db.Nodes.AnyAsync(n => n.NodeId == LocalNodeId))
             db.Nodes.Add(new SyncNode
             {
-                NodeId        = LocalNodeId,
-                GroupId       = GroupId,
-                SyncUrl       = "http://localhost",
-                Status        = "APPROVED",
-                SyncEnabled   = true,
-                TransportMode = TransportMode.Pull,
+                NodeId         = LocalNodeId,
+                GroupId        = GroupId,
+                SyncUrl        = "http://localhost",
+                LifecycleState = NodeLifecycleState.Active,
+                TransportMode  = TransportMode.Pull,
             });
         await db.SaveChangesAsync();
 
@@ -137,12 +136,11 @@ public sealed class TransportFixture : WebApplicationFactory<Program>, IAsyncLif
         if (!await db.Nodes.AnyAsync(n => n.NodeId == SourceNodeId))
             db.Nodes.Add(new SyncNode
             {
-                NodeId        = SourceNodeId,
-                GroupId       = GroupId,
-                SyncUrl       = "http://source",
-                Status        = "APPROVED",
-                SyncEnabled   = true,
-                TransportMode = TransportMode.Pull,
+                NodeId         = SourceNodeId,
+                GroupId        = GroupId,
+                SyncUrl        = "http://source",
+                LifecycleState = NodeLifecycleState.Active,
+                TransportMode  = TransportMode.Pull,
             });
         await db.SaveChangesAsync();
 

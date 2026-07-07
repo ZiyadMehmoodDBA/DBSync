@@ -29,7 +29,7 @@ public sealed class MetricsQueryServiceTests : IDisposable
         NodeId  = id,
         GroupId = "g1",
         SyncUrl = $"http://{id}",
-        Status  = "REGISTERED",
+        LifecycleState = NodeLifecycleState.Active,
         ConnectivityStatus = cs
     };
 

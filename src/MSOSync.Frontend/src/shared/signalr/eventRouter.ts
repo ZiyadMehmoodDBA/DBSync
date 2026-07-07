@@ -16,6 +16,29 @@ export async function routeToCache(
       return invalidateNodeLifecycle(queryClient);
     case OperationsEventType.SyncCycleCompleted:
       return invalidateOperational(queryClient);
+    case OperationsEventType.NodeLifecycleChanged:
+      // Lifecycle category: nodes grid, node-management overview, topology, history, node state
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['nodes'] }),
+        queryClient.invalidateQueries({ queryKey: ['node-management'] }),
+        queryClient.invalidateQueries({ queryKey: ['topology-graph'] }),
+        queryClient.invalidateQueries({ queryKey: ['topology-groups'] }),
+        queryClient.invalidateQueries({ queryKey: ['node-state', event.nodeId] }),
+        queryClient.invalidateQueries({ queryKey: ['node-transitions', event.nodeId] }),
+        queryClient.invalidateQueries({ queryKey: ['node-lifecycle-history', event.nodeId] }),
+        queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] }),
+      ]);
+      return;
+    case OperationsEventType.NodeMaintenanceChanged:
+      // Maintenance category: same minus history
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['nodes'] }),
+        queryClient.invalidateQueries({ queryKey: ['node-management'] }),
+        queryClient.invalidateQueries({ queryKey: ['topology-graph'] }),
+        queryClient.invalidateQueries({ queryKey: ['node-state', event.nodeId] }),
+        queryClient.invalidateQueries({ queryKey: ['node-transitions', event.nodeId] }),
+      ]);
+      return;
   }
 }
 

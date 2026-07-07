@@ -23,10 +23,10 @@ public sealed class SequenceVerificationTests
         if (await db.Nodes.FindAsync(nodeId) != null) return;
         db.Nodes.Add(new SyncNode
         {
-            NodeId   = nodeId,
-            GroupId  = "g",
-            SyncUrl  = "http://local",
-            Status   = "APPROVED"
+            NodeId         = nodeId,
+            GroupId        = "g",
+            SyncUrl        = "http://local",
+            LifecycleState = NodeLifecycleState.PendingRegistration
         });
         await db.SaveChangesAsync();
     }

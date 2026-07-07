@@ -10,10 +10,20 @@ internal sealed class TestAppDbContext : AppDbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
-        // SQLite doesn't support SQL Server column types — clear explicit types
+        // SQLite doesn't support SQL Server column types — clear explicit types.
+        // Also mark rowversion properties as nullable with no value generation.
         foreach (var entity in modelBuilder.Model.GetEntityTypes())
+        {
             foreach (var prop in entity.GetProperties())
+            {
                 prop.SetColumnType(null);
+                if (prop.ClrType == typeof(byte[]) && prop.IsConcurrencyToken)
+                {
+                    prop.ValueGenerated = Microsoft.EntityFrameworkCore.Metadata.ValueGenerated.Never;
+                    prop.IsNullable = true;
+                }
+            }
+        }
     }
 }
 

@@ -1,0 +1,13 @@
+namespace MSOSync.Persistence.Entities;
+
+public sealed class SyncNodeBootstrapToken
+{
+    public long Id { get; set; }
+    public string NodeId { get; set; } = null!;
+    public string TokenHash { get; set; } = null!;         // BCrypt hash; raw token never stored
+    public DateTimeOffset IssuedAt { get; set; }
+    public DateTimeOffset ExpiresAt { get; set; }
+    public DateTimeOffset? ConsumedAt { get; set; }
+    public DateTimeOffset? RevokedAt { get; set; }
+    public string IssuedBy { get; set; } = null!;
+}

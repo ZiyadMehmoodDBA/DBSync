@@ -1,12 +1,15 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using MSOSync.Api.Dtos.Nodes;
 using MSOSync.Common;
 using MSOSync.Metadata.Common;
 using MSOSync.Metadata.Dtos;
 using MSOSync.Metadata.Interfaces;
-using MSOSync.Metadata.Nodes;
+using MSOSync.Metadata.Lifecycle;
+using MSOSync.Metadata.NodeManagement;
+using MSOSync.Persistence.Entities;
 
 namespace MSOSync.Api.Controllers;
 
@@ -14,8 +17,8 @@ namespace MSOSync.Api.Controllers;
 [Route("api/v1/nodes")]
 public sealed class NodesController(
     INodeMetadataService nodeService,
-    INodeStateMachine    stateMachine,
-    IClock               clock) : ControllerBase
+    IClock               clock,
+    INodeLifecycleService lifecycleService) : ControllerBase
 {
     [HttpGet]
     [Authorize]
@@ -74,35 +77,11 @@ public sealed class NodesController(
         return Ok(result);
     }
 
-    [HttpPost("{nodeId}/enable")]
-    [Authorize(Policy = "OperatorOrAbove")]
-    public async Task<IActionResult> EnableNode(string nodeId, CancellationToken ct)
-    {
-        await nodeService.EnableNodeAsync(nodeId, ct);
-        return Ok();
-    }
-
-    [HttpPost("{nodeId}/disable")]
-    [Authorize(Policy = "OperatorOrAbove")]
-    public async Task<IActionResult> DisableNode(string nodeId, CancellationToken ct)
-    {
-        await nodeService.DisableNodeAsync(nodeId, ct);
-        return Ok();
-    }
-
     [HttpGet("registrations/pending")]
     [Authorize]
     public async Task<IActionResult> GetPendingRegistrations(CancellationToken ct)
     {
         var result = await nodeService.GetPendingRegistrationsAsync(ct);
-        return Ok(result);
-    }
-
-    [HttpPost("registrations/{requestId:long}/approve")]
-    [Authorize(Policy = "OperatorOrAbove")]
-    public async Task<IActionResult> ApproveRegistration(long requestId, CancellationToken ct)
-    {
-        var result = await nodeService.ApproveRegistrationAsync(requestId, ct);
         return Ok(result);
     }
 
@@ -122,6 +101,16 @@ public sealed class NodesController(
         return CreatedAtAction(nameof(GetNode), new { nodeId = result.NodeId }, result);
     }
 
+    [HttpPost("activate")]
+    [AllowAnonymous]
+    public async Task<ActionResult<ActivateResultDto>> Activate(
+        [FromBody] ActivateRequest request, CancellationToken ct)
+    {
+        var result = await lifecycleService.ActivateAsync(
+            request.ExternalId, request.BootstrapToken, request.AgentVersion, ct);
+        return Ok(result);
+    }
+
     [HttpPost("{nodeId}/heartbeat")]
     [Authorize(Policy = "NodeToken")]
     public async Task<IActionResult> Heartbeat(
@@ -137,15 +126,27 @@ public sealed class NodesController(
 
         var node = await nodeService.GetNodeAsync(nodeId, ct);
         if (node == null) return NotFound();
-        if (node.Status == "DISABLED") return Forbid();
 
-        // Update LastHeartbeat
+        // Lifecycle accept/reject matrix (spec §5.3). No lifecycle write anywhere in this action.
+        switch (node.LifecycleState)
+        {
+            case NodeLifecycleState.Active:
+            case NodeLifecycleState.Recovery:
+            case NodeLifecycleState.Decommissioning:
+                break;   // accepted — draining/recovering nodes still report telemetry
+            case NodeLifecycleState.PendingRegistration:
+            case NodeLifecycleState.PendingApproval:
+                return Forbid();                    // 403 — activation is the readiness proof
+            case NodeLifecycleState.Disabled:
+                return Forbid();                    // 403
+            case NodeLifecycleState.Decommissioned:
+            case NodeLifecycleState.Rejected:
+                return StatusCode(StatusCodes.Status410Gone);   // agent should stop
+            default:
+                return Forbid();
+        }
+
         await nodeService.RecordHeartbeatAsync(nodeId, clock.UtcNow, ct);
-
-        // Self-heal: OFFLINE → REGISTERED
-        if (node.Status == "OFFLINE")
-            await stateMachine.TransitionAsync(nodeId, "REGISTERED", ct);
-
         return NoContent();
     }
 }

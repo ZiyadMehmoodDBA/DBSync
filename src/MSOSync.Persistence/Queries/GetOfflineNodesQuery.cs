@@ -10,6 +10,6 @@ public sealed class GetOfflineNodesQuery(AppDbContext db)
         => db.Nodes
             .AsNoTracking()
             .Where(n => n.LastHeartbeat < DateTime.UtcNow.AddMinutes(-thresholdMinutes)
-                     && n.Status == "REGISTERED")
+                     && n.LifecycleState == NodeLifecycleState.Active)
             .ToListAsync(ct);
 }

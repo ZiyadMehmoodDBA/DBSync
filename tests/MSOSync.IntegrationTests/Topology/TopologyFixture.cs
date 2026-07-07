@@ -130,9 +130,9 @@ public sealed class TopologyFixture : WebApplicationFactory<Program>, IAsyncLife
 
         // Nodes: hub has 1 Reachable + 1 Degraded; store has 1 Reachable
         db.Nodes.AddRange(
-            new SyncNode { NodeId = "hub-1",   GroupId = "group-hub",   SyncUrl = "http://hub-1",   Status = "REGISTERED", ConnectivityStatus = ConnectivityStatus.Reachable },
-            new SyncNode { NodeId = "hub-2",   GroupId = "group-hub",   SyncUrl = "http://hub-2",   Status = "REGISTERED", ConnectivityStatus = ConnectivityStatus.Degraded  },
-            new SyncNode { NodeId = "store-1", GroupId = "group-store", SyncUrl = "http://store-1", Status = "REGISTERED", ConnectivityStatus = ConnectivityStatus.Reachable });
+            new SyncNode { NodeId = "hub-1",   GroupId = "group-hub",   SyncUrl = "http://hub-1",   LifecycleState = NodeLifecycleState.Active, ConnectivityStatus = ConnectivityStatus.Reachable },
+            new SyncNode { NodeId = "hub-2",   GroupId = "group-hub",   SyncUrl = "http://hub-2",   LifecycleState = NodeLifecycleState.Active, ConnectivityStatus = ConnectivityStatus.Degraded  },
+            new SyncNode { NodeId = "store-1", GroupId = "group-store", SyncUrl = "http://store-1", LifecycleState = NodeLifecycleState.Active, ConnectivityStatus = ConnectivityStatus.Reachable });
         await db.SaveChangesAsync();
 
         // Router: hub → store

@@ -17,11 +17,16 @@ public sealed class SyncNodeConfiguration : IEntityTypeConfiguration<SyncNode>
         builder.Property(e => e.NodeId).HasColumnName("node_id").HasColumnType("varchar(50)").HasMaxLength(50).IsUnicode(false);
         builder.Property(e => e.GroupId).HasColumnName("group_id").HasColumnType("varchar(50)").HasMaxLength(50).IsUnicode(false).IsRequired();
         builder.Property(e => e.SyncUrl).HasColumnName("sync_url").HasColumnType("varchar(255)").HasMaxLength(255).IsUnicode(false).IsRequired();
-        builder.Property(e => e.Status).HasColumnName("status").HasColumnType("varchar(20)").HasMaxLength(20).IsUnicode(false).IsRequired();
+        builder.Property(e => e.LifecycleState)
+            .HasColumnName("status")
+            .HasColumnType("varchar(30)")
+            .HasMaxLength(30)
+            .IsUnicode(false)
+            .HasConversion<string>()
+            .IsRequired();
         builder.Property(e => e.RegistrationTime).HasColumnName("registration_time").HasColumnType("datetime2(7)");
         builder.Property(e => e.LastHeartbeat).HasColumnName("last_heartbeat").HasColumnType("datetime2(7)");
         builder.Property(e => e.HeartbeatInterval).HasColumnName("heartbeat_interval").HasDefaultValue(60);
-        builder.Property(e => e.SyncEnabled).HasColumnName("sync_enabled").HasDefaultValue(true);
         builder.Property(e => e.TransportMode)
             .HasColumnName("transport_mode")
             .HasColumnType("tinyint")
@@ -51,6 +56,29 @@ public sealed class SyncNodeConfiguration : IEntityTypeConfiguration<SyncNode>
             .HasConversion<byte>()
             .HasDefaultValue(ConnectivityStatus.Unknown)
             .ValueGeneratedNever();
+
+        builder.Property(e => e.ConnectivityReason).HasColumnName("connectivity_reason")
+            .HasColumnType("varchar(30)").HasMaxLength(30).IsUnicode(false).HasConversion<string>();
+        builder.Property(e => e.LastProbeError).HasColumnName("last_probe_error")
+            .HasColumnType("nvarchar(512)").HasMaxLength(512);
+        builder.Property(e => e.ConsecutiveProbeFailures).HasColumnName("consecutive_probe_failures")
+            .HasDefaultValue(0);
+        builder.Property(e => e.PreviousLifecycleState).HasColumnName("previous_lifecycle_state")
+            .HasColumnType("varchar(30)").HasMaxLength(30).IsUnicode(false).HasConversion<string>();
+        builder.Property(e => e.MaintenanceMode).HasColumnName("maintenance_mode").HasDefaultValue(false);
+        builder.Property(e => e.MaintenanceReason).HasColumnName("maintenance_reason")
+            .HasColumnType("nvarchar(512)").HasMaxLength(512);
+        builder.Property(e => e.MaintenanceStartedAt).HasColumnName("maintenance_started_at");
+        builder.Property(e => e.MaintenanceUntil).HasColumnName("maintenance_until");
+        builder.Property(e => e.MaintenanceStartedBy).HasColumnName("maintenance_started_by")
+            .HasColumnType("nvarchar(100)").HasMaxLength(100);
+        builder.Property(e => e.DecommissionReason).HasColumnName("decommission_reason")
+            .HasColumnType("nvarchar(512)").HasMaxLength(512);
+        builder.Property(e => e.DecommissionStartedAt).HasColumnName("decommission_started_at");
+        builder.Property(e => e.DecommissionGraceUntil).HasColumnName("decommission_grace_until");
+        builder.Property(e => e.DecommissionInitialOpenBatches).HasColumnName("decommission_initial_open_batches");
+        builder.Property(e => e.RowVersion).HasColumnName("row_version").IsRowVersion();
+        builder.HasIndex(e => e.LifecycleState).HasDatabaseName("IX_sync_node_status");
 
         builder.Property(e => e.NodeType)
             .HasColumnName("node_type")

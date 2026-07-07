@@ -14,6 +14,20 @@ public sealed class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logge
         Exception exception,
         CancellationToken ct)
     {
+        if (exception is InvalidLifecycleTransitionException lifecycleEx)
+        {
+            httpContext.Response.StatusCode = StatusCodes.Status409Conflict;
+            await httpContext.Response.WriteAsJsonAsync(new
+            {
+                code = "INVALID_LIFECYCLE_TRANSITION",
+                from = lifecycleEx.From,
+                requested = lifecycleEx.Requested,
+                allowedTransitions = lifecycleEx.AllowedTargets,
+                correlationId = lifecycleEx.CorrelationId
+            }, ct);
+            return true;
+        }
+
         var (status, error, code, message) = exception switch
         {
             NotFoundException ex                   => (404, "Not Found",             ex.Code,            ex.Message),

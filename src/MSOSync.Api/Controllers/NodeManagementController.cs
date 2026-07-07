@@ -70,6 +70,7 @@ public sealed class NodeManagementController(
     // ── Approve / Reject ───────────────────────────────────────────────────────
 
     [HttpPost("registrations/{id:long}/approve")]
+    [ProducesResponseType(typeof(ApproveResultDto), 200)]
     [ProducesResponseType(204)]
     [ProducesResponseType(typeof(ProblemDetails), 403)]
     [ProducesResponseType(typeof(ProblemDetails), 404)]
@@ -82,8 +83,8 @@ public sealed class NodeManagementController(
         if (!perms.Permissions.Contains(SystemPermissions.ApproveNodes))
             return Forbid();
 
-        await lifecycle.ApproveAsync(id, request.Notes, currentUser.GetCurrentUsername(), ct);
-        return NoContent();
+        var result = await lifecycle.ApproveAsync(id, request.Notes, currentUser.GetCurrentUsername(), ct);
+        return result.BootstrapToken is null ? NoContent() : Ok(result);
     }
 
     [HttpPost("registrations/{id:long}/reject")]
@@ -165,7 +166,7 @@ public sealed class NodeManagementController(
     {
         var perms = await permissionService.GetEffectivePermissionsAsync(
             currentUser.GetCurrentUsername(), ct);
-        if (!perms.Permissions.Contains(SystemPermissions.ManageUsers))
+        if (!perms.Permissions.Contains(SystemPermissions.ProvisionNodes))
             return Forbid();
 
         var result = await lifecycle.ProvisionAsync(dto, currentUser.GetCurrentUsername(), ct);
@@ -181,7 +182,7 @@ public sealed class NodeManagementController(
     {
         var perms = await permissionService.GetEffectivePermissionsAsync(
             currentUser.GetCurrentUsername(), ct);
-        if (!perms.Permissions.Contains(SystemPermissions.ManageUsers))
+        if (!perms.Permissions.Contains(SystemPermissions.ProvisionNodes))
             return Forbid();
 
         Response.ContentType = "application/zip";

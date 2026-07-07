@@ -86,7 +86,7 @@ public sealed class PersistenceTests(DatabaseFixture fixture) : IClassFixture<Da
             NodeId = nodeId,
             GroupId = "test-group",
             SyncUrl = "http://test:8080",
-            Status = "REGISTERED",
+            LifecycleState = NodeLifecycleState.Active,
             LastHeartbeat = DateTime.UtcNow.AddMinutes(-120)
         };
         fixture.Db.Nodes.Add(node);

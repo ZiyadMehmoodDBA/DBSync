@@ -13,9 +13,19 @@ internal sealed class TestAppDbContext : AppDbContext
         base.OnModelCreating(modelBuilder);
         // SQLite doesn't support SQL Server-specific column types like nvarchar(max) or datetime2(7).
         // Clear explicit column types so EF uses SQLite's default affinity rules.
+        // Also, SQLite has no rowversion/timestamp type, so mark those as optional with no value generation.
         foreach (var entity in modelBuilder.Model.GetEntityTypes())
+        {
             foreach (var prop in entity.GetProperties())
+            {
                 prop.SetColumnType(null);
+                if (prop.ClrType == typeof(byte[]) && prop.IsConcurrencyToken)
+                {
+                    prop.ValueGenerated = Microsoft.EntityFrameworkCore.Metadata.ValueGenerated.Never;
+                    prop.IsNullable = true;
+                }
+            }
+        }
     }
 }
 

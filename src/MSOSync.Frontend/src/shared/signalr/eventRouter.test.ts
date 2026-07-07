@@ -84,4 +84,33 @@ describe('routeToCache', () => {
     expect(keys).toContain('metrics-summary');
     expect(keys).toHaveLength(6);
   });
+
+  it('routeToCache_NodeLifecycleChanged_InvalidatesLifecycleCategoryKeys', async () => {
+    await routeToCache(queryClient, makeEvent(OperationsEventType.NodeLifecycleChanged));
+
+    const keys = invalidateSpy.mock.calls.map((c: unknown[]) => (c[0] as { queryKey: unknown[] }).queryKey[0]);
+    expect(keys).toContain('nodes');
+    expect(keys).toContain('node-management');
+    expect(keys).toContain('topology-graph');
+    expect(keys).toContain('topology-groups');
+    expect(keys).toContain('node-state');
+    expect(keys).toContain('node-transitions');
+    expect(keys).toContain('node-lifecycle-history');
+    expect(keys).toContain('dashboard-summary');
+    expect(keys).toHaveLength(8);
+  });
+
+  it('routeToCache_NodeMaintenanceChanged_InvalidatesMaintenanceCategory_NotHistory', async () => {
+    await routeToCache(queryClient, makeEvent(OperationsEventType.NodeMaintenanceChanged));
+
+    const keys = invalidateSpy.mock.calls.map((c: unknown[]) => (c[0] as { queryKey: unknown[] }).queryKey[0]);
+    expect(keys).toContain('nodes');
+    expect(keys).toContain('node-management');
+    expect(keys).toContain('topology-graph');
+    expect(keys).toContain('node-state');
+    expect(keys).toContain('node-transitions');
+    expect(keys).toHaveLength(5);
+    // Must NOT include history
+    expect(keys).not.toContain('node-lifecycle-history');
+  });
 });

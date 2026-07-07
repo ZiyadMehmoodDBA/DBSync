@@ -121,10 +121,10 @@ public sealed class OperationalReadFixture : WebApplicationFactory<Program>, IAs
         {
             db.Nodes.Add(new SyncNode
             {
-                NodeId   = "test-node-1",
-                GroupId  = "test-group-1",
-                SyncUrl  = "http://test-node-1",
-                Status   = "REGISTERED",
+                NodeId         = "test-node-1",
+                GroupId        = "test-group-1",
+                SyncUrl        = "http://test-node-1",
+                LifecycleState = NodeLifecycleState.Active,
             });
             await db.SaveChangesAsync();
         }

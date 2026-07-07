@@ -10,7 +10,7 @@ vi.mock('sonner', () => ({
 }));
 
 import { toast } from 'sonner';
-import { routeToToast } from './notifications';
+import { routeToToast, lifecycleToastMessage, _resetDedupeForTests } from './notifications';
 import { OperationsEventType, type OperationsEvent } from './types';
 
 function makeEvent(
@@ -32,7 +32,7 @@ function makeEvent(
 describe('routeToToast', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Reset the dedup map between tests by varying timestamps
+    _resetDedupeForTests();
   });
 
   it('NodeHealthChanged Reachable → shows success toast', () => {
@@ -171,5 +171,59 @@ describe('routeToToast', () => {
       occurredAt: new Date(Date.UTC(2026, 0, 1, 16, 0, 0)).toISOString(),
     }));
     expect(toast.success).toHaveBeenCalledWith('Node node-fallback approved.');
+  });
+});
+
+describe('lifecycleToastMessage', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    _resetDedupeForTests();
+  });
+
+  it('lifecycleToastMessage_ActivationTrigger_SaysActivated', () => {
+    const event = makeEvent(OperationsEventType.NodeLifecycleChanged, {
+      currentStatus: 'Active',
+      trigger: 'Activation',
+    });
+    expect(lifecycleToastMessage(event)).toBe('Node node-1 activated');
+  });
+
+  it('lifecycleToastMessage_ManualToActive_SaysEnabled', () => {
+    const event = makeEvent(OperationsEventType.NodeLifecycleChanged, {
+      currentStatus: 'Active',
+      trigger: 'Manual',
+    });
+    expect(lifecycleToastMessage(event)).toBe('Node node-1 enabled');
+  });
+
+  it('lifecycleToastMessage_Decommissioning_SaysStarted', () => {
+    const event = makeEvent(OperationsEventType.NodeLifecycleChanged, {
+      currentStatus: 'Decommissioning',
+    });
+    expect(lifecycleToastMessage(event)).toBe('Node node-1: decommission started');
+  });
+
+  it('lifecycleToastMessage_RecoveryEntry_ReturnsNull', () => {
+    const event = makeEvent(OperationsEventType.NodeLifecycleChanged, {
+      currentStatus: 'Recovery',
+    });
+    expect(lifecycleToastMessage(event)).toBeNull();
+  });
+
+  it('duplicateCorrelationId_SecondToastSuppressed', () => {
+    _resetDedupeForTests();
+    const correlationId = 'corr-123';
+    const event = makeEvent(OperationsEventType.NodeLifecycleChanged, {
+      currentStatus: 'Active',
+      trigger: 'Manual',
+      correlationId,
+      occurredAt: new Date(Date.UTC(2026, 0, 1, 17, 0, 0)).toISOString(),
+    });
+
+    routeToToast(event);
+    routeToToast(event);
+
+    // Only one toast should fire — second is suppressed by correlationId dedupe
+    expect(toast.info).toHaveBeenCalledTimes(1);
   });
 });

@@ -1,4 +1,5 @@
 using MSOSync.Persistence;
+using MSOSync.Persistence.Entities;
 
 namespace MSOSync.Metadata.Topology;
 
@@ -14,8 +15,8 @@ public sealed record TopologyGroupDto(
 
 public sealed record TopologyGroupNodeDto(
     string             NodeId,
-    NodeStatus         Status,
+    NodeLifecycleState LifecycleState,
     ConnectivityStatus ConnectivityStatus,
     DateTime?          LastHeartbeat,
     int?               LastProbeLatencyMs,
-    bool               SyncEnabled);
+    bool               CanSynchronize);

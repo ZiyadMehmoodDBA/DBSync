@@ -171,10 +171,10 @@ public sealed class NodeManagementFixture : WebApplicationFactory<Program>, IAsy
         // Seed a SyncNode for re-registration tests — NodeLifecycleService checks Status == "REGISTERED"
         var node = new SyncNode
         {
-            NodeId   = "node-ext-001",
-            GroupId  = "group-a",
-            Status   = "REGISTERED",
-            SyncUrl  = "http://node1:8080",
+            NodeId         = "node-ext-001",
+            GroupId        = "group-a",
+            LifecycleState = NodeLifecycleState.Active,
+            SyncUrl        = "http://node1:8080",
         };
         db.Nodes.Add(node);
         await db.SaveChangesAsync();

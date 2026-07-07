@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using MSOSync.Persistence;
 
 namespace MSOSync.MetadataTests;
@@ -24,6 +25,13 @@ internal sealed class TestAppDbContext : AppDbContext
                 {
                     prop.ValueGenerated = Microsoft.EntityFrameworkCore.Metadata.ValueGenerated.Never;
                     prop.IsNullable = true;
+                }
+                // SQLite cannot order/compare DateTimeOffset in SQL. Store as a 64-bit
+                // integer (ticks-encoded, order-preserving for UTC values) so predicates
+                // like `t.ExpiresAt > now` translate.
+                if (prop.ClrType == typeof(DateTimeOffset) || prop.ClrType == typeof(DateTimeOffset?))
+                {
+                    prop.SetValueConverter(new DateTimeOffsetToBinaryConverter());
                 }
             }
         }

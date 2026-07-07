@@ -17,10 +17,10 @@ public sealed class IncomingBatchQueryServiceTests
 
     private static SyncNode MakeNode(string nodeId) => new()
     {
-        NodeId   = nodeId,
-        GroupId  = "default",
-        SyncUrl  = "http://localhost",
-        Status   = "REGISTERED"
+        NodeId         = nodeId,
+        GroupId        = "default",
+        SyncUrl        = "http://localhost",
+        LifecycleState = NodeLifecycleState.Active
     };
 
     private static SyncIncomingBatch MakeBatch(string sourceNodeId, IncomingBatchStatus status,

@@ -165,7 +165,7 @@ public sealed class SyncController(
         var ownNode = await nodeMetadata.GetNodeAsync(props.NodeId, ct);
         return Ok(new PingResponse(
             props.NodeId,
-            ownNode?.Status ?? "Unknown",
+            ownNode?.LifecycleState.ToString() ?? "Unknown",
             ownNode?.TransportMode ?? TransportMode.Pull));
     }
 

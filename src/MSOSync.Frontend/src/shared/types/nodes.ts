@@ -1,13 +1,18 @@
+import type { ConnectivityStatusName, NodeLifecycleState } from './lifecycle';
+
 export interface NodeDto {
   nodeId: string;
+  nodeName?: string;
   groupId: string;
   syncUrl: string;
-  status: string;
+  lifecycleState: NodeLifecycleState;
   registrationTime?: string;
   lastHeartbeat?: string;
   heartbeatInterval: number;
-  syncEnabled: boolean;
+  canSynchronize: boolean;
   transportMode: 'Pull' | 'Push';
+  connectivityStatus: ConnectivityStatusName;
+  maintenanceMode: boolean;
   dbServer?: string;
   dbName?: string;
   dbAuthMode?: string;
