@@ -21,6 +21,8 @@ public sealed class DecommissionWorker(
     IOptions<LifecycleOptions> lifecycleOptions,
     ILogger<DecommissionWorker> logger) : BackgroundService
 {
+    private int _running;
+
     protected override async Task ExecuteAsync(CancellationToken ct)
     {
         var props = nodeProps.Value;
@@ -38,9 +40,15 @@ public sealed class DecommissionWorker(
         using var timer = new PeriodicTimer(interval);
         while (await timer.WaitForNextTickAsync(ct))
         {
+            if (Interlocked.Exchange(ref _running, 1) == 1)
+            {
+                logger.LogWarning("DecommissionWorker tick skipped — previous tick still running");
+                continue;
+            }
             try { await RunTickAsync(ct); }
             catch (Exception ex) when (!ct.IsCancellationRequested)
             { logger.LogError(ex, "DecommissionWorker tick failed"); }
+            finally { Interlocked.Exchange(ref _running, 0); }
         }
     }
 
