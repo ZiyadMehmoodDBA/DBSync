@@ -1,4 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
+import { LifeBuoy } from 'lucide-react';
 import { useNodeManagement } from '../../NodeManagementProvider';
 import { useNodeManagementRegistrations } from '../../hooks/useNodeManagementRegistrations';
 import { nodeManagementKeys } from '../../hooks/queryKeys';
@@ -78,7 +79,14 @@ export function RegistrationQueue() {
               <span className={cn('rounded px-1.5 py-0.5 text-xs font-medium', STATUS_COLORS[r.status])}>
                 {r.status}
               </span>
-              <span className="text-xs text-neutral-400">{r.registrationType}</span>
+              {r.registrationType === 'Recovery' ? (
+                <span className="inline-flex items-center gap-1 rounded-full bg-orange-100 px-1.5 py-0.5 text-xs font-medium text-orange-800 dark:bg-orange-900/30 dark:text-orange-400">
+                  <LifeBuoy className="h-3 w-3" aria-hidden />
+                  Recovery
+                </span>
+              ) : (
+                <span className="text-xs text-neutral-400">{r.registrationType}</span>
+              )}
             </div>
           </div>
         </div>
