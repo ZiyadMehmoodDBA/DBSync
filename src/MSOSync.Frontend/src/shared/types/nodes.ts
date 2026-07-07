@@ -2,6 +2,7 @@ import type { ConnectivityStatusName, NodeLifecycleState } from './lifecycle';
 
 export interface NodeDto {
   nodeId: string;
+  nodeName?: string;
   groupId: string;
   syncUrl: string;
   lifecycleState: NodeLifecycleState;

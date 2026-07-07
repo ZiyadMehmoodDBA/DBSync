@@ -64,10 +64,10 @@ export function NodesGrid({ selectedNodeId, onSelectNode }: Props) {
   const endMaintenanceMutation = useEndMaintenance();
   const forceCompleteDecommissionMutation = useForceCompleteDecommission();
 
-  const nodeNameOf = useCallback((nodeId: string) =>
-    allNodes?.find(n => n.nodeId === nodeId)?.nodeId ?? nodeId,
-    [allNodes],
-  );
+  const nodeNameOf = useCallback((nodeId: string) => {
+    const n = allNodes?.find(n => n.nodeId === nodeId);
+    return n ? (n.nodeName ?? n.nodeId) : nodeId;
+  }, [allNodes]);
 
   const execute = useCallback((nodeId: string, action: LifecycleAction) => {
     switch (action) {

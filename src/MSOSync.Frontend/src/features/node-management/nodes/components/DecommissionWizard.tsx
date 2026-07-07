@@ -112,7 +112,7 @@ export function DecommissionWizard({
         <DialogFooter>
           {step > 1 && <Button variant="outline" onClick={() => setStep(step - 1)}>Back</Button>}
           {step < 3 && (
-            <Button onClick={() => setStep(step + 1)} disabled={step === 1 && !reasonText.trim()}>
+            <Button onClick={() => setStep(step + 1)} disabled={step === 1 && !reason}>
               Next
             </Button>
           )}
