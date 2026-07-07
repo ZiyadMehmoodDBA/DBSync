@@ -75,14 +75,14 @@ public sealed class NodeLifecycleController(
     [HttpGet("nodes/{id}/state")]
     public async Task<ActionResult<NodeStateDto>> GetState(string id, CancellationToken ct)
     {
-        await authz.EnsurePermissionAsync(SystemPermissions.ViewTopology, ct);
+        await authz.EnsurePermissionAsync(SystemPermissions.ManageNodeLifecycle, ct);
         return Ok(await history.GetCurrentStateAsync(id, ct));
     }
 
     [HttpGet("nodes/{id}/transitions")]
     public async Task<ActionResult<TransitionsDto>> GetTransitions(string id, CancellationToken ct)
     {
-        await authz.EnsurePermissionAsync(SystemPermissions.ViewTopology, ct);
+        await authz.EnsurePermissionAsync(SystemPermissions.ManageNodeLifecycle, ct);
         var node = await db.Nodes.AsNoTracking().FirstOrDefaultAsync(n => n.NodeId == id, ct)
             ?? throw new NotFoundException($"Node {id} not found", "NODE_NOT_FOUND");
         return Ok(transitions.GetTransitions(node));
@@ -96,7 +96,7 @@ public sealed class NodeLifecycleController(
         [FromQuery] LifecycleTrigger? trigger = null,
         CancellationToken ct = default)
     {
-        await authz.EnsurePermissionAsync(SystemPermissions.ViewTopology, ct);
+        await authz.EnsurePermissionAsync(SystemPermissions.ManageNodeLifecycle, ct);
         var result = await history.GetTimelineAsync(
             id, new LifecycleHistoryFilter(from, to, trigger, page, Math.Clamp(pageSize, 1, 200)), ct);
         return Ok(result);

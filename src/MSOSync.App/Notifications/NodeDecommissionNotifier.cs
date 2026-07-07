@@ -27,10 +27,10 @@ public sealed class NodeDecommissionNotifier(
         try
         {
             using var client = httpClientFactory.CreateClient();
-            client.Timeout = TimeSpan.FromSeconds(5);
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
             await client.PostAsJsonAsync(
                 $"{syncUrl.TrimEnd('/')}/api/v1/sync/lifecycle-notice",
-                new { type = "NODE_DECOMMISSIONING", nodeId = evt.NodeId }, ct);
+                new { type = "NODE_DECOMMISSIONING", nodeId = evt.NodeId }, cts.Token);
         }
         catch (Exception ex)
         {
