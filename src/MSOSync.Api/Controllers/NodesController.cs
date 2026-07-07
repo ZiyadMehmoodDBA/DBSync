@@ -73,35 +73,11 @@ public sealed class NodesController(
         return Ok(result);
     }
 
-    [HttpPost("{nodeId}/enable")]
-    [Authorize(Policy = "OperatorOrAbove")]
-    public async Task<IActionResult> EnableNode(string nodeId, CancellationToken ct)
-    {
-        await nodeService.EnableNodeAsync(nodeId, ct);
-        return Ok();
-    }
-
-    [HttpPost("{nodeId}/disable")]
-    [Authorize(Policy = "OperatorOrAbove")]
-    public async Task<IActionResult> DisableNode(string nodeId, CancellationToken ct)
-    {
-        await nodeService.DisableNodeAsync(nodeId, ct);
-        return Ok();
-    }
-
     [HttpGet("registrations/pending")]
     [Authorize]
     public async Task<IActionResult> GetPendingRegistrations(CancellationToken ct)
     {
         var result = await nodeService.GetPendingRegistrationsAsync(ct);
-        return Ok(result);
-    }
-
-    [HttpPost("registrations/{requestId:long}/approve")]
-    [Authorize(Policy = "OperatorOrAbove")]
-    public async Task<IActionResult> ApproveRegistration(long requestId, CancellationToken ct)
-    {
-        var result = await nodeService.ApproveRegistrationAsync(requestId, ct);
         return Ok(result);
     }
 

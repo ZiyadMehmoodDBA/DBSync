@@ -25,7 +25,7 @@ public static class MetadataServiceExtensions
 {
     public static IServiceCollection AddMetadata(
         this IServiceCollection services,
-        IConfiguration _)
+        IConfiguration configuration)
     {
         services.AddMemoryCache();
         services.AddMediatR(cfg =>
@@ -41,6 +41,13 @@ public static class MetadataServiceExtensions
         services.AddSingleton<INodeSyncPolicy, NodeSyncPolicy>();
         services.AddSingleton<IConnectivityPolicy, ConnectivityPolicy>();
         services.AddHostedService<LifecycleStartupValidator>();
+
+        // Epic 12B-1 — Lifecycle state machine + services
+        services.Configure<LifecycleOptions>(configuration.GetSection(LifecycleOptions.Section));
+        services.AddSingleton<INodeLifecycleStateMachine, NodeLifecycleStateMachine>();
+        services.AddSingleton<NodeLifecycleLockRegistry>();
+        services.AddScoped<IBootstrapTokenService, BootstrapTokenService>();
+        services.AddScoped<INodeLifecycleHistoryService, NodeLifecycleHistoryService>();
         services.AddScoped<IUsersManagementService, UsersManagementService>();
 
         // Epic 9A — Operational Read APIs

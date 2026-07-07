@@ -67,6 +67,9 @@ public sealed record ProvisionRequestDto(
 
 public sealed record ProvisionResultDto(string NodeId, string Token);
 
+/// <summary>BootstrapToken is non-null only for Recovery approvals (returned once to the operator).</summary>
+public sealed record ApproveResultDto(long RegistrationId, string? BootstrapToken);
+
 public sealed record BulkResultItemDto(long Id, string Status);
 
 public sealed record ApproveRegistrationRequest(string? Notes);

@@ -83,60 +83,12 @@ public sealed class NodeMetadataService(
         return MapNode(node);
     }
 
-    public async Task EnableNodeAsync(string nodeId, CancellationToken ct = default)
-    {
-        var node = await db.Nodes.FindAsync([nodeId], ct)
-            ?? throw new NotFoundException($"Node '{nodeId}' not found", "NODE_NOT_FOUND");
-
-        node.LifecycleState = NodeLifecycleState.Active; // TEMPORARY direct write — replaced by NodeLifecycleService gateway in Task 2.
-        await db.SaveChangesAsync(ct);
-        cache.Remove($"metadata:node:{nodeId}");
-        await mediator.Publish(new NodeMetadataChangedEvent(nodeId, "ENABLED"), ct);
-    }
-
-    public async Task DisableNodeAsync(string nodeId, CancellationToken ct = default)
-    {
-        var node = await db.Nodes.FindAsync([nodeId], ct)
-            ?? throw new NotFoundException($"Node '{nodeId}' not found", "NODE_NOT_FOUND");
-
-        node.LifecycleState = NodeLifecycleState.Disabled; // TEMPORARY direct write — replaced by NodeLifecycleService gateway in Task 2.
-        await db.SaveChangesAsync(ct);
-        cache.Remove($"metadata:node:{nodeId}");
-        await mediator.Publish(new NodeMetadataChangedEvent(nodeId, "DISABLED"), ct);
-    }
-
     public async Task<IReadOnlyList<RegistrationRequestDto>> GetPendingRegistrationsAsync(CancellationToken ct = default)
     {
         var requests = await db.RegistrationRequests.AsNoTracking()
             .Where(r => !r.Approved)
             .ToListAsync(ct);
         return requests.Select(MapRegistration).ToList().AsReadOnly();
-    }
-
-    public async Task<NodeProvisionResult> ApproveRegistrationAsync(long requestId, CancellationToken ct = default)
-    {
-        var request = await db.RegistrationRequests.FindAsync([requestId], ct)
-            ?? throw new NotFoundException($"Registration request {requestId} not found", "REGISTRATION_NOT_FOUND");
-
-        if (request.Approved)
-            throw new ValidationException($"Registration request {requestId} is already approved", "ALREADY_APPROVED");
-
-        request.Approved = true;
-
-        db.Nodes.Add(new SyncNode
-        {
-            NodeId = request.NodeId,
-            GroupId = request.NodeGroup ?? "default",
-            SyncUrl = request.SyncUrl ?? "http://localhost",
-            LifecycleState = NodeLifecycleState.PendingRegistration,
-            RegistrationTime = DateTime.UtcNow
-        });
-
-        var result = nodeSecurity.PrepareToken(request.NodeId);
-
-        await db.SaveChangesAsync(ct);
-        await mediator.Publish(new NodeMetadataChangedEvent(request.NodeId, "APPROVED"), ct);
-        return result;
     }
 
     public async Task RejectRegistrationAsync(long requestId, CancellationToken ct = default)

@@ -48,4 +48,16 @@ public sealed class NodeSecurityService(AppDbContext db, BCryptPasswordHasher ha
 
         return new NodeProvisionResult(nodeId, raw);
     }
+
+    /// <summary>
+    /// Revokes the node's operational credential — the node can no longer authenticate.
+    /// Used by recovery approval (old identity dies before new bootstrap token is issued)
+    /// and by decommission (trust revoked at drain start). Does NOT SaveChanges.
+    /// </summary>
+    public async Task RevokeAsync(string nodeId, CancellationToken ct = default)
+    {
+        var sec = await db.NodeSecurities.FirstOrDefaultAsync(s => s.NodeId == nodeId, ct);
+        if (sec is null) return;
+        db.NodeSecurities.Remove(sec);
+    }
 }
