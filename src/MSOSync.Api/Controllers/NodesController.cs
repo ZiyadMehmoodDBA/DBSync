@@ -6,7 +6,7 @@ using MSOSync.Common;
 using MSOSync.Metadata.Common;
 using MSOSync.Metadata.Dtos;
 using MSOSync.Metadata.Interfaces;
-using MSOSync.Metadata.Nodes;
+using MSOSync.Persistence.Entities;
 
 namespace MSOSync.Api.Controllers;
 
@@ -14,7 +14,6 @@ namespace MSOSync.Api.Controllers;
 [Route("api/v1/nodes")]
 public sealed class NodesController(
     INodeMetadataService nodeService,
-    INodeStateMachine    stateMachine,
     IClock               clock) : ControllerBase
 {
     [HttpGet]
@@ -137,14 +136,11 @@ public sealed class NodesController(
 
         var node = await nodeService.GetNodeAsync(nodeId, ct);
         if (node == null) return NotFound();
-        if (node.Status == "DISABLED") return Forbid();
+        if (node.LifecycleState == NodeLifecycleState.Disabled) return Forbid();
 
+        // Task 3 installs the full lifecycle accept/reject matrix; this task only removes the lifecycle write.
         // Update LastHeartbeat
         await nodeService.RecordHeartbeatAsync(nodeId, clock.UtcNow, ct);
-
-        // Self-heal: OFFLINE → REGISTERED
-        if (node.Status == "OFFLINE")
-            await stateMachine.TransitionAsync(nodeId, "REGISTERED", ct);
 
         return NoContent();
     }

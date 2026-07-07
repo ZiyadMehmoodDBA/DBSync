@@ -25,7 +25,7 @@ public sealed class RoutingServiceTests
         if (!db.NodeGroups.Any(g => g.GroupId == targetGroupId))
             db.NodeGroups.Add(new SyncNodeGroup { GroupId = targetGroupId, GroupName = targetGroupId });
         if (!db.Nodes.Any(n => n.NodeId == nodeId))
-            db.Nodes.Add(new SyncNode { NodeId = nodeId, GroupId = targetGroupId, SyncUrl = "http://x", Status = "ONLINE", SyncEnabled = true });
+            db.Nodes.Add(new SyncNode { NodeId = nodeId, GroupId = targetGroupId, SyncUrl = "http://x", LifecycleState = MSOSync.Persistence.Entities.NodeLifecycleState.Active });
         if (!db.Routers.Any(r => r.RouterId == routerId))
             db.Routers.Add(new SyncRouter { RouterId = routerId, SourceNodeGroup = "src", TargetNodeGroup = targetGroupId, Enabled = true });
         if (!db.TriggerRouters.Any(tr => tr.TriggerId == triggerId))

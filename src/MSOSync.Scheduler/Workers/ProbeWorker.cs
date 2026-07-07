@@ -58,7 +58,7 @@ public sealed class ProbeWorker(
         var httpClient = scope.ServiceProvider.GetRequiredService<INodeHttpClient>();
 
         var children = await db.Nodes.AsNoTracking()
-            .Where(n => n.UpstreamNodeId == localNodeId && n.SyncEnabled)
+            .Where(n => n.UpstreamNodeId == localNodeId && n.LifecycleState == NodeLifecycleState.Active && !n.MaintenanceMode)
             .ToListAsync(ct);
 
         foreach (var child in children)

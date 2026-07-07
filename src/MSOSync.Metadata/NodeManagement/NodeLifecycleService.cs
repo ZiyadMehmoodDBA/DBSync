@@ -35,7 +35,7 @@ public sealed class NodeLifecycleService(
 
             var regType = existingNode is null
                 ? RegistrationType.New
-                : existingNode.Status == "REGISTERED"
+                : existingNode.LifecycleState == NodeLifecycleState.Active
                     ? RegistrationType.ReRegistration
                     : RegistrationType.Recovery;
 
@@ -260,7 +260,7 @@ public sealed class NodeLifecycleService(
             NodeId     = nodeId,
             GroupId    = dto.GroupId ?? "default",
             SyncUrl    = $"https://{dto.NodeName}.local:8080",
-            Status     = "PROVISIONED",
+            LifecycleState = NodeLifecycleState.PendingRegistration,
             NodeType   = dto.NodeType,
             ExternalId = dto.ExternalId,
             NodeName   = dto.NodeName,

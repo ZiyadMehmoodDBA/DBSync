@@ -29,11 +29,11 @@ public sealed class ProvisionPackageServiceTests : IDisposable
     {
         _db.Nodes.Add(new SyncNode
         {
-            NodeId     = nodeId,
-            GroupId    = "g1",
-            SyncUrl    = "http://n1",
-            Status     = "PROVISIONED",
-            NodeType   = "target",
+            NodeId         = nodeId,
+            GroupId        = "g1",
+            SyncUrl        = "http://n1",
+            LifecycleState = NodeLifecycleState.PendingRegistration,
+            NodeType       = "target",
             ExternalId = "ext-node-1",
             NodeName   = "node-display-name",
             DbServer   = "srv",

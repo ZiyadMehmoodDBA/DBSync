@@ -99,14 +99,13 @@ public sealed class NodeMetadataServiceTests
         db.Nodes.Add(new SyncNode
         {
             NodeId = "node-4", GroupId = "default",
-            SyncUrl = "http://n4", Status = "APPROVED",
-            SyncEnabled = false
+            SyncUrl = "http://n4", LifecycleState = NodeLifecycleState.Disabled
         });
         await db.SaveChangesAsync();
 
         await svc.EnableNodeAsync("node-4");
 
-        db.Nodes.Single().SyncEnabled.Should().BeTrue();
+        db.Nodes.Single().LifecycleState.Should().Be(NodeLifecycleState.Active);
     }
 
     [Fact]
@@ -116,14 +115,13 @@ public sealed class NodeMetadataServiceTests
         db.Nodes.Add(new SyncNode
         {
             NodeId = "node-5", GroupId = "default",
-            SyncUrl = "http://n5", Status = "APPROVED",
-            SyncEnabled = true
+            SyncUrl = "http://n5", LifecycleState = NodeLifecycleState.Active
         });
         await db.SaveChangesAsync();
 
         await svc.DisableNodeAsync("node-5");
 
-        db.Nodes.Single().SyncEnabled.Should().BeFalse();
+        db.Nodes.Single().LifecycleState.Should().Be(NodeLifecycleState.Disabled);
     }
 
     [Fact]

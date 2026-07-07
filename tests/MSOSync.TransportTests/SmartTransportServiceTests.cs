@@ -33,12 +33,12 @@ public sealed class SmartTransportServiceTests
     }
 
     private static NodeDto ActivePushNode() =>
-        new("target", "g", "http://target", "APPROVED", null, null, 60, true, TransportMode.Push,
-            null, null, null, null, false);
+        new("target", "g", "http://target", NodeLifecycleState.Active, null, null, 60, true, TransportMode.Push,
+            ConnectivityStatus.Reachable, false, null, null, null, null, false);
 
     private static NodeDto ActivePullNode() =>
-        new("target", "g", "http://target", "APPROVED", null, null, 60, true, TransportMode.Pull,
-            null, null, null, null, false);
+        new("target", "g", "http://target", NodeLifecycleState.Active, null, null, 60, true, TransportMode.Pull,
+            ConnectivityStatus.Reachable, false, null, null, null, null, false);
 
     [Fact]
     public async Task SendBatchAsync_UnknownNode_Skips()
@@ -56,8 +56,8 @@ public sealed class SmartTransportServiceTests
     [Fact]
     public async Task SendBatchAsync_DisabledNode_Skips()
     {
-        var disabledNode = new NodeDto("target", "g", "http://t", "APPROVED", null, null, 60, false, TransportMode.Push,
-            null, null, null, null, false);
+        var disabledNode = new NodeDto("target", "g", "http://t", NodeLifecycleState.Disabled, null, null, 60, false, TransportMode.Push,
+            ConnectivityStatus.Reachable, false, null, null, null, null, false);
         var meta = new Mock<INodeMetadataService>();
         meta.Setup(m => m.GetNodeAsync("target", default)).ReturnsAsync(disabledNode);
 

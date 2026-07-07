@@ -143,12 +143,11 @@ public sealed class TransportTests(TransportFixture fixture)
         {
             db.Nodes.Add(new SyncNode
             {
-                NodeId        = gapSource,
-                GroupId       = TransportFixture.GroupId,
-                SyncUrl       = "http://gap-source",
-                Status        = "APPROVED",
-                SyncEnabled   = true,
-                TransportMode = TransportMode.Pull,
+                NodeId         = gapSource,
+                GroupId        = TransportFixture.GroupId,
+                SyncUrl        = "http://gap-source",
+                LifecycleState = NodeLifecycleState.Active,
+                TransportMode  = TransportMode.Pull,
             });
             await db.SaveChangesAsync();
         }

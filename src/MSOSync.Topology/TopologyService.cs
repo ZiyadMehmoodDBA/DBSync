@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using MSOSync.Persistence;
+using MSOSync.Persistence.Entities;
 
 namespace MSOSync.Topology;
 
@@ -10,7 +11,9 @@ public sealed class TopologyService(AppDbContext db) : ITopologyService
     {
         var nodes = await db.Nodes
             .AsNoTracking()
-            .Where(n => n.NodeId != localNodeId && n.Status == "APPROVED" && n.SyncEnabled)
+            .Where(n => n.NodeId != localNodeId
+                && n.LifecycleState == NodeLifecycleState.Active
+                && !n.MaintenanceMode)
             .OrderBy(n => n.NodeId)
             .Select(n => new SourceNodeInfo(n.NodeId, n.SyncUrl))
             .ToListAsync(ct);

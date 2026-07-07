@@ -100,10 +100,10 @@ public sealed class HeartbeatFixture : WebApplicationFactory<Program>, IAsyncLif
         {
             db.Nodes.Add(new SyncNode
             {
-                NodeId   = NodeId,
-                GroupId  = "hb-group",
-                SyncUrl  = "http://localhost",
-                Status   = "REGISTERED",
+                NodeId         = NodeId,
+                GroupId        = "hb-group",
+                SyncUrl        = "http://localhost",
+                LifecycleState = NodeLifecycleState.Active,
             });
         }
         await db.SaveChangesAsync();

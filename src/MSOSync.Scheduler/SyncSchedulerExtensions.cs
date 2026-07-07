@@ -19,7 +19,7 @@ public static class SyncSchedulerExtensions
         services.AddHostedService<PullJob>();
         services.AddHostedService<HeartbeatWorker>();
         services.AddHostedService<ProbeWorker>();
-        services.AddHostedService<NodeStatusWorker>();
+        // NodeStatusWorker deleted in Epic 12B-1 — lifecycle handled by NodeLifecycleState
         return services;
     }
 }

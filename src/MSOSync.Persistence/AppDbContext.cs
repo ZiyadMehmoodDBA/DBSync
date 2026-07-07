@@ -8,6 +8,9 @@ public class AppDbContext : DbContext
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
     public DbSet<SyncNode> Nodes => Set<SyncNode>();
+    public DbSet<SyncNodeLifecycleHistory> NodeLifecycleHistories => Set<SyncNodeLifecycleHistory>();
+    public DbSet<SyncNodeConnectivityHistory> NodeConnectivityHistories => Set<SyncNodeConnectivityHistory>();
+    public DbSet<SyncNodeBootstrapToken> NodeBootstrapTokens => Set<SyncNodeBootstrapToken>();
     public DbSet<SyncNodeGroup> NodeGroups => Set<SyncNodeGroup>();
     public DbSet<SyncNodeSecurity> NodeSecurities => Set<SyncNodeSecurity>();
     public DbSet<SyncRegistrationRequest> RegistrationRequests => Set<SyncRegistrationRequest>();

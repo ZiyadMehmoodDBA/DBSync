@@ -21,7 +21,7 @@ public sealed class DashboardQueryServiceTests : IDisposable
 
     private static SyncNode Node(string id, ConnectivityStatus cs) => new()
     {
-        NodeId = id, GroupId = "g1", SyncUrl = $"http://{id}", Status = "REGISTERED",
+        NodeId = id, GroupId = "g1", SyncUrl = $"http://{id}", LifecycleState = NodeLifecycleState.Active,
         ConnectivityStatus = cs
     };
 

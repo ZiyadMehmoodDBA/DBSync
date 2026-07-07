@@ -118,7 +118,7 @@ public sealed class EngineFixture : WebApplicationFactory<Program>, IAsyncLifeti
                 NodeId          = NodeId,
                 GroupId         = GroupId,
                 SyncUrl         = "http://hub:8080",
-                Status          = "REGISTERED",
+                LifecycleState  = NodeLifecycleState.Active,
                 LastHeartbeat   = DateTime.UtcNow,
             });
         await db.SaveChangesAsync();

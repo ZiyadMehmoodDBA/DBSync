@@ -208,27 +208,23 @@ public sealed class TopologyQueryService(AppDbContext db, IMemoryCache cache)
             .Select(n => new
             {
                 n.NodeId,
-                n.Status,
+                n.LifecycleState,
                 n.ConnectivityStatus,
                 n.LastHeartbeat,
                 n.LastProbeLatencyMs,
-                n.SyncEnabled
+                n.MaintenanceMode
             })
             .ToListAsync(ct);
 
         var nodes = rows.Select(n =>
-        {
-            if (!Enum.TryParse<NodeStatus>(n.Status, ignoreCase: true, out var status))
-                throw new InvalidOperationException(
-                    $"Unknown node status '{n.Status}' for node '{n.NodeId}'.");
-            return new TopologyGroupNodeDto(
+            new TopologyGroupNodeDto(
                 n.NodeId,
-                status,
+                n.LifecycleState,
                 n.ConnectivityStatus,
                 n.LastHeartbeat,
                 n.LastProbeLatencyMs,
-                n.SyncEnabled);
-        }).ToList();
+                n.LifecycleState == NodeLifecycleState.Active && !n.MaintenanceMode)
+        ).ToList();
 
         return nodes;
     }

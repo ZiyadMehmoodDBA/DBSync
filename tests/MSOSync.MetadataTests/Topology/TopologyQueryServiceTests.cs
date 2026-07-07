@@ -27,7 +27,7 @@ public sealed class TopologyQueryServiceTests
             NodeId             = id,
             GroupId            = groupId,
             SyncUrl            = "http://localhost",
-            Status             = "REGISTERED",
+            LifecycleState     = NodeLifecycleState.Active,
             ConnectivityStatus = cs,
         };
 
@@ -260,7 +260,7 @@ public sealed class TopologyQueryServiceTests
 
         result.Should().HaveCount(2);
         result.Select(n => n.NodeId).Should().BeEquivalentTo(new[] { "n1", "n2" });
-        result.All(n => n.Status == NodeStatus.Registered).Should().BeTrue();
+        result.All(n => n.LifecycleState == NodeLifecycleState.Active).Should().BeTrue();
     }
 
     [Fact]

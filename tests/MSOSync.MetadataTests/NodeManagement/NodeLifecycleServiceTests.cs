@@ -41,7 +41,7 @@ public sealed class NodeLifecycleServiceTests
 
         db.Nodes.Add(new SyncNode
         {
-            NodeId  = "ext-2", GroupId = "g1", SyncUrl = "http://n", Status = "REGISTERED"
+            NodeId  = "ext-2", GroupId = "g1", SyncUrl = "http://n", LifecycleState = NodeLifecycleState.Active
         });
         await db.SaveChangesAsync();
 
@@ -143,6 +143,6 @@ public sealed class NodeLifecycleServiceTests
         result.Token.Length.Should().BeGreaterThan(20);
 
         var node = db.Nodes.Find("ext-8")!;
-        node.Status.Should().Be("PROVISIONED");
+        node.LifecycleState.Should().Be(NodeLifecycleState.PendingRegistration);
     }
 }

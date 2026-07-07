@@ -88,7 +88,7 @@ public sealed class NodeMetadataService(
         var node = await db.Nodes.FindAsync([nodeId], ct)
             ?? throw new NotFoundException($"Node '{nodeId}' not found", "NODE_NOT_FOUND");
 
-        node.SyncEnabled = true;
+        node.LifecycleState = NodeLifecycleState.Active; // TEMPORARY direct write — replaced by NodeLifecycleService gateway in Task 2.
         await db.SaveChangesAsync(ct);
         cache.Remove($"metadata:node:{nodeId}");
         await mediator.Publish(new NodeMetadataChangedEvent(nodeId, "ENABLED"), ct);
@@ -99,7 +99,7 @@ public sealed class NodeMetadataService(
         var node = await db.Nodes.FindAsync([nodeId], ct)
             ?? throw new NotFoundException($"Node '{nodeId}' not found", "NODE_NOT_FOUND");
 
-        node.SyncEnabled = false;
+        node.LifecycleState = NodeLifecycleState.Disabled; // TEMPORARY direct write — replaced by NodeLifecycleService gateway in Task 2.
         await db.SaveChangesAsync(ct);
         cache.Remove($"metadata:node:{nodeId}");
         await mediator.Publish(new NodeMetadataChangedEvent(nodeId, "DISABLED"), ct);
@@ -128,7 +128,7 @@ public sealed class NodeMetadataService(
             NodeId = request.NodeId,
             GroupId = request.NodeGroup ?? "default",
             SyncUrl = request.SyncUrl ?? "http://localhost",
-            Status = "APPROVED",
+            LifecycleState = NodeLifecycleState.PendingRegistration,
             RegistrationTime = DateTime.UtcNow
         });
 
@@ -185,7 +185,7 @@ public sealed class NodeMetadataService(
             NodeId            = req.NodeId,
             GroupId           = req.GroupId,
             SyncUrl           = req.SyncUrl,
-            Status            = "PENDING",
+            LifecycleState    = NodeLifecycleState.PendingRegistration,  // spec §4.4: admin creating IS the approval
             RegistrationTime  = DateTime.UtcNow,
             HeartbeatInterval = req.HeartbeatInterval,
             TransportMode     = req.TransportMode,
@@ -208,9 +208,11 @@ public sealed class NodeMetadataService(
     }
 
     private static NodeDto MapNode(SyncNode n) =>
-        new(n.NodeId, n.GroupId, n.SyncUrl, n.Status,
-            n.RegistrationTime, n.LastHeartbeat, n.HeartbeatInterval, n.SyncEnabled,
-            n.TransportMode, n.DbServer, n.DbName, n.DbAuthMode, n.DbUser,
+        new(n.NodeId, n.GroupId, n.SyncUrl, n.LifecycleState,
+            n.RegistrationTime, n.LastHeartbeat, n.HeartbeatInterval,
+            n.LifecycleState == NodeLifecycleState.Active && !n.MaintenanceMode,
+            n.TransportMode, n.ConnectivityStatus, n.MaintenanceMode,
+            n.DbServer, n.DbName, n.DbAuthMode, n.DbUser,
             n.DbPasswordEncrypted != null);
 
     private static RegistrationRequestDto MapRegistration(SyncRegistrationRequest r) =>

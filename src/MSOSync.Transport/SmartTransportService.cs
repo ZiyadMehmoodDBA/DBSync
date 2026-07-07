@@ -31,10 +31,10 @@ public sealed class SmartTransportService(
             return;
         }
 
-        if (!node.SyncEnabled)
+        if (!node.CanSynchronize)
         {
-            logger.LogDebug("Transport: node {NodeId} sync disabled — skipping batch {BatchId}",
-                batch.NodeId, batch.BatchId);
+            logger.LogDebug("Transport: node {NodeId} not sync-eligible (lifecycle={Lifecycle}, maintenance={Maint}) — skipping batch {BatchId}",
+                batch.NodeId, node.LifecycleState, node.MaintenanceMode, batch.BatchId);
             return;
         }
 

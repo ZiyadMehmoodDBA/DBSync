@@ -511,10 +511,22 @@ namespace MSOSync.Persistence.Migrations
                         .HasColumnType("varchar(50)")
                         .HasColumnName("node_id");
 
+                    b.Property<string>("ConnectivityReason")
+                        .HasMaxLength(30)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(30)")
+                        .HasColumnName("connectivity_reason");
+
                     b.Property<byte>("ConnectivityStatus")
                         .HasColumnType("tinyint")
                         .HasDefaultValue((byte)0)
                         .HasColumnName("connectivity_status");
+
+                    b.Property<int>("ConsecutiveProbeFailures")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0)
+                        .HasColumnName("consecutive_probe_failures");
 
                     b.Property<string>("DbAuthMode")
                         .HasMaxLength(10)
@@ -542,6 +554,23 @@ namespace MSOSync.Persistence.Migrations
                         .HasColumnType("nvarchar(128)")
                         .HasColumnName("db_user");
 
+                    b.Property<DateTimeOffset?>("DecommissionGraceUntil")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("decommission_grace_until");
+
+                    b.Property<int?>("DecommissionInitialOpenBatches")
+                        .HasColumnType("int")
+                        .HasColumnName("decommission_initial_open_batches");
+
+                    b.Property<string>("DecommissionReason")
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)")
+                        .HasColumnName("decommission_reason");
+
+                    b.Property<DateTimeOffset?>("DecommissionStartedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("decommission_started_at");
+
                     b.Property<string>("ExternalId")
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(100)
@@ -566,6 +595,11 @@ namespace MSOSync.Persistence.Migrations
                         .HasColumnType("datetime2(7)")
                         .HasColumnName("last_heartbeat");
 
+                    b.Property<string>("LastProbeError")
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)")
+                        .HasColumnName("last_probe_error");
+
                     b.Property<int?>("LastProbeLatencyMs")
                         .HasColumnType("int")
                         .HasColumnName("last_probe_latency_ms");
@@ -573,6 +607,37 @@ namespace MSOSync.Persistence.Migrations
                     b.Property<DateTime?>("LastProbeTime")
                         .HasColumnType("datetime2(7)")
                         .HasColumnName("last_probe_time");
+
+                    b.Property<string>("LifecycleState")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(30)")
+                        .HasColumnName("status");
+
+                    b.Property<bool>("MaintenanceMode")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false)
+                        .HasColumnName("maintenance_mode");
+
+                    b.Property<string>("MaintenanceReason")
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)")
+                        .HasColumnName("maintenance_reason");
+
+                    b.Property<DateTimeOffset?>("MaintenanceStartedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("maintenance_started_at");
+
+                    b.Property<string>("MaintenanceStartedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("maintenance_started_by");
+
+                    b.Property<DateTimeOffset?>("MaintenanceUntil")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("maintenance_until");
 
                     b.Property<string>("NodeName")
                         .ValueGeneratedOnAdd()
@@ -587,22 +652,22 @@ namespace MSOSync.Persistence.Migrations
                         .HasColumnType("nvarchar(50)")
                         .HasColumnName("node_type");
 
+                    b.Property<string>("PreviousLifecycleState")
+                        .HasMaxLength(30)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(30)")
+                        .HasColumnName("previous_lifecycle_state");
+
                     b.Property<DateTime?>("RegistrationTime")
                         .HasColumnType("datetime2(7)")
                         .HasColumnName("registration_time");
 
-                    b.Property<string>("Status")
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
                         .IsRequired()
-                        .HasMaxLength(20)
-                        .IsUnicode(false)
-                        .HasColumnType("varchar(20)")
-                        .HasColumnName("status");
-
-                    b.Property<bool>("SyncEnabled")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
-                        .HasDefaultValue(true)
-                        .HasColumnName("sync_enabled");
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion")
+                        .HasColumnName("row_version");
 
                     b.Property<string>("SyncUrl")
                         .IsRequired()
@@ -627,10 +692,119 @@ namespace MSOSync.Persistence.Migrations
                     b.HasIndex("LastHeartbeat")
                         .HasDatabaseName("IX_sync_node_last_heartbeat");
 
+                    b.HasIndex("LifecycleState")
+                        .HasDatabaseName("IX_sync_node_status");
+
                     b.HasIndex("UpstreamNodeId")
                         .HasDatabaseName("IX_sync_node_upstream");
 
                     b.ToTable("sync_node", "msosync");
+                });
+
+            modelBuilder.Entity("MSOSync.Persistence.Entities.SyncNodeBootstrapToken", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTimeOffset?>("ConsumedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("consumed_at");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("expires_at");
+
+                    b.Property<DateTimeOffset>("IssuedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("issued_at");
+
+                    b.Property<string>("IssuedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("issued_by");
+
+                    b.Property<string>("NodeId")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(50)")
+                        .HasColumnName("node_id");
+
+                    b.Property<DateTimeOffset?>("RevokedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("revoked_at");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(100)")
+                        .HasColumnName("token_hash");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("NodeId")
+                        .HasDatabaseName("IX_node_bootstrap_token_node");
+
+                    b.ToTable("sync_node_bootstrap_token", "msosync");
+                });
+
+            modelBuilder.Entity("MSOSync.Persistence.Entities.SyncNodeConnectivityHistory", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("NewStatus")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(20)")
+                        .HasColumnName("new_status");
+
+                    b.Property<string>("NodeId")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(50)")
+                        .HasColumnName("node_id");
+
+                    b.Property<DateTimeOffset>("OccurredAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("occurred_at");
+
+                    b.Property<string>("PreviousStatus")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(20)")
+                        .HasColumnName("previous_status");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(30)")
+                        .HasColumnName("reason");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OccurredAt")
+                        .HasDatabaseName("IX_node_connectivity_history_time");
+
+                    b.HasIndex("NodeId", "OccurredAt")
+                        .IsDescending(false, true)
+                        .HasDatabaseName("IX_node_connectivity_history_node_time");
+
+                    b.ToTable("sync_node_connectivity_history", "msosync");
                 });
 
             modelBuilder.Entity("MSOSync.Persistence.Entities.SyncNodeGroup", b =>
@@ -650,6 +824,74 @@ namespace MSOSync.Persistence.Migrations
                     b.HasKey("GroupId");
 
                     b.ToTable("sync_node_group", "msosync");
+                });
+
+            modelBuilder.Entity("MSOSync.Persistence.Entities.SyncNodeLifecycleHistory", b =>
+                {
+                    b.Property<long>("HistoryId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("history_id");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("HistoryId"));
+
+                    b.Property<string>("Actor")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("actor");
+
+                    b.Property<Guid?>("CorrelationId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("correlation_id");
+
+                    b.Property<string>("FromState")
+                        .HasMaxLength(30)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(30)")
+                        .HasColumnName("from_state");
+
+                    b.Property<string>("MetadataJson")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("metadata_json");
+
+                    b.Property<string>("NodeId")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(50)")
+                        .HasColumnName("node_id");
+
+                    b.Property<DateTimeOffset>("OccurredAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("occurred_at");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)")
+                        .HasColumnName("reason");
+
+                    b.Property<string>("ToState")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(30)")
+                        .HasColumnName("to_state");
+
+                    b.Property<string>("Trigger")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(20)")
+                        .HasColumnName("trigger");
+
+                    b.HasKey("HistoryId");
+
+                    b.HasIndex("NodeId", "OccurredAt")
+                        .IsDescending(false, true)
+                        .HasDatabaseName("IX_node_lifecycle_history_node_time");
+
+                    b.ToTable("sync_node_lifecycle_history", "msosync");
                 });
 
             modelBuilder.Entity("MSOSync.Persistence.Entities.SyncNodeSecurity", b =>
@@ -1407,6 +1649,36 @@ namespace MSOSync.Persistence.Migrations
                         .HasForeignKey("UpstreamNodeId")
                         .OnDelete(DeleteBehavior.NoAction)
                         .HasConstraintName("FK_sync_node_upstream_node_id");
+                });
+
+            modelBuilder.Entity("MSOSync.Persistence.Entities.SyncNodeBootstrapToken", b =>
+                {
+                    b.HasOne("MSOSync.Persistence.Entities.SyncNode", null)
+                        .WithMany()
+                        .HasForeignKey("NodeId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired()
+                        .HasConstraintName("FK_node_bootstrap_token_node");
+                });
+
+            modelBuilder.Entity("MSOSync.Persistence.Entities.SyncNodeConnectivityHistory", b =>
+                {
+                    b.HasOne("MSOSync.Persistence.Entities.SyncNode", null)
+                        .WithMany()
+                        .HasForeignKey("NodeId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired()
+                        .HasConstraintName("FK_node_connectivity_history_node");
+                });
+
+            modelBuilder.Entity("MSOSync.Persistence.Entities.SyncNodeLifecycleHistory", b =>
+                {
+                    b.HasOne("MSOSync.Persistence.Entities.SyncNode", null)
+                        .WithMany()
+                        .HasForeignKey("NodeId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired()
+                        .HasConstraintName("FK_node_lifecycle_history_node");
                 });
 
             modelBuilder.Entity("MSOSync.Persistence.Entities.SyncRolePermission", b =>

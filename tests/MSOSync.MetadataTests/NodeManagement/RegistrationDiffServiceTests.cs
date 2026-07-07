@@ -10,7 +10,7 @@ public sealed class RegistrationDiffServiceTests
     private readonly RegistrationDiffService _sut = new();
 
     private static SyncNode MakeNode(string? dbServer = "srv", string? dbName = "db") =>
-        new() { NodeId = "n1", GroupId = "g1", SyncUrl = "http://n1", Status = "REGISTERED",
+        new() { NodeId = "n1", GroupId = "g1", SyncUrl = "http://n1", LifecycleState = NodeLifecycleState.Active,
                 DbServer = dbServer, DbName = dbName };
 
     private static RegistrationMetadataDto MakeMeta(

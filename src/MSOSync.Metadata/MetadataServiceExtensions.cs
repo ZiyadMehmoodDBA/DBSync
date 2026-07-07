@@ -11,7 +11,7 @@ using MSOSync.Metadata.IncomingBatches;
 using MSOSync.Metadata.Interfaces;
 using MSOSync.Metadata.Locks;
 using MSOSync.Metadata.Metrics;
-using MSOSync.Metadata.Nodes;
+using MSOSync.Metadata.Lifecycle;
 using MSOSync.Metadata.Services;
 using MSOSync.Metadata.Topology;
 using MSOSync.Metadata.Permissions;
@@ -37,7 +37,10 @@ public static class MetadataServiceExtensions
         services.AddScoped<ITriggerMetadataService, TriggerMetadataService>();
         services.AddScoped<IRouterMetadataService, RouterMetadataService>();
         services.AddScoped<IChannelMetadataService, ChannelMetadataService>();
-        services.AddScoped<INodeStateMachine, NodeStateMachine>();
+        // Epic 12B-1 — Lifecycle policies
+        services.AddSingleton<INodeSyncPolicy, NodeSyncPolicy>();
+        services.AddSingleton<IConnectivityPolicy, ConnectivityPolicy>();
+        services.AddHostedService<LifecycleStartupValidator>();
         services.AddScoped<IUsersManagementService, UsersManagementService>();
 
         // Epic 9A — Operational Read APIs

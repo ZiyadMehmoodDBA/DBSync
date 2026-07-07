@@ -122,7 +122,7 @@ public sealed class ApplyEngineFixture : IAsyncLifetime
                 NodeId  = "src",
                 GroupId = "apply-g",
                 SyncUrl = "http://src",
-                Status  = "APPROVED",
+                LifecycleState = NodeLifecycleState.PendingRegistration,
             });
         await db.SaveChangesAsync();
 

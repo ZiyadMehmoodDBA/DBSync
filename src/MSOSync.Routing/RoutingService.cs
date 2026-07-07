@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Primitives;
 using MSOSync.Metadata.Events;
+using MSOSync.Metadata.Lifecycle;
 using MSOSync.Persistence;
 
 namespace MSOSync.Routing;
@@ -30,7 +31,7 @@ public sealed class RoutingService(
             .Join(db.Routers.Where(r => r.Enabled),
                   tr => tr.RouterId, r => r.RouterId,
                   (tr, r) => r.TargetNodeGroup)
-            .Join(db.Nodes.Where(n => n.SyncEnabled),
+            .Join(db.Nodes.Where(NodeSyncPolicy.EligibleExpression),
                   group => group, n => n.GroupId,
                   (group, n) => n.NodeId)
             .Distinct()

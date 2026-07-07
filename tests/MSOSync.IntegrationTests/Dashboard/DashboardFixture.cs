@@ -120,9 +120,9 @@ public sealed class DashboardFixture : WebApplicationFactory<Program>, IAsyncLif
         if (await db.Nodes.AnyAsync()) return;
 
         db.Nodes.AddRange(
-            new SyncNode { NodeId = "hub-1",   GroupId = "g1", SyncUrl = "http://hub-1",   Status = "REGISTERED", ConnectivityStatus = ConnectivityStatus.Reachable  },
-            new SyncNode { NodeId = "hub-2",   GroupId = "g1", SyncUrl = "http://hub-2",   Status = "REGISTERED", ConnectivityStatus = ConnectivityStatus.Reachable  },
-            new SyncNode { NodeId = "store-1", GroupId = "g2", SyncUrl = "http://store-1", Status = "REGISTERED", ConnectivityStatus = ConnectivityStatus.Degraded   });
+            new SyncNode { NodeId = "hub-1",   GroupId = "g1", SyncUrl = "http://hub-1",   LifecycleState = NodeLifecycleState.Active, ConnectivityStatus = ConnectivityStatus.Reachable  },
+            new SyncNode { NodeId = "hub-2",   GroupId = "g1", SyncUrl = "http://hub-2",   LifecycleState = NodeLifecycleState.Active, ConnectivityStatus = ConnectivityStatus.Reachable  },
+            new SyncNode { NodeId = "store-1", GroupId = "g2", SyncUrl = "http://store-1", LifecycleState = NodeLifecycleState.Active, ConnectivityStatus = ConnectivityStatus.Degraded   });
         await db.SaveChangesAsync();
 
         db.DataEvents.AddRange(
