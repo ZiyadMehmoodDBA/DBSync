@@ -22,6 +22,7 @@ import {
   Sun,
   Moon,
   LogOut,
+  Cpu,
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Separator } from '../../components/ui/separator';
@@ -71,6 +72,14 @@ const NAV_GROUPS: { heading: string; items: NavItem[] }[] = [
     ],
   },
   {
+    heading: 'Configuration',
+    items: [
+      { label: 'Templates',   path: '/configuration/templates',   icon: Cpu,      requiredPermission: PermissionKeys.ManageConfigurations },
+      { label: 'Assignments', path: '/configuration/assignments',  icon: Server,   requiredPermission: PermissionKeys.ManageConfigurations },
+      { label: 'Drift',       path: '/configuration/drift',        icon: AlertTriangle, requiredPermission: PermissionKeys.ManageConfigurations },
+    ],
+  },
+  {
     heading: 'Downloads',
     items: [
       { label: 'Downloads', path: '/downloads', icon: Download, requiredPermission: PermissionKeys.ExportData },
@@ -114,27 +123,29 @@ function SignalRIndicator() {
 }
 
 function NavGroup({ heading, items }: { heading: string; items: NavItem[] }) {
-  const canViewMetrics  = useHasPermission(PermissionKeys.ViewMetrics);
-  const canViewTopology = useHasPermission(PermissionKeys.ViewTopology);
-  const canViewAudit    = useHasPermission(PermissionKeys.ViewAudit);
-  const canManageUsers  = useHasPermission(PermissionKeys.ManageUsers);
-  const canExportData   = useHasPermission(PermissionKeys.ExportData);
+  const canViewMetrics         = useHasPermission(PermissionKeys.ViewMetrics);
+  const canViewTopology        = useHasPermission(PermissionKeys.ViewTopology);
+  const canViewAudit           = useHasPermission(PermissionKeys.ViewAudit);
+  const canManageUsers         = useHasPermission(PermissionKeys.ManageUsers);
+  const canExportData          = useHasPermission(PermissionKeys.ExportData);
+  const canManageConfigurations = useHasPermission(PermissionKeys.ManageConfigurations);
 
   const permMap: Record<PermissionKey, boolean> = {
-    [PermissionKeys.ViewMetrics]:         canViewMetrics,
-    [PermissionKeys.ViewTopology]:        canViewTopology,
-    [PermissionKeys.ViewAudit]:           canViewAudit,
-    [PermissionKeys.ManageUsers]:         canManageUsers,
-    [PermissionKeys.ExportData]:          canExportData,
-    [PermissionKeys.ViewEvents]:          true,
-    [PermissionKeys.RetryBatches]:        true,
-    [PermissionKeys.ApproveNodes]:        true,
-    [PermissionKeys.ReleaseLocks]:        true,
-    [PermissionKeys.EditParameters]:      true,
-    [PermissionKeys.ManageTriggers]:      true,
-    [PermissionKeys.ManageRouters]:       true,
-    [PermissionKeys.ProvisionNodes]:      true,
-    [PermissionKeys.ManageNodeLifecycle]: true,
+    [PermissionKeys.ViewMetrics]:          canViewMetrics,
+    [PermissionKeys.ViewTopology]:         canViewTopology,
+    [PermissionKeys.ViewAudit]:            canViewAudit,
+    [PermissionKeys.ManageUsers]:          canManageUsers,
+    [PermissionKeys.ExportData]:           canExportData,
+    [PermissionKeys.ManageConfigurations]: canManageConfigurations,
+    [PermissionKeys.ViewEvents]:           true,
+    [PermissionKeys.RetryBatches]:         true,
+    [PermissionKeys.ApproveNodes]:         true,
+    [PermissionKeys.ReleaseLocks]:         true,
+    [PermissionKeys.EditParameters]:       true,
+    [PermissionKeys.ManageTriggers]:       true,
+    [PermissionKeys.ManageRouters]:        true,
+    [PermissionKeys.ProvisionNodes]:       true,
+    [PermissionKeys.ManageNodeLifecycle]:  true,
   };
 
   const visibleItems = items.filter(

@@ -23,6 +23,9 @@ import { LocksPage } from '../features/locks/LocksPage';
 import { RolesPage } from '../features/administration/RolesPage';
 import { DownloadsPage } from '../features/downloads/DownloadsPage';
 import { NodeManagementPage } from '../features/node-management/NodeManagementPage';
+import { TemplatesPage } from '../features/configuration/TemplatesPage';
+import { AssignmentsPage } from '../features/configuration/AssignmentsPage';
+import { DriftPage } from '../features/configuration/DriftPage';
 import { PermissionKeys } from '../shared/types/permissions';
 
 export const router = createBrowserRouter([
@@ -60,8 +63,11 @@ export const router = createBrowserRouter([
               { path: 'parameters',       element: <ParametersPage /> },
               { path: 'audit',            element: <PermissionGuard permissionKey={PermissionKeys.ViewAudit}><AuditPage /></PermissionGuard> },
               { path: 'locks',            element: <LocksPage /> },
-              { path: 'downloads',        element: <PermissionGuard permissionKey={PermissionKeys.ExportData}><DownloadsPage /></PermissionGuard> },
-              { path: 'profile',          element: <ProfilePage /> },
+              { path: 'downloads',              element: <PermissionGuard permissionKey={PermissionKeys.ExportData}><DownloadsPage /></PermissionGuard> },
+              { path: 'profile',               element: <ProfilePage /> },
+              { path: 'configuration/templates',  element: <PermissionGuard permissionKey={PermissionKeys.ManageConfigurations}><TemplatesPage /></PermissionGuard> },
+              { path: 'configuration/assignments', element: <PermissionGuard permissionKey={PermissionKeys.ManageConfigurations}><AssignmentsPage /></PermissionGuard> },
+              { path: 'configuration/drift',      element: <PermissionGuard permissionKey={PermissionKeys.ManageConfigurations}><DriftPage /></PermissionGuard> },
             ],
           },
         ],

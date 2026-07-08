@@ -19,6 +19,8 @@ import { NodeActionsMenu } from './NodeActionsMenu';
 import { MaintenanceDialog } from './MaintenanceDialog';
 import { DecommissionWizard } from './DecommissionWizard';
 import { NodeLifecyclePanel } from './NodeLifecyclePanel';
+import { NodeConfigurationTab } from '../../../configuration/NodeConfigurationTab';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../../../components/ui/tabs';
 import type { LifecycleAction } from '../../../../shared/types/lifecycle';
 
 type DialogState =
@@ -183,7 +185,18 @@ export function NodesGrid({ selectedNodeId, onSelectNode }: Props) {
               Close
             </button>
           </div>
-          <NodeLifecyclePanel nodeId={selectedNodeId} />
+          <Tabs defaultValue="lifecycle">
+            <TabsList className="mx-4 mt-2">
+              <TabsTrigger value="lifecycle">Lifecycle</TabsTrigger>
+              <TabsTrigger value="configuration">Configuration</TabsTrigger>
+            </TabsList>
+            <TabsContent value="lifecycle">
+              <NodeLifecyclePanel nodeId={selectedNodeId} />
+            </TabsContent>
+            <TabsContent value="configuration">
+              <NodeConfigurationTab nodeId={selectedNodeId} />
+            </TabsContent>
+          </Tabs>
         </div>
       )}
 

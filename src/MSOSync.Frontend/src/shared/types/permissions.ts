@@ -12,7 +12,8 @@ export const PermissionKeys = {
   ManageRouters:       'MANAGE_ROUTERS',
   ManageUsers:         'MANAGE_USERS',
   ProvisionNodes:      'PROVISION_NODES',
-  ManageNodeLifecycle: 'MANAGE_NODE_LIFECYCLE',
+  ManageNodeLifecycle:   'MANAGE_NODE_LIFECYCLE',
+  ManageConfigurations:  'MANAGE_CONFIGURATIONS',
 } as const;
 
 export type PermissionKey = (typeof PermissionKeys)[keyof typeof PermissionKeys];
