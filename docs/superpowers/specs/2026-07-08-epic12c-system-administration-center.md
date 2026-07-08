@@ -107,6 +107,12 @@ Reserved for Epic 12D (nav slots only, no pages shipped in 12C):
 /administration/maintenance
 ```
 
+Reserved for future optional modules (namespace only, no implementation):
+```
+/operations/plugins
+```
+This avoids a navigation redesign if CE ever gains optional modules.
+
 ### Redirects
 
 ```
@@ -239,8 +245,11 @@ DeepLink:      string?      // → /operations/activity with correlationId pre-f
 
 **`IOverviewQueryService`** — also powers the Overview widget in the health aggregate; single query service, no duplication.
 
+**Server-side snapshot cache (`OverviewSnapshotCache`):**  
+`IOverviewQueryService` wraps results in a 5-second in-memory cache. Invalidated immediately by: `OperationChanged`, `WorkerStatusChanged`, `NodeLifecycleChanged`, `ConfigurationStateChanged`. Without this, every SignalR event would trigger a fresh cross-subsystem aggregation query, making `/api/v1/system/overview` the busiest endpoint in the system.
+
 **Refresh via SignalR:**  
-`OverviewRefreshed` message broadcast on: `OperationChanged`, `WorkerStatusChanged`, `NodeLifecycleChanged`, `ConfigurationStateChanged`. Frontend debounces 5 seconds before re-fetching overview endpoint.
+`OverviewRefreshed` message broadcast (after cache invalidation) on the same four events. Frontend debounces 5 seconds before re-fetching.
 
 Additional refresh triggers: initial load, browser tab becomes active, manual refresh button.
 
@@ -267,7 +276,7 @@ Approve Registrations, View Failed Jobs, Open Drift, Create Node, View Workers.
 Last 10 events, each row: category badge, summary, timestamp, "View Correlation →" link.
 
 **Zone E — System Info strip (footer or top-right card):**  
-Version, Database migration, Environment, Uptime, SignalR status.
+Version, Database migration, Environment, Uptime, SignalR status, **Last Refreshed** timestamp (UTC). Operators must always be able to confirm whether they are viewing live data.
 
 ---
 
@@ -304,6 +313,10 @@ CREATE INDEX IX_sync_operation_type          ON [msosync].[sync_operation] (oper
 CREATE INDEX IX_sync_operation_started_at    ON [msosync].[sync_operation] (started_at DESC);
 CREATE INDEX IX_sync_operation_correlation   ON [msosync].[sync_operation] (correlation_id);
 ```
+
+### Design invariant — sync_operation ownership
+
+> `sync_operation` **never owns domain state.** Its sole purpose is the orchestration index. Future contributors must not add business-specific fields (e.g., `TemplateId`, `ExportFormat`, `GracePeriod`) to this table. Such data belongs in the domain table referenced by `reference_id`. Violations make the table a second source of truth and break the handler dispatch model.
 
 ### Domain integration
 
@@ -379,7 +392,7 @@ Operation detail response includes: domain reference deep-link, correlation deep
 
 ### Frontend
 
-Table columns: Type badge, Summary, Status badge, Progress bar + message, Source, Started by, Started, Duration, Actions (Cancel / Retry / View Correlation).
+Table columns: Type badge, Summary, Status badge, Progress bar + message, **Queue Position** (shown only for Pending operations — indicates position in pending queue; useful during large rollouts), Source, Started by, Started, Duration, Actions (Cancel / Retry / View Correlation).
 
 Filter bar: type multi-select, status multi-select, source multi-select, date range, initiator.
 
@@ -394,6 +407,9 @@ Clicking any row or "View Correlation" opens Activity Correlation tab seeded wit
 
 ### IWorkerStatusRegistry (in-memory singleton)
 
+**Startup registration invariant:**  
+`IWorkerStatusRegistry.Register()` must be called in each worker's `StartAsync`. If a hosted worker starts without calling `Register()`, the Health page silently omits it — a hidden availability gap. The service startup sequence should validate that all expected workers are registered. Consider a startup health check that lists registered vs expected worker names and fails fast on discrepancy.
+
 ```csharp
 interface IWorkerStatusRegistry
 {
@@ -404,6 +420,7 @@ interface IWorkerStatusRegistry
     WorkerStatusDto GetOne(string workerName);
     WorkerStatusDto[] GetAll();
 }
+```
 ```
 
 Workers call `RecordTickStart` / `RecordTickComplete` / `RecordTickFailed` on each iteration. No other changes to worker logic required. Registry is thread-safe: `ConcurrentDictionary<string, WorkerState>`, lock-free reads, per-worker lock only when updating rolling averages.
@@ -491,7 +508,7 @@ Implementations registered and resolved by `ISystemHealthService`:
 ```
 GET /api/v1/system/workers          ViewerOrAbove — WorkerStatusDto[] (all, no history)
 GET /api/v1/system/workers/{name}   ViewerOrAbove — WorkerStatusDto + full tick history
-POST /api/v1/system/workers/{name}/diagnostics   AdminOnly — dep check, no execution
+POST /api/v1/system/workers/{name}/diagnostics   AdminOnly — read-only probe: dep resolution, config state, registry snapshot. No execution, no writes, no retries, no side effects.
 GET /api/v1/system/health           ViewerOrAbove — ISystemHealthContributor[] aggregated
 GET /api/v1/system/info             ViewerOrAbove — version, build, migration, runtime, env, uptime
 ```
@@ -506,6 +523,8 @@ GET /api/v1/system/info             ViewerOrAbove — version, build, migration,
 `/api/v1/system/health` is separate: rich structured JSON for the UI, not the infrastructure probe format.
 
 ### Frontend
+
+**Workers summary bar** (above grid): total worker count, counts by state, **Longest Running Worker** (name + duration of current tick if Running). Surfacing the longest-running worker early makes it easy to spot stuck or slow workers at a glance.
 
 **Workers grid:** sorted Failed → Warning → Delayed → Running → Idle → Disabled.  
 Card per worker: Name, State badge, Last Run (relative), Avg Duration, Failures badge, Next Expected.
@@ -673,6 +692,8 @@ Last successful step: Configuration Assigned
 Failure: Node never acknowledged configuration.
 ```
 
+**Phase collapse:** each phase header is collapsible. Collapsed state shows phase name, event count, and outcome badge ("4 events ✓"). Long workflows (20+ events across 5+ phases) become easy to scan with irrelevant phases collapsed.
+
 **Cross-navigation** (EntityChips): above timeline, each chip links to the domain entity.
 
 **Deep linking:** every row with a `DeepLink` is clickable. Every surface that carries a `correlationId` (Jobs table, Overview Recent Activity, Node detail, Configuration assignments) includes "View Correlation →".
@@ -717,7 +738,7 @@ Every parameter update audits `PARAMETER_UPDATED` with old value, new value, act
 
 ### Feature Flags
 
-Parameters with `Category = 'FeatureFlag'`. Seeded in M024:
+Parameters with `Category = 'FeatureFlag'`. Seeded in M025:
 
 | Name | Default | Description |
 |---|---|---|
@@ -728,6 +749,8 @@ Parameters with `Category = 'FeatureFlag'`. Seeded in M024:
 | `EnableExportJobs` | true | Enables background export job processing |
 
 `/administration/feature-flags`: card per flag showing name, description, boolean toggle, last modified, modified by. `IsDynamic = true` → applied immediately. `RequiresRestart = true` → shows "Restart Required" badge.
+
+Filter/search bar: **Search by name**, **Category** multi-select, **Recently Modified** sort (last 7 days highlighted). Once there are 50+ flags, a flat toggle list becomes unusable without filtering.
 
 **Permission:** `AdminOnly`.
 
@@ -741,7 +764,7 @@ Badge per parameter: `✓ Live` (IsDynamic=true) or `⚠ Restart Required` (Requ
 
 ### Retention Policies
 
-New `sync_parameter` keys seeded in M024:
+New `sync_parameter` keys seeded in M025:
 
 | Key | Default | Description |
 |---|---|---|
@@ -807,14 +830,23 @@ No data duplication — state comes from `ISystemHealthContributor` aggregation.
 
 ## Database Migrations
 
-### M024 — Operations & Administration Foundation
+### M024 — Operations Foundation
 
-1. Create `sync_operation` table (Pillar 2)
-2. Add composite indexes on `correlation_id` to `sync_audit`, `sync_node_lifecycle_history`, `sync_node_configuration_history`
-3. Add `category`, `display_name`, `description`, `display_order`, `value_type`, `minimum_value`, `maximum_value`, `allowed_values`, `depends_on`, `conflicts_with` columns to `sync_parameter`
-4. Seed Feature Flag parameters
-5. Seed Retention Policy parameters
-6. Seed/update existing system parameters with category groupings and metadata
+Scoped to the `sync_operation` registry and correlation performance. Kept small for safe rollback.
+
+1. Create `sync_operation` table (Pillar 2, see DDL above)
+2. Add composite index `IX_sync_audit_correlation_time` on `sync_audit (correlation_id, create_time)`
+3. Add index `IX_sync_node_lifecycle_history_correlation` on `sync_node_lifecycle_history (correlation_id)`
+4. Add index `IX_sync_node_configuration_history_correlation` on `sync_node_configuration_history (correlation_id)`
+
+### M025 — Parameter Metadata & Administration Seeds
+
+Separate migration for `sync_parameter` schema and data changes. Isolating from M024 means a failed seed rollback does not affect the operation registry.
+
+1. Add nullable columns to `sync_parameter`: `category`, `display_name`, `description`, `display_order`, `value_type`, `minimum_value`, `maximum_value`, `allowed_values`, `depends_on`, `conflicts_with`
+2. Seed Feature Flag parameters (Category = 'FeatureFlag')
+3. Seed Retention Policy parameters (Category = 'Retention')
+4. Update existing system parameters with category groupings and metadata
 
 ---
 
@@ -912,6 +944,7 @@ Existing events unchanged.
 - `CorrelationTimelineTests` — seed audit events with shared correlationId + operation row; GET /audit/correlation/{id}; verify phase grouping, entity chips, failure banner
 - `AdministrationTests` — feature flag toggle; parameter validation; retention policy update + PurgeJob; PARAMETER_UPDATED audit generation
 - `NavigationTests` — verify all redirects (/audit, /admin/*, /dashboard) return 301/302 to correct targets
+- `OverviewPerformanceTests` — seed 1000 operations, 100 nodes (varied states), 100 workers (varied states); `GET /api/v1/system/overview` must respond in under 500 ms. Not a hard SLA but establishes a regression baseline before the endpoint becomes production load.
 
 ---
 
@@ -942,5 +975,41 @@ Epic 12C     System Administration Center  ← this spec
 Epic 12D     Platform Runtime & Diagnostics
 Epic 13      Enterprise capabilities
 ```
+
+---
+
+## Appendix — Correlation Lifecycle Example
+
+A complete workflow trace from node approval to configuration current, all linked by one `CorrelationId`.
+
+```
+Phase: Registration
+  ● [Registration/Info]  Registration Received           09:14:01  actor: node
+  ● [Registration/Info]  Registration Approved           09:14:45  actor: admin
+
+Phase: Lifecycle
+  ● [Lifecycle/Info]     Bootstrap Token Generated       09:14:46  actor: system
+  ● [Lifecycle/Info]     Node Activated                  09:14:47  actor: system
+                                                         +2s
+  ● [Lifecycle/Info]     Heartbeat Received              09:14:49  actor: node
+  ● [Lifecycle/Info]     Node → Active                   09:14:49  actor: system
+
+Phase: Configuration
+  ● [Configuration/Info] Template v4 Assigned            09:15:03  actor: admin
+  ● [Configuration/Info] Node → UpdateAvailable          09:15:03  actor: system
+                                                         +18s
+  ● [Configuration/Info] Configuration Downloaded        09:15:21  actor: node
+  ● [Configuration/Info] Configuration Applied           09:15:22  actor: node
+
+Phase: Operations
+                                                         +27s
+  ● [Configuration/Info] Heartbeat: hash match           09:15:49  actor: node
+  ● [Configuration/Info] Node → Current                  09:15:49  actor: system
+
+EntityChips: [Node Clinic-07] [Template Clinic v4] [Operation Rollout-102] [User admin]
+Duration: 1m 48s   Result: Success
+```
+
+This trace is assembled from `sync_audit` (primary), `sync_node_lifecycle_history` (Lifecycle phase enrichment), `sync_node_configuration_history` (Configuration phase enrichment), and `sync_operation` (operation metadata). The Activity page reconstructs it in a single indexed query per table; no cross-table join is needed because each table is indexed on `correlation_id`.
 
 After 12C ships, MSOSync CE has all core capabilities of a production-grade synchronization platform. Subsequent work (12D, 13) extends the platform for advanced operational control and enterprise requirements rather than filling architectural gaps.
