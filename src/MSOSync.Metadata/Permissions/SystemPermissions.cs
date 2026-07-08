@@ -7,7 +7,8 @@ public static class SystemPermissions
     public const string ViewTopology       = "VIEW_TOPOLOGY";
     public const string ApproveNodes       = "APPROVE_NODES";
     public const string ProvisionNodes     = "PROVISION_NODES";
-    public const string ManageNodeLifecycle = "MANAGE_NODE_LIFECYCLE";
+    public const string ManageNodeLifecycle   = "MANAGE_NODE_LIFECYCLE";
+    public const string ManageConfigurations  = "MANAGE_CONFIGURATIONS";
 
     // Default permission sets per role — used by ResetRoleToDefaultsAsync
     public static readonly IReadOnlyDictionary<string, IReadOnlyList<string>> Defaults =
@@ -21,6 +22,6 @@ public static class SystemPermissions
             ["ADMIN"]    = ["VIEW_EVENTS", "VIEW_METRICS", "VIEW_AUDIT", "VIEW_TOPOLOGY",
                             "EXPORT_DATA", "RETRY_BATCHES", "APPROVE_NODES", "RELEASE_LOCKS",
                             "EDIT_PARAMETERS", "MANAGE_TRIGGERS", "MANAGE_ROUTERS", "MANAGE_USERS",
-                            "PROVISION_NODES", "MANAGE_NODE_LIFECYCLE"],
+                            "PROVISION_NODES", "MANAGE_NODE_LIFECYCLE", "MANAGE_CONFIGURATIONS"],
         };
 }

@@ -10,4 +10,5 @@ public enum OperationsEventType
     SyncCycleCompleted,
     NodeLifecycleChanged,
     NodeMaintenanceChanged,
+    ConfigurationChanged,
 }

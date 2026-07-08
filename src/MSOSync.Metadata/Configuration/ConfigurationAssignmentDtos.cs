@@ -54,3 +54,7 @@ public sealed record DriftNodeDto(
     string? AppliedEffectiveHash,
     ConfigurationState? ConfigurationState,
     DateTime? ConfigurationStatusReportedAt);
+
+public sealed record AssignRequest(Guid TemplateId, int Version);
+public sealed record SetOverrideRequest(string Key, string Value, string Source);
+public sealed record CloneTemplateRequest(string NewName);

@@ -18,6 +18,7 @@ using MSOSync.Metadata.Permissions;
 using MSOSync.Metadata.NodeManagement;
 using MSOSync.Metadata.Preferences;
 using MSOSync.Metadata.Users;
+using MSOSync.Metadata.Configuration;
 
 namespace MSOSync.Metadata;
 
@@ -105,6 +106,16 @@ public static class MetadataServiceExtensions
         services.AddScoped<IValidator<Lifecycle.DecommissionRequest>, Lifecycle.DecommissionRequestValidator>();
         services.AddScoped<IValidator<Lifecycle.DisableRequest>, Lifecycle.DisableRequestValidator>();
         services.AddScoped<IValidator<Lifecycle.ActivateRequest>, Lifecycle.ActivateRequestValidator>();
+
+        // Epic 12B-2 — Configuration Management
+        services.AddScoped<IConfigurationValidationService, ConfigurationValidationService>();
+        services.AddScoped<IConfigurationTemplateService, ConfigurationTemplateService>();
+        services.AddScoped<IEffectiveConfigurationComputer, EffectiveConfigurationComputer>();
+        services.AddScoped<IConfigurationAssignmentService, ConfigurationAssignmentService>();
+        services.AddScoped<IRolloutService, RolloutService>();
+        services.AddSingleton<IDriftDetector, DriftDetector>();
+        services.AddScoped<INodeConfigurationService, NodeConfigurationService>();
+        services.AddScoped<HeartbeatProcessor>();
 
         return services;
     }
