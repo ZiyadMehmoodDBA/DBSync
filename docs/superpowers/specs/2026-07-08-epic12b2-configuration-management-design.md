@@ -92,6 +92,22 @@ Epic 12B-2 adds a professional, deterministic configuration management system fo
 
 **Idempotency rule:** consecutive heartbeats reporting the same (appliedVersion, hash, state) do NOT create duplicate history events.
 
+#### `sync_configuration_rollout`
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | uniqueidentifier PK | returned as rolloutId in 202 response |
+| `status` | nvarchar(20) | Queued / InProgress / Completed / Failed |
+| `template_id` | uniqueidentifier FK→ConfigurationTemplate | |
+| `template_version` | int | |
+| `target_node_count` | int | total nodes targeted |
+| `applied_count` | int | nodes that reached Applied state |
+| `failed_count` | int | nodes that failed or couldn't be assigned |
+| `initiated_by` | uniqueidentifier FK→SyncUser | |
+| `started_at` | datetime2 | |
+| `completed_at` | datetime2 | nullable |
+
+Rollouts are persistent (not in-memory) so `GET /rollout/{id}` is durable across restarts. Individual assignment events in `sync_node_configuration_history` carry the `correlation_id` = rolloutId for grouping.
+
 ### SyncNode additions (M023)
 | Column | Type | Notes |
 |--------|------|-------|
@@ -139,6 +155,8 @@ public enum ConfigurationState
     Unknown           // ConfigurationStatusReportedAt older than stale threshold
 }
 ```
+
+**Unknown stale threshold formula:** `HeartbeatIntervalSeconds × MissedThreshold × 2` seconds, where both values come from the `Heartbeat:` config section. Default: `30 × 3 × 2 = 180 seconds`. Evaluated at query time (drift endpoint, summary, node detail) — not stored on SyncNode.
 
 ### ConfigurationAssignment domain concept
 In CE, represented as columns on SyncNode (`AssignedTemplateId`, `AssignedTemplateVersion`). Conceptually a distinct domain object with fields: `AssignedTemplateId`, `AssignedTemplateVersion`, `AssignedBy`, `AssignedAt`. Extension point for Enterprise (separate table with rollout metadata).
@@ -323,6 +341,8 @@ Sent to: `operators` group + `node-{nodeId}` group.
 
 **New permission seed (M023):** `MANAGE_CONFIGURATIONS` (admin-level)
 
+**Route naming note:** Management APIs use `/api/v1/configuration/...` (singular, management namespace). Node-facing endpoint uses `/api/v1/configurations/current` (plural, node namespace) — intentionally distinct to enable separate auth middleware and avoid route ambiguity. This is consistent with the existing pattern where `/api/v1/nodes/{nodeId}/heartbeat` (hub-perspective) differs from `/api/v1/configurations/current` (node-perspective).
+
 ### ConfigurationTemplateController (base: `/api/v1/configuration/templates`)
 
 | Method | Path | Auth | Description |
@@ -351,7 +371,7 @@ Sent to: `operators` group + `node-{nodeId}` group.
 | DELETE | `/nodes/{nodeId}/overrides/{key}` | MANAGE_CONFIGURATIONS | Remove override; recomputes ExpectedEffectiveHash |
 | POST | `/rollout` | MANAGE_CONFIGURATIONS | Bulk assign → 202 + `{ rolloutId, status: "Queued" }` |
 | GET | `/rollout/{rolloutId}` | MANAGE_CONFIGURATIONS | Rollout progress (per-node state breakdown) |
-| GET | `/drift` | MANAGE_CONFIGURATIONS | All nodes + ConfigurationState (server-side filter: state, templateId, version, nodeGroup, search) |
+| GET | `/drift` | MANAGE_CONFIGURATIONS | All nodes + ConfigurationState. Query params: `?state=Drifted&templateId=X&version=3&nodeGroup=hub-group&search=node*` (search matches node name prefix). Filters combined with AND logic. |
 | GET | `/summary` | VIEW_TOPOLOGY or MANAGE_CONFIGURATIONS | Counts by ConfigurationState |
 
 **Assignment pre-flight validation:**
@@ -434,8 +454,8 @@ Configuration is an operational module, not administrative.
 
 ### SignalR integration
 `ConfigurationChangedEvent` → eventRouter routes by category:
-- Invalidate: `useNodeConfiguration(nodeId)` + `useAssignments` + `useDriftSummary` + `useConfigurationSummary`
-- Does NOT invalidate template authoring queries or unrelated groups
+- Invalidate: `useNodeConfiguration(nodeId)` + `useNodeConfiguration` (list) + `useDriftSummary(filters)` + `useConfigurationSummary()`
+- Does NOT invalidate `useTemplates`, `useTemplate`, `useTemplateVersions`, or unrelated query groups
 
 Template versions: lazy-loaded (list on initial page; load content only on expand or compare action).
 
@@ -443,7 +463,8 @@ Template versions: lazy-loaded (list on initial page; load content only on expan
 
 ## Section 6: Testing Strategy
 
-### Backend unit tests (SQLite EF Core, MSOSync.ConfigurationTests)
+### Backend unit tests (SQLite EF Core, new project: MSOSync.ConfigurationTests)
+New project added to solution, follows the same pattern as MSOSync.MetadataTests (SQLite, xUnit, FluentAssertions, Moq). No Testcontainers dependency — unit tests only.
 
 **`CanonicalJsonSerializer` tests (independent):**
 - Property ordering deterministic
