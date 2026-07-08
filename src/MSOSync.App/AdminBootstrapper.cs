@@ -31,9 +31,9 @@ public sealed class AdminBootstrapper(
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var hasher = scope.ServiceProvider.GetRequiredService<BCryptPasswordHasher>();
 
-        if (await db.Users.AnyAsync(ct))
+        if (await db.Users.AnyAsync(u => u.Username == adminUser, ct))
         {
-            logger.LogDebug("Users already exist — skipping admin bootstrap");
+            logger.LogDebug("Admin user '{Username}' already exists — skipping bootstrap", adminUser);
             return;
         }
 
