@@ -124,4 +124,74 @@ public sealed class ConfigurationAssignmentServiceTests : IClassFixture<Configur
         var dto2 = await _svc.GetNodeConfigurationAsync(node.NodeId, CancellationToken.None);
         dto2.ExpectedEffectiveHash.Should().Be(originalHash);
     }
+
+    [Fact]
+    public async Task AssignAsync_Reassign_WritesUnassignedHistoryForOldTemplate()
+    {
+        // Seed two templates and one node
+        var nodeId   = "reassign-node-1";
+        var settings = new ConfigurationSettings
+        {
+            HeartbeatIntervalSeconds = 30, TransportMode = "Push",
+            MaxRetryAttempts = 3, RetryBackoffSeconds = 60, BatchSizeLimit = 1000,
+            FeatureFlags = [], ChannelIds = [], RouterIds = [], TriggerIds = [],
+        };
+
+        var templateA = new SyncConfigurationTemplate
+        {
+            Id = Guid.NewGuid(), Name = $"TA-{nodeId}", Status = "Published",
+            CurrentPublishedVersion = 1, CreatedBy = _userId,
+            CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow,
+        };
+        _fx.Db.ConfigurationTemplates.Add(templateA);
+
+        var hash = CanonicalJsonSerializer.ComputeHash(settings);
+        var versionA = new SyncConfigurationTemplateVersion
+        {
+            Id = Guid.NewGuid(), TemplateId = templateA.Id, VersionNumber = 1,
+            IsDraft = false, SettingsJson = JsonSerializer.Serialize(settings, _json),
+            TemplateContentHash = hash, SchemaVersion = 1,
+        };
+        _fx.Db.ConfigurationTemplateVersions.Add(versionA);
+
+        var templateB = new SyncConfigurationTemplate
+        {
+            Id = Guid.NewGuid(), Name = $"TB-{nodeId}", Status = "Published",
+            CurrentPublishedVersion = 1, CreatedBy = _userId,
+            CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow,
+        };
+        _fx.Db.ConfigurationTemplates.Add(templateB);
+
+        var versionB = new SyncConfigurationTemplateVersion
+        {
+            Id = Guid.NewGuid(), TemplateId = templateB.Id, VersionNumber = 1,
+            IsDraft = false, SettingsJson = JsonSerializer.Serialize(settings, _json),
+            TemplateContentHash = hash, SchemaVersion = 1,
+        };
+        _fx.Db.ConfigurationTemplateVersions.Add(versionB);
+
+        var node = new SyncNode { NodeId = nodeId, GroupId = "g", SyncUrl = "http://x" };
+        _fx.Db.Nodes.Add(node);
+        await _fx.Db.SaveChangesAsync();
+
+        // Assign template A
+        await _svc.AssignAsync(nodeId, templateA.Id, 1, _userId, null, CancellationToken.None);
+
+        // Reassign to template B
+        await _svc.AssignAsync(nodeId, templateB.Id, 1, _userId, null, CancellationToken.None);
+
+        var history = await _fx.Db.NodeConfigurationHistories
+            .Where(h => h.NodeId == nodeId)
+            .OrderBy(h => h.OccurredAt)
+            .ToListAsync(default);
+
+        // Should have: Assigned(A), Unassigned(A), Assigned(B)
+        history.Should().HaveCount(3);
+        history[0].EventType.Should().Be("Assigned");
+        history[0].TemplateId.Should().Be(templateA.Id);
+        history[1].EventType.Should().Be(ConfigurationAuditConstants.Unassigned);
+        history[1].TemplateId.Should().Be(templateA.Id);
+        history[2].EventType.Should().Be("Assigned");
+        history[2].TemplateId.Should().Be(templateB.Id);
+    }
 }

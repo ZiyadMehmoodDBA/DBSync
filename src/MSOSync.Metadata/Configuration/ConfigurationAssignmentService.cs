@@ -36,6 +36,21 @@ public sealed class ConfigurationAssignmentService(
         // Compute ExpectedEffectiveHash
         var effective = await computer.ComputeAsync(templateVersion, nodeId, ct);
 
+        // If node already has an assignment, write an Unassigned event for the old template
+        if (node.AssignedTemplateId.HasValue)
+        {
+            db.NodeConfigurationHistories.Add(new SyncNodeConfigurationHistory
+            {
+                Id              = Guid.NewGuid(),
+                NodeId          = nodeId,
+                EventType       = ConfigurationAuditConstants.Unassigned,
+                TemplateId      = node.AssignedTemplateId,
+                TemplateVersion = node.AssignedTemplateVersion,
+                ActorId         = userId,
+                OccurredAt      = DateTime.UtcNow,
+            });
+        }
+
         node.AssignedTemplateId      = templateId;
         node.AssignedTemplateVersion = version;
         node.ExpectedEffectiveHash   = effective.EffectiveHash;
@@ -267,6 +282,8 @@ public sealed class ConfigurationAssignmentService(
 
         var effective = await computer.ComputeAsync(ver, nodeId, ct);
         node.ExpectedEffectiveHash = effective.EffectiveHash;
+        // Expected hash changed — node must re-apply configuration
+        node.ConfigurationState = ConfigurationState.UpdateAvailable;
         await db.SaveChangesAsync(ct);
     }
 }

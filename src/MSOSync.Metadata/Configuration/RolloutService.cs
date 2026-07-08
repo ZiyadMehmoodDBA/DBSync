@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using MSOSync.Common.Exceptions;
 using MSOSync.Metadata.Audit;
 using MSOSync.Persistence;
@@ -8,58 +9,88 @@ namespace MSOSync.Metadata.Configuration;
 
 public sealed class RolloutService(
     AppDbContext db,
-    IConfigurationAssignmentService assignmentSvc,
-    IAuditService auditSvc) : IRolloutService
+    IAuditService auditSvc,
+    IServiceScopeFactory scopeFactory) : IRolloutService
 {
-    public async Task<RolloutDto> StartRolloutAsync(StartRolloutRequest req, Guid userId, CancellationToken ct)
+    public async Task<RolloutDto> StartRolloutAsync(
+        Guid templateId, int version, IReadOnlyList<string> nodeIds,
+        Guid actorId, CancellationToken ct)
     {
         var rolloutId     = Guid.NewGuid();
         var correlationId = rolloutId.ToString();
         var now           = DateTime.UtcNow;
 
+        // Persist rollout record first
         var rollout = new SyncConfigurationRollout
         {
             Id              = rolloutId,
             Status          = "InProgress",
-            TemplateId      = req.TemplateId,
-            TemplateVersion = req.TemplateVersion,
-            TargetNodeCount = req.NodeIds.Count,
-            PendingCount    = req.NodeIds.Count,
-            InitiatedBy     = userId,
+            TemplateId      = templateId,
+            TemplateVersion = version,
+            TargetNodeCount = nodeIds.Count,
+            PendingCount    = nodeIds.Count,
+            InitiatedBy     = actorId,
             StartedAt       = now,
         };
         db.ConfigurationRollouts.Add(rollout);
         await db.SaveChangesAsync(ct);
 
         await auditSvc.WriteAsync(ConfigurationAuditConstants.RolloutStarted,
-            $"Rollout {rolloutId} started for template {req.TemplateId} v{req.TemplateVersion} ({req.NodeIds.Count} nodes)",
-            userId.ToString(), ct);
+            $"Rollout {rolloutId} started for template {templateId} v{version} ({nodeIds.Count} nodes)",
+            actorId.ToString(), ct);
 
-        // Process each node — failure policy: continue on per-node failure
-        int applied = 0, failed = 0;
-        foreach (var nodeId in req.NodeIds)
+        // Fire and forget — do not await; use a new scope for background DB work
+        var capturedNodeIds    = nodeIds.ToList();
+        var capturedTemplateId = templateId;
+        var capturedVersion    = version;
+        var capturedActor      = actorId;
+        var capturedCorrelation = correlationId;
+        var capturedRolloutId  = rolloutId;
+        var capturedTotal      = nodeIds.Count;
+
+        _ = Task.Run(async () =>
         {
-            try
+            await using var scope     = scopeFactory.CreateAsyncScope();
+            var bgDb                  = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var bgAssignmentSvc       = scope.ServiceProvider.GetRequiredService<IConfigurationAssignmentService>();
+
+            int succeeded = 0, failed = 0;
+            foreach (var nodeId in capturedNodeIds)
             {
-                await assignmentSvc.AssignAsync(nodeId, req.TemplateId, req.TemplateVersion,
-                    userId, correlationId, ct);
-                applied++;
-            }
-            catch
-            {
-                failed++;
+                try
+                {
+                    await bgAssignmentSvc.AssignAsync(nodeId, capturedTemplateId, capturedVersion,
+                        capturedActor, capturedCorrelation, CancellationToken.None);
+                    succeeded++;
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
+                catch
+                {
+                    failed++;
+                }
+
+                var bgRollout = await bgDb.ConfigurationRollouts.FindAsync(capturedRolloutId);
+                if (bgRollout is not null)
+                {
+                    bgRollout.AppliedCount    = succeeded;
+                    bgRollout.FailedCount     = failed;
+                    bgRollout.PendingCount    = capturedTotal - succeeded - failed;
+                    bgRollout.ProgressPercent = (succeeded + failed) * 100 / capturedTotal;
+                    await bgDb.SaveChangesAsync(CancellationToken.None);
+                }
             }
 
-            rollout.AppliedCount    = applied;
-            rollout.FailedCount     = failed;
-            rollout.PendingCount    = req.NodeIds.Count - applied - failed;
-            rollout.ProgressPercent = (applied + failed) * 100 / req.NodeIds.Count;
-            await db.SaveChangesAsync(ct);
-        }
-
-        rollout.Status      = "Completed";
-        rollout.CompletedAt = DateTime.UtcNow;
-        await db.SaveChangesAsync(ct);
+            var finalRollout = await bgDb.ConfigurationRollouts.FindAsync(capturedRolloutId);
+            if (finalRollout is not null)
+            {
+                finalRollout.Status      = "Completed";
+                finalRollout.CompletedAt = DateTime.UtcNow;
+                await bgDb.SaveChangesAsync(CancellationToken.None);
+            }
+        }, CancellationToken.None); // CancellationToken.None — background work continues after response
 
         return MapRollout(rollout);
     }
