@@ -88,7 +88,7 @@ public sealed class ConfigurationTemplateService(
             ?? throw new NotFoundException($"No draft version for template {templateId}");
 
         var settings = JsonSerializer.Deserialize<ConfigurationSettings>(draft.SettingsJson, _json)!;
-        var validation = await validationSvc.ValidateAsync(settings, ct);
+        var validation = await validationSvc.ValidateAsync(settings, ct, draft.SchemaVersion);
 
         string? hashPreview = null;
         if (validation.IsValid)
@@ -108,7 +108,7 @@ public sealed class ConfigurationTemplateService(
             ?? throw new NotFoundException($"No draft version for template {templateId}");
 
         var settings = JsonSerializer.Deserialize<ConfigurationSettings>(draft.SettingsJson, _json)!;
-        var validation = await validationSvc.ValidateAsync(settings, ct);
+        var validation = await validationSvc.ValidateAsync(settings, ct, draft.SchemaVersion);
 
         if (!validation.IsValid)
         {

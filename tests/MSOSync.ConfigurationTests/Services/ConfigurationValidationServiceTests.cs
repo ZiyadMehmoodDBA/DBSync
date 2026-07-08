@@ -1,4 +1,5 @@
 using FluentAssertions;
+using Microsoft.EntityFrameworkCore;
 using MSOSync.ConfigurationTests;
 using MSOSync.Metadata.Configuration;
 using MSOSync.Persistence.Entities;
@@ -100,5 +101,33 @@ public sealed class ConfigurationValidationServiceTests : IClassFixture<Configur
             Valid(channels: [missingId]), CancellationToken.None);
         result.IsValid.Should().BeFalse();
         result.Errors.Should().Contain(e => e.Field == "ChannelIds");
+    }
+
+    [Fact]
+    public async Task Rule4_DisabledChannel_Fails()
+    {
+        // Seed a disabled channel whose ID matches what settings references
+        var channelId = Guid.NewGuid();
+        _fx.Db.Channels.Add(new SyncChannel
+        {
+            ChannelId = channelId.ToString(),
+            Priority  = 1,
+            Enabled   = false,
+        });
+        await _fx.Db.SaveChangesAsync();
+
+        var result = await _svc.ValidateAsync(
+            Valid(channels: [channelId]), CancellationToken.None);
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e =>
+            e.Field == "ChannelIds" && e.Message.Contains("disabled"));
+    }
+
+    [Fact]
+    public async Task Rule12_SchemaVersionExceedsMax_Fails()
+    {
+        var result = await _svc.ValidateAsync(Valid(), CancellationToken.None, schemaVersion: 999);
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.Field == "SchemaVersion");
     }
 }

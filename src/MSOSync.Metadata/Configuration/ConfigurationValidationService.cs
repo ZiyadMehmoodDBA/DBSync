@@ -9,44 +9,64 @@ public sealed class ConfigurationValidationService(AppDbContext db) : IConfigura
     private static readonly IReadOnlySet<string> ValidTransportModes =
         new HashSet<string>(StringComparer.Ordinal) { "Push", "Pull", "Both" };
 
-    public async Task<ValidationResult> ValidateAsync(ConfigurationSettings s, CancellationToken ct)
+    private const int MaxSupportedSchemaVersion = 1;
+
+    public async Task<ValidationResult> ValidateAsync(ConfigurationSettings s, CancellationToken ct,
+        int schemaVersion = 1)
     {
         var errors = new List<ValidationError>();
 
-        // Rule 1: referenced Channel entities must exist
+        // Rule 12: SchemaVersion must not exceed maximum supported version
+        if (schemaVersion > MaxSupportedSchemaVersion)
+            errors.Add(new("SchemaVersion",
+                $"Schema version {schemaVersion} is not supported; maximum supported is {MaxSupportedSchemaVersion}"));
+
+        // Rule 1: referenced Channel entities must exist and be enabled
         if (s.ChannelIds.Count > 0)
         {
             var channelIdStrings = s.ChannelIds.Select(g => g.ToString()).ToList();
-            var existing = await db.Channels.AsNoTracking()
+            var found = await db.Channels.AsNoTracking()
                 .Where(c => channelIdStrings.Contains(c.ChannelId))
-                .Select(c => c.ChannelId).ToListAsync(ct);
-            var missing = channelIdStrings.Except(existing, StringComparer.OrdinalIgnoreCase).ToList();
+                .Select(c => new { c.ChannelId, c.Enabled })
+                .ToListAsync(ct);
+            var foundIds = found.Select(c => c.ChannelId).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var missing = channelIdStrings.Where(id => !foundIds.Contains(id)).ToList();
             if (missing.Count > 0)
                 errors.Add(new("ChannelIds", $"Channel IDs not found: {string.Join(", ", missing)}"));
+            foreach (var c in found.Where(c => !c.Enabled))
+                errors.Add(new("ChannelIds", $"Channel '{c.ChannelId}' is disabled"));
         }
 
-        // Rule 2: referenced Router entities must exist
+        // Rule 2: referenced Router entities must exist and be enabled
         if (s.RouterIds.Count > 0)
         {
             var routerIdStrings = s.RouterIds.Select(g => g.ToString()).ToList();
-            var existing = await db.Routers.AsNoTracking()
+            var found = await db.Routers.AsNoTracking()
                 .Where(r => routerIdStrings.Contains(r.RouterId))
-                .Select(r => r.RouterId).ToListAsync(ct);
-            var missing = routerIdStrings.Except(existing, StringComparer.OrdinalIgnoreCase).ToList();
+                .Select(r => new { r.RouterId, r.Enabled })
+                .ToListAsync(ct);
+            var foundIds = found.Select(r => r.RouterId).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var missing = routerIdStrings.Where(id => !foundIds.Contains(id)).ToList();
             if (missing.Count > 0)
                 errors.Add(new("RouterIds", $"Router IDs not found: {string.Join(", ", missing)}"));
+            foreach (var r in found.Where(r => !r.Enabled))
+                errors.Add(new("RouterIds", $"Router '{r.RouterId}' is disabled"));
         }
 
-        // Rule 3: referenced Trigger entities must exist
+        // Rule 3: referenced Trigger entities must exist and be enabled
         if (s.TriggerIds.Count > 0)
         {
             var triggerIdStrings = s.TriggerIds.Select(g => g.ToString()).ToList();
-            var existing = await db.Triggers.AsNoTracking()
+            var found = await db.Triggers.AsNoTracking()
                 .Where(t => triggerIdStrings.Contains(t.TriggerId))
-                .Select(t => t.TriggerId).ToListAsync(ct);
-            var missing = triggerIdStrings.Except(existing, StringComparer.OrdinalIgnoreCase).ToList();
+                .Select(t => new { t.TriggerId, t.Enabled })
+                .ToListAsync(ct);
+            var foundIds = found.Select(t => t.TriggerId).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var missing = triggerIdStrings.Where(id => !foundIds.Contains(id)).ToList();
             if (missing.Count > 0)
                 errors.Add(new("TriggerIds", $"Trigger IDs not found: {string.Join(", ", missing)}"));
+            foreach (var t in found.Where(t => !t.Enabled))
+                errors.Add(new("TriggerIds", $"Trigger '{t.TriggerId}' is disabled"));
         }
 
         // Rule 5: no duplicate IDs

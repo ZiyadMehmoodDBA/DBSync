@@ -14,7 +14,6 @@ public static class CanonicalJsonSerializer
     private static readonly JsonSerializerOptions _opts = new()
     {
         WriteIndented = false,
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
     };
 
     public static string ComputeHash(ConfigurationSettings settings)
