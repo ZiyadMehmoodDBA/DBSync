@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using MSOSync.Api.Dtos.Nodes;
 using MSOSync.Common;
 using MSOSync.Metadata.Common;
+using MSOSync.Metadata.Configuration;
 using MSOSync.Metadata.Dtos;
 using MSOSync.Metadata.Interfaces;
 using MSOSync.Metadata.Lifecycle;
@@ -18,7 +19,8 @@ namespace MSOSync.Api.Controllers;
 public sealed class NodesController(
     INodeMetadataService nodeService,
     IClock               clock,
-    INodeLifecycleService lifecycleService) : ControllerBase
+    INodeLifecycleService lifecycleService,
+    HeartbeatProcessor heartbeatProcessor) : ControllerBase
 {
     [HttpGet]
     [Authorize]
@@ -147,6 +149,7 @@ public sealed class NodesController(
         }
 
         await nodeService.RecordHeartbeatAsync(nodeId, clock.UtcNow, ct);
-        return NoContent();
+        var response = await heartbeatProcessor.ProcessAsync(nodeId, request, ct);
+        return Ok(response);
     }
 }
