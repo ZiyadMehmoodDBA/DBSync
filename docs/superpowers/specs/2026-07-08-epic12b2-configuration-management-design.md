@@ -102,9 +102,15 @@ Epic 12B-2 adds a professional, deterministic configuration management system fo
 | `target_node_count` | int | total nodes targeted |
 | `applied_count` | int | nodes that reached Applied state |
 | `failed_count` | int | nodes that failed or couldn't be assigned |
+| `pending_count` | int | nodes not yet applied |
+| `progress_percent` | int | `(applied_count + failed_count) * 100 / target_node_count` |
 | `initiated_by` | uniqueidentifier FK→SyncUser | |
 | `started_at` | datetime2 | |
 | `completed_at` | datetime2 | nullable |
+
+**Rollout status values:** `Queued` / `InProgress` / `Completed` / `Failed` / `Cancelled`
+
+**Failure policy:** continue processing remaining nodes; report per-node failures in rollout status. Rollout reaches `Completed` if all targeted assignments were attempted; `Failed` only if the rollout itself could not start or was cancelled externally.
 
 Rollouts are persistent (not in-memory) so `GET /rollout/{id}` is durable across restarts. Individual assignment events in `sync_node_configuration_history` carry the `correlation_id` = rolloutId for grouping.
 
@@ -131,12 +137,17 @@ public sealed record ConfigurationSettings
     public int MaxRetryAttempts { get; init; }
     public int RetryBackoffSeconds { get; init; }
     public int BatchSizeLimit { get; init; }
+    public string? MinimumAgentVersion { get; init; }    // semver string e.g. "1.2.0"; null = no constraint
     public Dictionary<string, bool> FeatureFlags { get; init; }
     public List<Guid> ChannelIds { get; init; }
     public List<Guid> RouterIds { get; init; }
     public List<Guid> TriggerIds { get; init; }
 }
 ```
+
+**FeatureFlagCatalog:** all valid flag keys are defined in a single `FeatureFlagCatalog` static class (no magic strings). Validation gate rejects any key not present in the catalog. Catalog is the extension point for adding new feature flags.
+
+**MinimumAgentVersion:** assignment pre-flight validates that the target node's reported agent version (if known) is ≥ MinimumAgentVersion. Null = no constraint. Assignment proceeds if node has not yet reported a version.
 
 Stored as canonical JSON in `settings_json`. Channel/Router/Trigger referenced by immutable ID, not name. UI resolves IDs to display names.
 
@@ -157,6 +168,10 @@ public enum ConfigurationState
 ```
 
 **Unknown stale threshold formula:** `HeartbeatIntervalSeconds × MissedThreshold × 2` seconds, where both values come from the `Heartbeat:` config section. Default: `30 × 3 × 2 = 180 seconds`. Evaluated at query time (drift endpoint, summary, node detail) — not stored on SyncNode.
+
+**ConfigurationState write ownership:** Only `ConfigurationAssignmentService` (on assign/unassign) and `HeartbeatProcessor` (on each heartbeat) may write `SyncNode.ConfigurationState`, `SyncNode.AppliedTemplateVersion`, `SyncNode.AppliedEffectiveHash`, or `SyncNode.ConfigurationStatusReportedAt`. No other code path may set these fields directly.
+
+**Configuration history retention:** history rows are pruned by the existing `RetentionWorker` (or equivalent background job) using the `audit.retention.days` system parameter (default 90 days). Hard delete — no archive. Enterprise extension: swap to soft-delete + cold storage when needed.
 
 ### ConfigurationAssignment domain concept
 In CE, represented as columns on SyncNode (`AssignedTemplateId`, `AssignedTemplateVersion`). Conceptually a distinct domain object with fields: `AssignedTemplateId`, `AssignedTemplateVersion`, `AssignedBy`, `AssignedAt`. Extension point for Enterprise (separate table with rollout metadata).
@@ -322,6 +337,19 @@ Drift = AssignedVersion ≠ AppliedVersion OR ExpectedEffectiveHash ≠ AppliedE
 4. Compute `ExpectedEffectiveHash` = SHA256(canonical JSON of effective settings)
 
 Note: ExpectedEffectiveHash includes override values. TemplateContentHash never does.
+
+**Serialization order before hashing:**
+```
+1. Start with template SettingsJson (parsed)
+2. Apply overrides (per-key replacement)
+3. Serialize merged result to canonical JSON:
+   - Sorted property names
+   - Sorted array values (order-invariant collections)
+   - No whitespace
+   - UTF-8 encoding
+4. SHA256 → hex string
+```
+This order is fixed. Any deviation produces a different hash and triggers false drift.
 
 ### SignalR event: `ConfigurationChangedEvent`
 ```json
