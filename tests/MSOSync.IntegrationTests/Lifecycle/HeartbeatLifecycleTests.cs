@@ -22,28 +22,28 @@ public sealed class HeartbeatLifecycleTests(LifecycleFixture fixture)
     private static object Hb(string nodeId) => new { NodeId = nodeId, UptimeSeconds = 1L };
 
     [Fact]
-    public async Task Heartbeat_Active_Returns204()
+    public async Task Heartbeat_Active_Returns200()
     {
         var nodeId    = await fixture.SeedNodeAsync(NodeLifecycleState.Active, "hb-active");
         var token     = await fixture.IssueNodeTokenAsync(nodeId);
         var resp = await fixture.NodeClient(nodeId, token)
             .PostAsJsonAsync($"api/v1/nodes/{nodeId}/heartbeat", Hb(nodeId));
-        resp.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        resp.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     [Fact]
-    public async Task Heartbeat_Recovery_Returns204()
+    public async Task Heartbeat_Recovery_Returns200()
     {
         var nodeId = await fixture.SeedNodeAsync(NodeLifecycleState.Recovery, "hb-recovery",
             mutate: n => n.PreviousLifecycleState = NodeLifecycleState.Active);
         var token  = await fixture.IssueNodeTokenAsync(nodeId);
         var resp   = await fixture.NodeClient(nodeId, token)
             .PostAsJsonAsync($"api/v1/nodes/{nodeId}/heartbeat", Hb(nodeId));
-        resp.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        resp.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     [Fact]
-    public async Task Heartbeat_Decommissioning_Returns204()
+    public async Task Heartbeat_Decommissioning_Returns200()
     {
         // Seed Decommissioning directly and issue a fresh token — decommission API would revoke it.
         var nodeId = await fixture.SeedNodeAsync(NodeLifecycleState.Decommissioning, "hb-decommissioning",
@@ -56,7 +56,7 @@ public sealed class HeartbeatLifecycleTests(LifecycleFixture fixture)
         var token = await fixture.IssueNodeTokenAsync(nodeId);
         var resp  = await fixture.NodeClient(nodeId, token)
             .PostAsJsonAsync($"api/v1/nodes/{nodeId}/heartbeat", Hb(nodeId));
-        resp.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        resp.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     [Fact]
@@ -102,7 +102,7 @@ public sealed class HeartbeatLifecycleTests(LifecycleFixture fixture)
     }
 
     [Fact]
-    public async Task Heartbeat_NeverWritesLifecycle()
+    public async Task Heartbeat_Active_NeverWritesLifecycle()
     {
         // Heartbeat on Active node → state unchanged, no new lifecycle history row added
         var nodeId    = await fixture.SeedNodeAsync(NodeLifecycleState.Active, "hb-nolc");
@@ -119,7 +119,7 @@ public sealed class HeartbeatLifecycleTests(LifecycleFixture fixture)
 
         var resp = await fixture.NodeClient(nodeId, token)
             .PostAsJsonAsync($"api/v1/nodes/{nodeId}/heartbeat", Hb(nodeId));
-        resp.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        resp.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // Count after — must be same
         await using (var scope = fixture.Services.CreateAsyncScope())

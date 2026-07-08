@@ -37,7 +37,7 @@ public sealed class NodeConfigurationService(
         var dto = new CurrentConfigDto(
             TemplateId:           node.AssignedTemplateId.Value,
             TemplateVersion:      node.AssignedTemplateVersion.Value,
-            ContentHash:          version.TemplateContentHash ?? effective.EffectiveHash,
+            ContentHash:          effective.EffectiveHash,
             ConfigurationVersion: node.AssignedTemplateVersion.Value,
             SchemaVersion:        version.SchemaVersion,
             Effective:            effective.Settings);

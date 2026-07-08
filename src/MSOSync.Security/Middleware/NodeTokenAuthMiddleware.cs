@@ -54,6 +54,10 @@ public sealed class NodeTokenAuthMiddleware(RequestDelegate next)
             && val.EndsWith("/heartbeat", StringComparison.OrdinalIgnoreCase))
             return true;
 
+        // /api/v1/configurations/* — node-facing config endpoints
+        if (path.StartsWithSegments("/api/v1/configurations", StringComparison.OrdinalIgnoreCase))
+            return true;
+
         return false;
     }
 

@@ -36,7 +36,7 @@ public sealed class RolloutService(
         await db.SaveChangesAsync(ct);
 
         await auditSvc.WriteAsync(ConfigurationAuditConstants.RolloutStarted,
-            $"Rollout {rolloutId} started for template {templateId} v{version} ({nodeIds.Count} nodes)",
+            $"Rollout {rolloutId}: {nodeIds.Count} node(s)",
             actorId.ToString(), ct);
 
         // Fire and forget — do not await; use a new scope for background DB work
