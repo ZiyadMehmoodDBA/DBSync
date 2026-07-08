@@ -18,10 +18,8 @@ public sealed class HeartbeatProcessorTests : IClassFixture<ConfigurationDbFixtu
     public HeartbeatProcessorTests(ConfigurationDbFixture fx)
     {
         _fx = fx;
-        var validSvc = new ConfigurationValidationService(fx.Db);
-        var computer = new EffectiveConfigurationComputer(fx.Db, validSvc);
         var detector = new DriftDetector();
-        _processor   = new HeartbeatProcessor(fx.Db, computer, detector);
+        _processor   = new HeartbeatProcessor(fx.Db, detector);
     }
 
     private async Task<(SyncNode node, SyncConfigurationTemplateVersion version)> SeedNodeWithTemplate()

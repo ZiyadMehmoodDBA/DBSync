@@ -12,12 +12,9 @@ namespace MSOSync.Metadata.Configuration;
 /// </summary>
 public sealed class HeartbeatProcessor(
     AppDbContext db,
-    IEffectiveConfigurationComputer computer,
     IDriftDetector detector,
     IConfiguration? configuration = null)
 {
-    // Reserved for future pre-compute validation gate
-    private readonly IEffectiveConfigurationComputer _computer = computer;
 
     private int HeartbeatIntervalSeconds => int.TryParse(
         configuration?["Heartbeat:IntervalSeconds"], out var v) ? v : 30;
@@ -64,7 +61,9 @@ public sealed class HeartbeatProcessor(
         }
         else
         {
-            // Structural drift detection
+            // ConfigurationApplyStatus.Applied: fall through to DriftDetector.Compute.
+            // DriftDetector returns Current when hashes match, Drifted when they diverge —
+            // which is the correct semantic for an "Applied" report. No separate branch needed.
             node.ConfigurationState = detector.Compute(node, now,
                 HeartbeatIntervalSeconds, MissedThreshold);
         }

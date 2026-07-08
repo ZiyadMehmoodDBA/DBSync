@@ -32,7 +32,11 @@ public sealed class NodeConfigurationController(INodeConfigurationService config
             return NoContent();  // 204 — no template assigned
 
         if (result.NotModified)
+        {
+            if (!string.IsNullOrEmpty(result.ETag))
+                Response.Headers.ETag = $"\"{result.ETag}\"";
             return StatusCode(304);  // 304 Not Modified
+        }
 
         if (!string.IsNullOrEmpty(result.ETag))
             Response.Headers.ETag = $"\"{result.ETag}\"";
