@@ -48,4 +48,14 @@ public sealed class SyncNode
     public string? DbAuthMode { get; set; }  // "Windows" or "Sql"
     public string? DbUser { get; set; }
     public string? DbPasswordEncrypted { get; set; }
+
+    // Configuration management (Epic 12B-2) — all nullable; null = no template assigned
+    public Guid? AssignedTemplateId { get; set; }
+    public int? AssignedTemplateVersion { get; set; }
+    public int? AppliedTemplateVersion { get; set; }            // node reports via heartbeat
+    public string? ExpectedEffectiveHash { get; set; }          // hub recomputes on assignment/override change
+    public string? AppliedEffectiveHash { get; set; }           // node reports via heartbeat
+    public ConfigurationState? ConfigurationState { get; set; } // computed by hub on heartbeat
+    public DateTime? ConfigurationStatusReportedAt { get; set; }// when node last reported
+    public DateTime? LastAppliedAt { get; set; }
 }

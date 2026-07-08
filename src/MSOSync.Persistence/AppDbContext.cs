@@ -11,6 +11,11 @@ public class AppDbContext : DbContext
     public DbSet<SyncNodeLifecycleHistory> NodeLifecycleHistories => Set<SyncNodeLifecycleHistory>();
     public DbSet<SyncNodeConnectivityHistory> NodeConnectivityHistories => Set<SyncNodeConnectivityHistory>();
     public DbSet<SyncNodeBootstrapToken> NodeBootstrapTokens => Set<SyncNodeBootstrapToken>();
+    public DbSet<SyncConfigurationTemplate> ConfigurationTemplates => Set<SyncConfigurationTemplate>();
+    public DbSet<SyncConfigurationTemplateVersion> ConfigurationTemplateVersions => Set<SyncConfigurationTemplateVersion>();
+    public DbSet<SyncNodeConfigurationOverride> NodeConfigurationOverrides => Set<SyncNodeConfigurationOverride>();
+    public DbSet<SyncNodeConfigurationHistory> NodeConfigurationHistories => Set<SyncNodeConfigurationHistory>();
+    public DbSet<SyncConfigurationRollout> ConfigurationRollouts => Set<SyncConfigurationRollout>();
     public DbSet<SyncNodeGroup> NodeGroups => Set<SyncNodeGroup>();
     public DbSet<SyncNodeSecurity> NodeSecurities => Set<SyncNodeSecurity>();
     public DbSet<SyncRegistrationRequest> RegistrationRequests => Set<SyncRegistrationRequest>();

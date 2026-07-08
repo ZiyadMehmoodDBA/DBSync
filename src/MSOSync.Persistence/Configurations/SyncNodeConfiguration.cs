@@ -132,5 +132,18 @@ public sealed class SyncNodeConfiguration : IEntityTypeConfiguration<SyncNode>
 
         builder.HasIndex(e => e.UpstreamNodeId)
             .HasDatabaseName("IX_sync_node_upstream");
+
+        // Epic 12B-2 — Configuration management (all nullable)
+        builder.Property(e => e.AssignedTemplateId).HasColumnName("assigned_template_id");
+        builder.Property(e => e.AssignedTemplateVersion).HasColumnName("assigned_template_version");
+        builder.Property(e => e.AppliedTemplateVersion).HasColumnName("applied_template_version");
+        builder.Property(e => e.ExpectedEffectiveHash).HasColumnName("expected_effective_hash")
+            .HasColumnType("nvarchar(64)").HasMaxLength(64);
+        builder.Property(e => e.AppliedEffectiveHash).HasColumnName("applied_effective_hash")
+            .HasColumnType("nvarchar(64)").HasMaxLength(64);
+        builder.Property(e => e.ConfigurationState).HasColumnName("configuration_state")
+            .HasColumnType("nvarchar(20)").HasMaxLength(20).HasConversion<string>();
+        builder.Property(e => e.ConfigurationStatusReportedAt).HasColumnName("configuration_status_reported_at");
+        builder.Property(e => e.LastAppliedAt).HasColumnName("last_applied_at");
     }
 }
