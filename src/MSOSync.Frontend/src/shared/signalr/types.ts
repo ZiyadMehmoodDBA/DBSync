@@ -29,6 +29,7 @@ export const OperationsEventType = {
   SyncCycleCompleted:  'SyncCycleCompleted',
   NodeLifecycleChanged:   'NodeLifecycleChanged',
   NodeMaintenanceChanged: 'NodeMaintenanceChanged',
+  ConfigurationChanged:   'ConfigurationChanged',
 } as const;
 
 export type OperationsEventType = (typeof OperationsEventType)[keyof typeof OperationsEventType];

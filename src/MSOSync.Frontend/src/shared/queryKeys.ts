@@ -65,4 +65,21 @@ export const queryKeys = {
   nodeTransitions:      (id: string) => ['node-transitions', id] as const,
   nodeLifecycleHistory: (id: string, filter?: unknown) =>
     filter ? ['node-lifecycle-history', id, filter] as const : ['node-lifecycle-history', id] as const,
+
+  configurationTemplates: (filter?: string) =>
+    filter ? ['configuration-templates', filter] as const : ['configuration-templates'] as const,
+  configurationTemplate: (id: string) => ['configuration-template', id] as const,
+  configurationTemplateVersions: (id: string) => ['configuration-template-versions', id] as const,
+  configurationTemplateVersion: (id: string, v: number) =>
+    ['configuration-template-version', id, v] as const,
+
+  nodeConfiguration: (nodeId: string) => ['node-configuration', nodeId] as const,
+  nodeConfigurationHistory: (nodeId: string) => ['node-configuration-history', nodeId] as const,
+
+  driftSummary: (filter?: Record<string, unknown>) =>
+    filter ? ['drift-summary', filter] as const : ['drift-summary'] as const,
+  driftNodes: (filter?: Record<string, unknown>) =>
+    filter ? ['drift-nodes', filter] as const : ['drift-nodes'] as const,
+  configurationSummary: () => ['configuration-summary'] as const,
+  rolloutStatus: (rolloutId: string) => ['rollout-status', rolloutId] as const,
 };

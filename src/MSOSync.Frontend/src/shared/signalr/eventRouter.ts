@@ -1,6 +1,7 @@
 import type { QueryClient } from '@tanstack/react-query';
 import { OperationsEventType, type OperationsEvent, type PermissionEvent, type ExportJobEvent } from './types';
 import type { ExportJobDto } from '../types/export';
+import { queryKeys } from '../queryKeys';
 
 export async function routeToCache(
   queryClient: QueryClient,
@@ -37,6 +38,15 @@ export async function routeToCache(
         queryClient.invalidateQueries({ queryKey: ['topology-graph'] }),
         queryClient.invalidateQueries({ queryKey: ['node-state', event.nodeId] }),
         queryClient.invalidateQueries({ queryKey: ['node-transitions', event.nodeId] }),
+      ]);
+      return;
+    case OperationsEventType.ConfigurationChanged:
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.nodeConfiguration(event.nodeId) }),
+        queryClient.invalidateQueries({ queryKey: ['node-configuration'] }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.driftSummary() }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.driftNodes() }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.configurationSummary() }),
       ]);
       return;
   }
