@@ -42,7 +42,8 @@ const TYPE_BADGE_COLORS: Record<string, string> = {
   Recovery:     'bg-teal-100 text-teal-800',
 };
 
-const ALL_TYPES: OperationType[] = ['Export', 'Rollout', 'Decommission', 'Recovery'];
+// 'Recovery' excluded: no IOperationHandler exists yet — filter would silently return empty
+const ALL_TYPES: OperationType[] = ['Export', 'Rollout', 'Decommission'];
 const ALL_STATUSES: OperationStatus[] = ['Pending', 'Running', 'Completed', 'Failed', 'Cancelled'];
 
 // --- Component ---
@@ -276,9 +277,9 @@ export function JobsPage() {
           </SelectContent>
         </Select>
 
-        {data && (
+        {data?.totalCount != null && (
           <span className="ml-auto text-xs text-muted-foreground">
-            {data.totalCount ?? 0} total
+            {data.totalCount} total
           </span>
         )}
       </div>

@@ -5,10 +5,11 @@ import type { OverviewHealthWidget, OverviewOperationsWidget, HealthLevel } from
 
 function healthColor(level: HealthLevel): string {
   switch (level) {
-    case 'Healthy':  return 'bg-green-100 text-green-800 border-green-200';
-    case 'Degraded': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-    case 'Critical': return 'bg-red-100 text-red-800 border-red-200';
-    default:         return 'bg-gray-100 text-gray-600 border-gray-200';
+    case 'Healthy':   return 'bg-green-100 text-green-800 border-green-200';
+    case 'Degraded':  return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+    case 'Unhealthy': return 'bg-red-100 text-red-800 border-red-200';
+    case 'Critical':  return 'bg-red-100 text-red-800 border-red-200';
+    default:          return 'bg-gray-100 text-gray-600 border-gray-200';
   }
 }
 

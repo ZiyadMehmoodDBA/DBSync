@@ -5,10 +5,11 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import type { HealthLevel } from '@/shared/types/system';
 
 const LEVEL_COLORS: Record<HealthLevel, string> = {
-  Healthy:  'bg-green-100 text-green-800 border-green-200',
-  Degraded: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-  Critical: 'bg-red-100 text-red-800 border-red-200',
-  Unknown:  'bg-gray-100 text-gray-600 border-gray-200',
+  Healthy:   'bg-green-100 text-green-800 border-green-200',
+  Degraded:  'bg-yellow-100 text-yellow-800 border-yellow-200',
+  Unhealthy: 'bg-red-100 text-red-800 border-red-200',
+  Critical:  'bg-red-100 text-red-800 border-red-200',
+  Unknown:   'bg-gray-100 text-gray-600 border-gray-200',
 };
 
 export function SystemHealthPanel() {

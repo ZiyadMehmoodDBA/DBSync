@@ -1,4 +1,4 @@
-export type HealthLevel = 'Healthy' | 'Degraded' | 'Critical' | 'Unknown';
+export type HealthLevel = 'Healthy' | 'Degraded' | 'Unhealthy' | 'Critical' | 'Unknown';
 export type WarningSeverity = 'Critical' | 'High' | 'Medium' | 'Low';
 
 export interface OverviewHealthWidget {
