@@ -1,9 +1,16 @@
 namespace MSOSync.Metadata.Dtos;
 
 public sealed record ParameterDto(
-    string Name,
-    string? Value,
-    string Description,
-    bool IsSecret,
-    bool RequiresRestart,
-    bool IsDynamic);
+    string  ParameterName,
+    string? ParameterValue,
+    string? Category,
+    string? DisplayName,
+    string? Description,
+    int?    DisplayOrder,
+    string? ValueType,
+    string? MinimumValue,
+    string? MaximumValue,
+    string? AllowedValues,
+    bool    IsSecret,
+    bool    IsDynamic,
+    bool    RequiresRestart);

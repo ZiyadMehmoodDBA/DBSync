@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using MSOSync.Common;
 using MSOSync.Common.Exceptions;
+using MSOSync.Metadata.Audit;
 using MSOSync.Metadata.Descriptors;
 using MSOSync.Metadata.Dtos;
 using MSOSync.Metadata.Events;
@@ -16,7 +17,8 @@ public sealed class ParameterMetadataService(
     AppDbContext db,
     IMemoryCache cache,
     IMediator mediator,
-    ICurrentUserService currentUserService) : IParameterMetadataService
+    ICurrentUserService currentUserService,
+    IAuditService auditService) : IParameterMetadataService
 {
     private const string SecretMask = "*****";
     private static readonly MemoryCacheEntryOptions CacheOptions = new()
@@ -24,9 +26,13 @@ public sealed class ParameterMetadataService(
         AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(60)
     };
 
-    public async Task<IReadOnlyList<ParameterDto>> GetParametersAsync(CancellationToken ct = default)
+    public async Task<IReadOnlyList<ParameterDto>> GetParametersAsync(string? category = null, CancellationToken ct = default)
     {
-        var parameters = await db.Parameters.AsNoTracking().ToListAsync(ct);
+        var query = db.Parameters.AsNoTracking()
+            .Where(p => category == null || p.Category == category)
+            .OrderBy(p => p.DisplayOrder == null ? int.MaxValue : p.DisplayOrder)
+            .ThenBy(p => p.ParameterName);
+        var parameters = await query.ToListAsync(ct);
         return parameters.Select(Map).ToList().AsReadOnly();
     }
 
@@ -67,6 +73,13 @@ public sealed class ParameterMetadataService(
         await db.SaveChangesAsync(ct);
 
         cache.Remove($"metadata:parameter:{name}");
+
+        await auditService.WriteAsync(
+            "PARAMETER_UPDATED",
+            $"{name}: '{oldValue}' → '{newValue}'",
+            currentUserService.GetCurrentUsername(),
+            ct);
+
         await mediator.Publish(new ParameterChangedEvent(name, oldValue, newValue), ct);
     }
 
@@ -95,9 +108,19 @@ public sealed class ParameterMetadataService(
             p.ParameterName, ParameterDescriptor.Unknown(p.ParameterName));
         var value = descriptor.IsSecret ? SecretMask : p.ParameterValue;
         return new ParameterDto(
-            p.ParameterName, value,
-            descriptor.Description, descriptor.IsSecret,
-            descriptor.RequiresRestart, descriptor.IsDynamic);
+            ParameterName:  p.ParameterName,
+            ParameterValue: value,
+            Category:       p.Category,
+            DisplayName:    p.DisplayName,
+            Description:    p.Description ?? descriptor.Description,
+            DisplayOrder:   p.DisplayOrder,
+            ValueType:      p.ValueType,
+            MinimumValue:   p.MinimumValue,
+            MaximumValue:   p.MaximumValue,
+            AllowedValues:  p.AllowedValues,
+            IsSecret:       descriptor.IsSecret,
+            IsDynamic:      descriptor.IsDynamic,
+            RequiresRestart: descriptor.RequiresRestart);
     }
 
     private static ParameterHistoryDto MapHist(SyncParameterHist h) =>

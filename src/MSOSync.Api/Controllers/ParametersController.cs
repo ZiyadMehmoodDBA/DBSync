@@ -12,9 +12,12 @@ public sealed class ParametersController(IParameterMetadataService paramService)
 {
     [HttpGet]
     [Authorize]
-    public async Task<IActionResult> GetParameters(CancellationToken ct)
+    [ProducesResponseType<IEnumerable<ParameterDto>>(200)]
+    public async Task<IActionResult> GetParameters(
+        [FromQuery] string? category = null,
+        CancellationToken ct = default)
     {
-        var result = await paramService.GetParametersAsync(ct);
+        var result = await paramService.GetParametersAsync(category, ct);
         return Ok(result);
     }
 
