@@ -156,7 +156,7 @@ export const router = createBrowserRouter([
               { path: 'channels',         element: <ChannelsPage /> },
               { path: 'triggers',         element: <TriggersPage /> },
               { path: 'routers',          element: <RoutersPage /> },
-              { path: 'users',            element: <PermissionGuard permissionKey={PermissionKeys.ManageUsers}><UsersPage /></PermissionGuard> },
+              { path: 'users',            element: <Navigate to="/administration/users" replace /> },
               { path: 'parameters',       element: <Navigate to="/administration/settings" replace /> },
               { path: 'locks',            element: <LocksPage /> },
               { path: 'downloads',        element: <PermissionGuard permissionKey={PermissionKeys.ExportData}><DownloadsPage /></PermissionGuard> },
