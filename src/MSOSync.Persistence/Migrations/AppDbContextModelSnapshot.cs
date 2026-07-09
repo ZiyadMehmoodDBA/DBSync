@@ -61,6 +61,9 @@ namespace MSOSync.Persistence.Migrations
 
                     b.HasKey("AuditId");
 
+                    b.HasIndex("CorrelationId", "CreateTime")
+                        .HasDatabaseName("IX_sync_audit_correlation_create_time");
+
                     b.HasIndex("CreateTime")
                         .HasDatabaseName("IX_sync_audit_create_time");
 
@@ -1032,6 +1035,9 @@ namespace MSOSync.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CorrelationId")
+                        .HasDatabaseName("IX_node_config_history_correlation_id");
+
                     b.HasIndex("NodeId", "OccurredAt")
                         .HasDatabaseName("IX_node_config_history_node_time");
 
@@ -1220,6 +1226,9 @@ namespace MSOSync.Persistence.Migrations
 
                     b.HasKey("HistoryId");
 
+                    b.HasIndex("CorrelationId")
+                        .HasDatabaseName("IX_node_lifecycle_history_correlation_id");
+
                     b.HasIndex("NodeId", "OccurredAt")
                         .IsDescending(false, true)
                         .HasDatabaseName("IX_node_lifecycle_history_node_time");
@@ -1342,6 +1351,114 @@ namespace MSOSync.Persistence.Migrations
                         .HasDatabaseName("IX_sync_outgoing_batch_node_status");
 
                     b.ToTable("sync_outgoing_batch", "msosync");
+                });
+
+            modelBuilder.Entity("MSOSync.Persistence.Entities.SyncOperation", b =>
+                {
+                    b.Property<Guid>("OperationId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("operation_id")
+                        .HasDefaultValueSql("NEWID()");
+
+                    b.Property<bool>("CanCancel")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false)
+                        .HasColumnName("can_cancel");
+
+                    b.Property<bool>("CanRetry")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false)
+                        .HasColumnName("can_retry");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("datetime2(7)")
+                        .HasColumnName("completed_at");
+
+                    b.Property<string>("CorrelationId")
+                        .HasMaxLength(100)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(100)")
+                        .HasColumnName("correlation_id");
+
+                    b.Property<Guid?>("InitiatedBy")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("initiated_by");
+
+                    b.Property<string>("MetadataJson")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)")
+                        .HasColumnName("metadata_json");
+
+                    b.Property<string>("OperationType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(50)")
+                        .HasColumnName("operation_type");
+
+                    b.Property<int?>("ProgressPercent")
+                        .HasColumnType("int")
+                        .HasColumnName("progress_percent");
+
+                    b.Property<string>("ProgressMessage")
+                        .HasMaxLength(500)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(500)")
+                        .HasColumnName("progress_message");
+
+                    b.Property<Guid?>("ReferenceId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("reference_id");
+
+                    b.Property<string>("Result")
+                        .HasMaxLength(30)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(30)")
+                        .HasColumnName("result");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(30)")
+                        .HasColumnName("source");
+
+                    b.Property<DateTime>("StartedAt")
+                        .HasColumnType("datetime2(7)")
+                        .HasColumnName("started_at");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(30)")
+                        .HasColumnName("status");
+
+                    b.Property<string>("Summary")
+                        .HasMaxLength(500)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(500)")
+                        .HasColumnName("summary");
+
+                    b.HasKey("OperationId");
+
+                    b.HasIndex("CorrelationId")
+                        .HasDatabaseName("IX_sync_operation_correlation_id");
+
+                    b.HasIndex("OperationType")
+                        .HasDatabaseName("IX_sync_operation_type");
+
+                    b.HasIndex("StartedAt")
+                        .IsDescending(true)
+                        .HasDatabaseName("IX_sync_operation_started_at_desc");
+
+                    b.HasIndex("Status")
+                        .HasDatabaseName("IX_sync_operation_status");
+
+                    b.ToTable("sync_operation", "msosync");
                 });
 
             modelBuilder.Entity("MSOSync.Persistence.Entities.SyncParameter", b =>

@@ -43,6 +43,7 @@ public class AppDbContext : DbContext
     public DbSet<SyncPermission>     Permissions      => Set<SyncPermission>();
     public DbSet<SyncRolePermission> RolePermissions  => Set<SyncRolePermission>();
     public DbSet<SyncExportJob>      ExportJobs       => Set<SyncExportJob>();
+    public DbSet<SyncOperation>      Operations       => Set<SyncOperation>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
