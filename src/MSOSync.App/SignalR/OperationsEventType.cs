@@ -12,4 +12,5 @@ public enum OperationsEventType
     NodeMaintenanceChanged,
     ConfigurationChanged,
     OperationChanged,           // Epic 12C — sync_operation state transitions
+    WorkerStatusChanged,        // Epic 12C — worker health state transitions
 }

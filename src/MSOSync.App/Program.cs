@@ -96,6 +96,8 @@ try
     builder.Services.AddMediatR(cfg =>
         cfg.RegisterServicesFromAssemblyContaining<MSOSync.App.SignalR.NodeOperationsPublisher>());
 
+    builder.Services.AddSingleton<IWorkerStatusRegistry, WorkerStatusRegistry>();
+
     builder.Services.AddHostedService<AdminBootstrapper>();
 
     // Export jobs
