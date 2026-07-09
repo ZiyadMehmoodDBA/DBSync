@@ -41,6 +41,7 @@ public sealed class OperationsController(
     /// <param name="pageSize">Number of items per page (1–100, default 25).</param>
     [HttpGet]
     [ProducesResponseType(typeof(OperationPageDto), 200)]
+    [ProducesResponseType(typeof(ProblemDetails), 400)]
     public async Task<IActionResult> GetOperations(
         [FromQuery] string?   types       = null,
         [FromQuery] string?   statuses    = null,
@@ -112,6 +113,7 @@ public sealed class OperationsController(
         }
 
         var updated = await queryService.GetDetailAsync(id, ct);
+        if (updated is null) return NotFound();
         return Ok(updated);
     }
 
@@ -145,6 +147,7 @@ public sealed class OperationsController(
         }
 
         var updated = await queryService.GetDetailAsync(id, ct);
+        if (updated is null) return NotFound();
         return Ok(updated);
     }
 
