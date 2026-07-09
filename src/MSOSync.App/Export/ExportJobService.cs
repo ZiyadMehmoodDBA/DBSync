@@ -2,6 +2,7 @@ using System.Diagnostics.Metrics;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using MSOSync.Metadata.Audit;
 using MSOSync.Metadata.Export;
 using MSOSync.Persistence;
 using MSOSync.Persistence.Entities;
@@ -11,6 +12,7 @@ namespace MSOSync.App.Export;
 public sealed class ExportJobService(
     AppDbContext db,
     IMediator mediator,
+    IAuditService auditSvc,
     IOptions<ExportOptions> opts)
     : IExportJobService
 {
@@ -39,6 +41,9 @@ public sealed class ExportJobService(
         db.ExportJobs.Add(job);
         await db.SaveChangesAsync(ct);
         s_created.Add(1);
+        await auditSvc.WriteAsync("EXPORT_JOB_CREATED",
+            $"Job {job.JobId} ({job.ResourceType}/{job.Format})",
+            job.RequestedBy, ct);
         return job;
     }
 
@@ -114,6 +119,9 @@ public sealed class ExportJobService(
         s_completed.Add(1);
         s_rows.Add(rowCount);
         s_duration.Record(duration);
+        await auditSvc.WriteAsync("EXPORT_JOB_COMPLETED",
+            $"Job {jobId} ({job.ResourceType}/{job.Format}) rows={rowCount} duration={duration:F1}s",
+            job.RequestedBy, ct);
         await PublishAsync(jobId, ct);
     }
 
