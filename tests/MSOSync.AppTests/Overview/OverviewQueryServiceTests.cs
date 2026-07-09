@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using MSOSync.App.Workers;
 using MSOSync.Metadata.Overview;
@@ -32,7 +33,7 @@ public sealed class OverviewQueryServiceTests : IDisposable
         publisherMock
             .Setup(p => p.Publish(It.IsAny<INotification>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
-        _registry = new WorkerStatusRegistry(publisherMock.Object);
+        _registry = new WorkerStatusRegistry(publisherMock.Object, NullLogger<WorkerStatusRegistry>.Instance);
 
         var envMock = new Mock<IHostEnvironment>();
         envMock.Setup(e => e.EnvironmentName).Returns("Test");

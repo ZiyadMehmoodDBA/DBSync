@@ -183,9 +183,9 @@ public sealed class OverviewQueryService(
     private static string? DeriveEventDeepLink(string? actionName, string? entityId) =>
         actionName switch
         {
-            var a when a is not null && a.StartsWith("NODE_") && entityId is not null => $"/operations/nodes/{entityId}",
+            // NODE_ events: ObjectName is audit detail text (e.g. "node:x Pending->Active corr:y"),
+            // not a bare node ID. Return null to avoid broken deep-links.
             var a when a is not null && a.StartsWith("EXPORT_") => "/operations/jobs",
-            var a when a is not null && a.StartsWith("CONFIGURATION_") && entityId is not null => $"/configuration/templates/{entityId}",
             _ => null
         };
 }

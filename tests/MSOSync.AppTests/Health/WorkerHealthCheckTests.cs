@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using MSOSync.App.Health;
 using MSOSync.App.Workers;
@@ -17,7 +18,7 @@ public sealed class WorkerHealthCheckTests
         publisherMock
             .Setup(p => p.Publish(It.IsAny<INotification>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
-        var registry = new WorkerStatusRegistry(publisherMock.Object);
+        var registry = new WorkerStatusRegistry(publisherMock.Object, NullLogger<WorkerStatusRegistry>.Instance);
         configure(registry);
         return registry;
     }

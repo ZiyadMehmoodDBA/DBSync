@@ -25,9 +25,6 @@ public sealed class ExportJobService(
     private static readonly Counter<long>       s_rows      = s_meter.CreateCounter<long>("msosync_export_rows_written_total");
     private static readonly Histogram<double>   s_duration  = s_meter.CreateHistogram<double>("msosync_export_job_duration_seconds");
 
-    // Tracks JobId → OperationId for this service scope (one request / one background task).
-    private readonly Dictionary<Guid, Guid> _operationIds = new();
-
     public async Task<SyncExportJob> CreateJobAsync(
         string requestedBy, string resourceType, string format,
         string filtersJson, Guid? parentJobId, CancellationToken ct)
@@ -61,8 +58,6 @@ public sealed class ExportJobService(
             summary:       $"Export {job.ResourceType} to {job.Format}",
             metadataJson:  $"{{\"format\":\"{job.Format}\",\"resourceType\":\"{job.ResourceType}\"}}",
             ct:            ct);
-
-        _operationIds[job.JobId] = operationId;
 
         return job;
     }
@@ -198,7 +193,6 @@ public sealed class ExportJobService(
 
     private async Task<Guid?> FindOperationIdAsync(Guid jobId, CancellationToken ct)
     {
-        if (_operationIds.TryGetValue(jobId, out var cached)) return cached;
         var op = await db.Operations.AsNoTracking()
             .Where(o => o.ReferenceId == jobId && o.OperationType == "Export")
             .OrderByDescending(o => o.StartedAt)

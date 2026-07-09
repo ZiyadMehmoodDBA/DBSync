@@ -60,13 +60,13 @@ public sealed record OverviewSystemWidget(
     DateTime LastRefreshedAt);
 
 public sealed record SystemInfoDto(
-    string Version,
-    string BuildDate,
-    string GitCommit,
-    string DotNetRuntime,
-    string OperatingSystem,
-    string DatabaseMigration,
-    string Edition,
-    string Environment,
-    string ServerTime,
-    string ProcessUptime);
+    string  Version,
+    string? BuildDate,
+    string? GitCommit,
+    string  DotNetRuntime,
+    string  OperatingSystem,
+    string  DatabaseMigration,
+    string  Edition,
+    string  Environment,
+    string  ServerTime,
+    string  ProcessUptime);

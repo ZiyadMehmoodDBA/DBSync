@@ -1,5 +1,6 @@
 using FluentAssertions;
 using MediatR;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using MSOSync.App.SignalR;
 using MSOSync.App.Workers;
@@ -16,7 +17,7 @@ public sealed class WorkerRegistryTests
         publisherMock
             .Setup(p => p.Publish(It.IsAny<INotification>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
-        return new WorkerStatusRegistry(publisherMock.Object);
+        return new WorkerStatusRegistry(publisherMock.Object, NullLogger<WorkerStatusRegistry>.Instance);
     }
 
     // Test 1: Register + RecordTickStart => ExecutionState = Running

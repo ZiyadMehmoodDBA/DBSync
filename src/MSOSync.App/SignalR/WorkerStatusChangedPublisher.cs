@@ -9,13 +9,13 @@ public sealed class WorkerStatusChangedPublisher(IHubContext<OperationsHub> hub)
 {
     public async Task Handle(WorkerStatusChangedEvent n, CancellationToken ct)
         => await hub.Clients.Group("operators").SendAsync(
-            "WorkerStatusChanged",
-            new
-            {
-                n.WorkerName,
-                PreviousState = n.PreviousState.ToString(),
-                NewState = n.NewState.ToString(),
-                n.OccurredAt
-            },
+            "OperationsEvent",
+            new OperationsEvent(
+                Type:           OperationsEventType.WorkerStatusChanged,
+                NodeId:         n.WorkerName,
+                NodeLabel:      n.WorkerName,
+                PreviousStatus: n.PreviousState.ToString(),
+                CurrentStatus:  n.NewState.ToString(),
+                OccurredAt:     n.OccurredAt),
             ct);
 }

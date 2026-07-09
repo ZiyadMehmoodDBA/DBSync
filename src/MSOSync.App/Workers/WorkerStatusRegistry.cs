@@ -1,10 +1,13 @@
 using System.Collections.Concurrent;
 using MediatR;
+using Microsoft.Extensions.Logging;
 using MSOSync.App.SignalR;
 
 namespace MSOSync.App.Workers;
 
-public sealed class WorkerStatusRegistry(IPublisher publisher) : IWorkerStatusRegistry
+public sealed class WorkerStatusRegistry(
+    IPublisher publisher,
+    ILogger<WorkerStatusRegistry> logger) : IWorkerStatusRegistry
 {
     private sealed class WorkerEntry
     {
@@ -66,6 +69,7 @@ public sealed class WorkerStatusRegistry(IPublisher publisher) : IWorkerStatusRe
 
                 var tick = new TickRecord(startedAt, now, durationMs, true, null, CurrentTickTrigger);
                 EnqueueTick(tick);
+                CurrentTickTrigger = TickTrigger.Scheduled; // reset to default
                 return tick;
             }
         }
@@ -91,6 +95,7 @@ public sealed class WorkerStatusRegistry(IPublisher publisher) : IWorkerStatusRe
 
                 var tick = new TickRecord(startedAt, now, durationMs, false, ex.Message, CurrentTickTrigger);
                 EnqueueTick(tick);
+                CurrentTickTrigger = TickTrigger.Scheduled; // reset to default
                 return tick;
             }
         }
@@ -256,8 +261,12 @@ public sealed class WorkerStatusRegistry(IPublisher publisher) : IWorkerStatusRe
         {
             _lastHealthState[workerName] = newState;
             // Fire-and-forget; we're in a sync context
-            _ = publisher.Publish(new WorkerStatusChangedEvent(
-                workerName, prevState, newState, DateTime.UtcNow));
+            var evt = new WorkerStatusChangedEvent(workerName, prevState, newState, DateTime.UtcNow);
+            _ = publisher.Publish(evt).ContinueWith(
+                t => logger.LogError(t.Exception,
+                    "WorkerStatusRegistry failed to publish {EventType} for worker {WorkerName}",
+                    evt.GetType().Name, workerName),
+                TaskContinuationOptions.OnlyOnFaulted);
         }
     }
 }

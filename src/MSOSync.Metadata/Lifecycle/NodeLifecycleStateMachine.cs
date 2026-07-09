@@ -23,7 +23,7 @@ public sealed class NodeLifecycleStateMachine : INodeLifecycleStateMachine
             [NodeLifecycleState.Disabled] =
                 [NodeLifecycleState.Active, NodeLifecycleState.Recovery, NodeLifecycleState.Decommissioning],
             [NodeLifecycleState.Decommissioning] =
-                [NodeLifecycleState.Decommissioned],
+                [NodeLifecycleState.Decommissioned, NodeLifecycleState.Disabled],
             [NodeLifecycleState.Decommissioned] = [],   // terminal — Invariant 1
             [NodeLifecycleState.Rejected] = [],          // terminal — Invariant 1
         };

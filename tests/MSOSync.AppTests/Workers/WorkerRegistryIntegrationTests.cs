@@ -1,4 +1,5 @@
 using MediatR;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using MSOSync.App.Workers;
 using MSOSync.Common.Workers;
@@ -15,7 +16,7 @@ public sealed class WorkerRegistryIntegrationTests
         publisherMock
             .Setup(p => p.Publish(It.IsAny<INotification>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
-        var registry = new WorkerStatusRegistry(publisherMock.Object);
+        var registry = new WorkerStatusRegistry(publisherMock.Object, NullLogger<WorkerStatusRegistry>.Instance);
 
         registry.Register("WorkerAlpha", TimeSpan.FromSeconds(10));
         registry.Register("WorkerBeta", TimeSpan.FromMinutes(5));

@@ -1,3 +1,4 @@
+using System.Reflection;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Hosting;
@@ -37,10 +38,18 @@ public sealed class SystemController(
     {
         var process = System.Diagnostics.Process.GetCurrentProcess();
         var uptime = DateTime.UtcNow - process.StartTime.ToUniversalTime();
+        var entryAssembly = Assembly.GetEntryAssembly();
+        var version = entryAssembly?.GetName().Version?.ToString()
+                      ?? entryAssembly?.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
+                      ?? "12C";
+        string? buildDate = null;
+        var location = entryAssembly?.Location;
+        if (!string.IsNullOrEmpty(location) && System.IO.File.Exists(location))
+            buildDate = System.IO.File.GetLastWriteTimeUtc(location).ToString("O");
         return Ok(new SystemInfoDto(
-            Version: "12C",
-            BuildDate: "2026-07-08",
-            GitCommit: "unknown",
+            Version: version,
+            BuildDate: buildDate,
+            GitCommit: null,
             DotNetRuntime: System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription,
             OperatingSystem: System.Runtime.InteropServices.RuntimeInformation.OSDescription,
             DatabaseMigration: "M025",
