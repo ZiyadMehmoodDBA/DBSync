@@ -10,10 +10,10 @@ interface Props {
 interface ChartDatum {
   x: number;
   y: number;
-  isSuccess: boolean;
+  success: boolean;
   startedAt: string;
   trigger: string;
-  errorMessage: string | null;
+  error: string | null;
 }
 
 export function WorkerTickChart({ ticks }: Props) {
@@ -27,14 +27,14 @@ export function WorkerTickChart({ ticks }: Props) {
   const sliced = ticks.slice(-100);
   const data: ChartDatum[] = sliced.map((t, i) => ({
     x: i,
-    y: t.durationMs ?? 0,
-    isSuccess: t.isSuccess,
+    y: t.durationMs,
+    success: t.success,
     startedAt: t.startedAt,
     trigger: t.trigger,
-    errorMessage: t.errorMessage,
+    error: t.error,
   }));
 
-  const colors = data.map((d) => (d.isSuccess ? '#22c55e' : '#ef4444'));
+  const colors = data.map((d) => (d.success ? '#22c55e' : '#ef4444'));
 
   const options: ApexOptions = {
     chart: {
@@ -66,11 +66,11 @@ export function WorkerTickChart({ ticks }: Props) {
       custom: ({ dataPointIndex }: { dataPointIndex: number }) => {
         const d = data[dataPointIndex];
         if (!d) return '';
-        const status = d.isSuccess ? '<span style="color:#22c55e">&#10003; Success</span>' : '<span style="color:#ef4444">&#10007; Failed</span>';
+        const status = d.success ? '<span style="color:#22c55e">&#10003; Success</span>' : '<span style="color:#ef4444">&#10007; Failed</span>';
         const started = formatDateTime(d.startedAt);
-        const dur = d.y != null ? `${d.y}ms` : '—';
-        const errorLine = d.errorMessage
-          ? `<div style="color:#ef4444;max-width:240px;word-break:break-word">Error: ${d.errorMessage}</div>`
+        const dur = `${d.y}ms`;
+        const errorLine = d.error
+          ? `<div style="color:#ef4444;max-width:240px;word-break:break-word">Error: ${d.error}</div>`
           : '';
         return `
           <div style="padding:8px 10px;font-size:12px;line-height:1.6">

@@ -30,21 +30,19 @@ export function SystemHealthPanel() {
   return (
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
       {data.map((c) => (
-        <Card key={c.contributor}>
+        <Card key={c.name}>
           <CardHeader className="pb-1 pt-3 px-4">
             <div className="flex items-center justify-between">
-              <p className="text-sm font-medium">{c.contributor}</p>
+              <p className="text-sm font-medium">{c.name}</p>
               <Badge className={`border text-xs ${LEVEL_COLORS[c.level] ?? LEVEL_COLORS['Unknown']}`}>
                 {c.level}
               </Badge>
             </div>
           </CardHeader>
           <CardContent className="px-4 pb-3">
+            <p className="text-xs text-muted-foreground">{c.summary}</p>
             {c.detail && (
-              <p className="text-xs text-muted-foreground">{c.detail}</p>
-            )}
-            {c.latencyMs != null && (
-              <p className="text-xs text-muted-foreground">Latency: {c.latencyMs}ms</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{c.detail}</p>
             )}
           </CardContent>
         </Card>

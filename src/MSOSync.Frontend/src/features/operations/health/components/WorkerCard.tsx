@@ -37,13 +37,13 @@ export function WorkerCard({ worker }: Props) {
       <CardHeader className="pb-2 pt-4 px-4">
         <div className="flex items-start justify-between gap-2">
           <p className="text-sm font-semibold leading-tight truncate">{worker.workerName}</p>
-          <Badge className={`shrink-0 border text-xs ${STATE_COLORS[worker.workerState] ?? STATE_COLORS['Idle']}`}>
-            {worker.workerState}
+          <Badge className={`shrink-0 border text-xs ${STATE_COLORS[worker.state] ?? STATE_COLORS['Idle']}`}>
+            {worker.state}
           </Badge>
         </div>
-        {worker.nextExpectedAt && (
+        {worker.nextExpected && (
           <p className="text-xs text-muted-foreground mt-0.5">
-            Next: {relative(worker.nextExpectedAt)}
+            Next: {relative(worker.nextExpected)}
           </p>
         )}
       </CardHeader>
@@ -51,10 +51,10 @@ export function WorkerCard({ worker }: Props) {
       <CardContent className="px-4 pb-3 flex-1 space-y-1">
         <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-xs">
           <span className="text-muted-foreground">Last run</span>
-          <span>{relative(worker.lastRunAt)}</span>
+          <span>{relative(worker.lastCompleted)}</span>
 
           <span className="text-muted-foreground">Avg duration</span>
-          <span>{worker.avgDurationMs != null ? `${worker.avgDurationMs}ms` : '—'}</span>
+          <span>{worker.averageDurationMs > 0 ? `${worker.averageDurationMs}ms` : '—'}</span>
 
           <span className="text-muted-foreground">Executions</span>
           <span>{worker.executionCount.toLocaleString()}</span>
@@ -87,14 +87,10 @@ export function WorkerCard({ worker }: Props) {
             <WorkerTickChart ticks={worker.recentTicks} />
             <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-xs">
               <span className="text-muted-foreground">Success rate</span>
-              <span>
-                {worker.successRatePct != null
-                  ? `${worker.successRatePct.toFixed(1)}%`
-                  : '—'}
-              </span>
+              <span>{`${worker.successRatePct.toFixed(1)}%`}</span>
 
               <span className="text-muted-foreground">Max duration</span>
-              <span>{worker.maxDurationMs != null ? `${worker.maxDurationMs}ms` : '—'}</span>
+              <span>{worker.maxDurationMs > 0 ? `${worker.maxDurationMs}ms` : '—'}</span>
 
               <span className="text-muted-foreground">Last failure</span>
               <span className="text-destructive">{relative(worker.lastFailureAt)}</span>

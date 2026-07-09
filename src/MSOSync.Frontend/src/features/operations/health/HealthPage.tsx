@@ -16,8 +16,8 @@ const STATE_SORT_ORDER: Record<string, number> = {
 
 function sortWorkers(workers: WorkerStatusDto[]): WorkerStatusDto[] {
   return [...workers].sort((a, b) => {
-    const ao = STATE_SORT_ORDER[a.workerState] ?? 99;
-    const bo = STATE_SORT_ORDER[b.workerState] ?? 99;
+    const ao = STATE_SORT_ORDER[a.state] ?? 99;
+    const bo = STATE_SORT_ORDER[b.state] ?? 99;
     return ao - bo;
   });
 }
@@ -25,8 +25,8 @@ function sortWorkers(workers: WorkerStatusDto[]): WorkerStatusDto[] {
 function findLongestRunning(workers: WorkerStatusDto[]): WorkerStatusDto | null {
   return (
     workers
-      .filter((w) => w.workerState === 'Running' && w.lastRunAt != null)
-      .sort((a, b) => new Date(a.lastRunAt!).getTime() - new Date(b.lastRunAt!).getTime())[0] ?? null
+      .filter((w) => w.state === 'Running' && w.lastStarted != null)
+      .sort((a, b) => new Date(a.lastStarted!).getTime() - new Date(b.lastStarted!).getTime())[0] ?? null
   );
 }
 
@@ -58,7 +58,7 @@ export function HealthPage() {
 
   const stateCounts = COUNTED_STATES.reduce<Partial<Record<WorkerStateType, number>>>(
     (acc, state) => {
-      acc[state] = all.filter((w) => w.workerState === state).length;
+      acc[state] = all.filter((w) => w.state === state).length;
       return acc;
     },
     {}
@@ -88,7 +88,7 @@ export function HealthPage() {
             Longest running:{' '}
             <span className="font-medium text-foreground">{longest.workerName}</span>
             {' — '}
-            {formatRelativeTime(longest.lastRunAt!)}
+            {formatRelativeTime(longest.lastStarted!)}
           </span>
         )}
       </div>
@@ -103,7 +103,7 @@ export function HealthPage() {
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {sorted.map((w) => (
-              <WorkerCard key={w.workerId} worker={w} />
+              <WorkerCard key={w.workerName} worker={w} />
             ))}
           </div>
         )}

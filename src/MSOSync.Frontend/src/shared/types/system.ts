@@ -89,34 +89,46 @@ export type WorkerStateType =
   | 'Delayed'
   | 'Disabled';
 
+export type TickTrigger = 'Scheduled' | 'Manual' | 'Startup' | 'Retry';
+
 export interface WorkerTickDto {
-  tickId: number;
   startedAt: string;
-  completedAt: string | null;
-  durationMs: number | null;
-  trigger: string;
-  isSuccess: boolean;
-  errorMessage: string | null;
+  completedAt: string;
+  durationMs: number;
+  success: boolean;
+  error: string | null;
+  trigger: TickTrigger;
 }
 
 export interface WorkerStatusDto {
-  workerId: string;
   workerName: string;
-  workerState: WorkerStateType;
-  lastRunAt: string | null;
-  nextExpectedAt: string | null;
-  avgDurationMs: number | null;
+  workerVersion: string;
+  expectedInterval: string;
+  registeredAt: string;
+  enabled: boolean;
+  state: WorkerStateType;
+  executionState: 'Running' | 'Idle';
+  healthState: 'Healthy' | 'Warning' | 'Delayed' | 'Failed' | 'Disabled';
+  lastStarted: string | null;
+  lastCompleted: string | null;
+  lastSuccessfulRun: string | null;
+  nextExpected: string | null;
+  averageDurationMs: number;
+  lastDurationMs: number;
   executionCount: number;
+  consecutiveFailures: number;
+  lastError: string | null;
+  lastHeartbeat: string;
+  successRatePct: number;
+  maxDurationMs: number;
   failureCount: number;
   lastFailureAt: string | null;
-  successRatePct: number | null;
-  maxDurationMs: number | null;
   recentTicks: WorkerTickDto[];
 }
 
 export interface HealthContributionDto {
-  contributor: string;
+  name: string;
   level: HealthLevel;
+  summary: string;
   detail: string | null;
-  latencyMs: number | null;
 }
