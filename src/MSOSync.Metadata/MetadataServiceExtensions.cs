@@ -21,6 +21,7 @@ using MSOSync.Metadata.Users;
 using MSOSync.Metadata.Configuration;
 using MSOSync.Metadata.Operations;
 using MSOSync.Metadata.Operations.Handlers;
+using MSOSync.Metadata.Overview;
 
 namespace MSOSync.Metadata;
 
@@ -125,6 +126,10 @@ public static class MetadataServiceExtensions
         services.AddKeyedScoped<IOperationHandler, RolloutOperationHandler>(OperationType.Rollout);
         services.AddKeyedScoped<IOperationHandler, DecommissionOperationHandler>(OperationType.Decommission);
         services.AddScoped<IOperationQueryService, OperationQueryService>();
+
+        // Epic 12C — Overview
+        services.AddSingleton<OverviewSnapshotCache>();
+        services.AddScoped<IOverviewQueryService, OverviewQueryService>();
 
         return services;
     }

@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Hosting;
 using MSOSync.Common.Health;
 using MSOSync.Common.Workers;
+using MSOSync.Metadata.Overview;
 
 namespace MSOSync.Api.Controllers;
 
@@ -10,7 +12,9 @@ namespace MSOSync.Api.Controllers;
 [Authorize(Policy = "ViewerOrAbove")]
 public sealed class SystemController(
     ISystemHealthService healthSvc,
-    IWorkerStatusRegistry workerRegistry) : ControllerBase
+    IWorkerStatusRegistry workerRegistry,
+    IOverviewQueryService overviewSvc,
+    IHostEnvironment env) : ControllerBase
 {
     [HttpGet("health")]
     [ProducesResponseType<HealthContribution[]>(200)]
@@ -21,4 +25,28 @@ public sealed class SystemController(
     [ProducesResponseType<WorkerStatusDto[]>(200)]
     public IActionResult GetWorkers()
         => Ok(workerRegistry.GetAll());
+
+    [HttpGet("overview")]
+    [ProducesResponseType<OverviewDto>(200)]
+    public async Task<IActionResult> GetOverviewAsync(CancellationToken ct)
+        => Ok(await overviewSvc.GetAsync(ct));
+
+    [HttpGet("info")]
+    [ProducesResponseType<SystemInfoDto>(200)]
+    public IActionResult GetInfo()
+    {
+        var process = System.Diagnostics.Process.GetCurrentProcess();
+        var uptime = DateTime.UtcNow - process.StartTime.ToUniversalTime();
+        return Ok(new SystemInfoDto(
+            Version: "12C",
+            BuildDate: "2026-07-08",
+            GitCommit: "unknown",
+            DotNetRuntime: System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription,
+            OperatingSystem: System.Runtime.InteropServices.RuntimeInformation.OSDescription,
+            DatabaseMigration: "M025",
+            Edition: "Community",
+            Environment: env.EnvironmentName,
+            ServerTime: DateTime.UtcNow.ToString("O"),
+            ProcessUptime: $"{(int)uptime.TotalDays}d {uptime.Hours:D2}:{uptime.Minutes:D2}:{uptime.Seconds:D2}"));
+    }
 }
