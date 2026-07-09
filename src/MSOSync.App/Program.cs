@@ -6,7 +6,9 @@ using MSOSync.Api.Controllers.Auth;
 using MSOSync.Api.Exceptions;
 using MSOSync.App;
 using MSOSync.App.Export;
+using MSOSync.App.Health;
 using MSOSync.App.Workers;
+using MSOSync.Common.Health;
 using MSOSync.Common.Workers;
 using MSOSync.Batch;
 using MSOSync.Common;
@@ -99,6 +101,15 @@ try
 
     builder.Services.AddSingleton<IWorkerStatusRegistry, WorkerStatusRegistry>();
 
+    // --- Epic 12C: System Health ---
+    builder.Services.AddSingleton<ISystemHealthService, SystemHealthService>();
+    builder.Services.AddSingleton<ISystemHealthContributor, WorkerHealthContributor>();
+    builder.Services.AddSingleton<ISystemHealthContributor, DatabaseHealthContributor>();
+    builder.Services.AddSingleton<ISystemHealthContributor, ApiHealthContributor>();
+    builder.Services.AddSingleton<ISystemHealthContributor, SignalRHealthContributor>();
+    builder.Services.AddHealthChecks()
+        .AddCheck<WorkerHealthCheck>("workers");
+
     builder.Services.AddHostedService<AdminBootstrapper>();
 
     // Export jobs
@@ -128,9 +139,17 @@ try
     app.MapControllers();
     app.MapHub<MSOSync.App.Hubs.OperationsHub>("/hubs/operations");
 
-    app.MapGet("/health", () => Results.Ok(new { status = "UP", version = "0.1.0" }))
-       .WithName("Health")
-       .WithTags("System");
+    // Health endpoints (no auth required — infrastructure probes)
+    app.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+    {
+        Predicate = _ => false,  // liveness: always returns UP without running checks
+        ResponseWriter = async (ctx, _) =>
+        {
+            ctx.Response.ContentType = "application/json";
+            await ctx.Response.WriteAsync("{\"status\":\"UP\"}");
+        }
+    });
+    app.MapHealthChecks("/health/ready");  // readiness: runs all registered IHealthCheck implementations
 
     if (app.Environment.IsDevelopment())
     {
