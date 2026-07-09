@@ -1,10 +1,13 @@
 using System.Security.Claims;
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 
 namespace MSOSync.Security.Middleware;
 
-public sealed class NodeTokenAuthMiddleware(RequestDelegate next)
+public sealed class NodeTokenAuthMiddleware(
+    RequestDelegate next,
+    ILogger<NodeTokenAuthMiddleware> logger)
 {
     public async Task InvokeAsync(HttpContext context, NodeSecurityService nodeSecurityService)
     {
@@ -22,6 +25,9 @@ public sealed class NodeTokenAuthMiddleware(RequestDelegate next)
             await WriteUnauthorizedAsync(context, "Invalid node token");
             return;
         }
+
+        // Log header presence only — never log the token value itself
+        logger.LogDebug("Node token auth: X-Node-Token header present for path {Path}", context.Request.Path);
 
         var valid = await nodeSecurityService.ValidateTokenAsync(nodeId, nodeToken, context.RequestAborted);
         if (!valid)
