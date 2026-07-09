@@ -131,6 +131,9 @@ public static class MetadataServiceExtensions
         services.AddSingleton<OverviewSnapshotCache>();
         services.AddScoped<IOverviewQueryService, OverviewQueryService>();
 
+        // Epic 12C — Correlation Timeline
+        services.AddScoped<CorrelationTimelineAssembler>();
+
         return services;
     }
 }
