@@ -10,6 +10,7 @@ import {
 import { AuditFilters } from './AuditFilters';
 import { AuditGrid } from './AuditGrid';
 import { AuditInsightsTab } from './AuditInsightsTab';
+import { CorrelationTimeline } from '../../shared/components/CorrelationTimeline';
 import { ExportMenu } from '../../shared/components/ExportMenu';
 import { DEFAULT_PAGE_SIZE } from '../../shared/constants/query';
 import { useInfiniteAudit } from '../../shared/hooks/useInfiniteAudit';
@@ -51,6 +52,7 @@ export function AuditPage() {
         <TabsList>
           <TabsTrigger value="log">Log</TabsTrigger>
           <TabsTrigger value="insights">Insights</TabsTrigger>
+          <TabsTrigger value="correlation">Correlation</TabsTrigger>
         </TabsList>
         <TabsContent value="log">
           <div className="flex flex-col gap-4">
@@ -76,6 +78,9 @@ export function AuditPage() {
         </TabsContent>
         <TabsContent value="insights">
           <AuditInsightsTab />
+        </TabsContent>
+        <TabsContent value="correlation" className="mt-4">
+          <CorrelationTimeline />
         </TabsContent>
       </Tabs>
     </div>
