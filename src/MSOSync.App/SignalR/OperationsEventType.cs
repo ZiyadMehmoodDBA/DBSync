@@ -11,4 +11,5 @@ public enum OperationsEventType
     NodeLifecycleChanged,
     NodeMaintenanceChanged,
     ConfigurationChanged,
+    OperationChanged,           // Epic 12C — sync_operation state transitions
 }
