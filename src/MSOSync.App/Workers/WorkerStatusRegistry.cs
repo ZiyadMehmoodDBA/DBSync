@@ -181,7 +181,7 @@ public sealed class WorkerStatusRegistry(IPublisher publisher) : IWorkerStatusRe
 
         // Derive health state (rules applied in priority order)
         WorkerHealthState healthState;
-        if (!entry.Enabled)
+        if (!snap.Enabled)
         {
             healthState = WorkerHealthState.Disabled;
         }
