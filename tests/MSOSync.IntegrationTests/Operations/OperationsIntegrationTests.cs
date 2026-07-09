@@ -27,6 +27,7 @@ using MSOSync.Api.Controllers.Auth;
 using MSOSync.Api.Exceptions;
 using MSOSync.App.Export;
 using MSOSync.Metadata.Export;
+using MSOSync.Metadata.Configuration;
 
 namespace MSOSync.IntegrationTests.Operations;
 
@@ -275,5 +276,62 @@ public sealed class OperationsIntegrationTests(OperationsFixture fixture)
         var resp = await client.PostAsJsonAsync($"api/v1/operations/{opId}/cancel", new { });
 
         resp.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    // ── StartRollout creates operation row ─────────────────────────────────
+
+    [Fact]
+    public async Task StartRollout_CreatesOperation_WithStatusPending()
+    {
+        using var scope = fixture.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var rolloutSvc = scope.ServiceProvider.GetRequiredService<IRolloutService>();
+
+        // Arrange: create a configuration template and version
+        var templateId = Guid.NewGuid();
+        var actorId = Guid.NewGuid();
+        var now = DateTime.UtcNow;
+
+        var template = new SyncConfigurationTemplate
+        {
+            Id = templateId,
+            Name = "Test Template",
+            Status = "Published",
+            CurrentPublishedVersion = 1,
+            CreatedBy = actorId,
+            CreatedAt = now,
+            UpdatedAt = now,
+        };
+        db.ConfigurationTemplates.Add(template);
+
+        var templateVersion = new SyncConfigurationTemplateVersion
+        {
+            Id = Guid.NewGuid(),
+            TemplateId = templateId,
+            VersionNumber = 1,
+            IsDraft = false,
+            SettingsJson = "{}",
+            SchemaVersion = 1,
+            PublishedAt = now,
+            PublishedBy = actorId,
+        };
+        db.ConfigurationTemplateVersions.Add(templateVersion);
+        await db.SaveChangesAsync();
+
+        var nodeIds = new[] { "node-1", "node-2" };
+
+        // Act: start rollout
+        var rolloutDto = await rolloutSvc.StartRolloutAsync(templateId, 1, nodeIds, actorId, default);
+
+        // Assert: verify operation was created with type=Rollout and status=Pending
+        var operation = await db.Operations.AsNoTracking()
+            .FirstOrDefaultAsync(o => o.ReferenceId == rolloutDto.Id);
+
+        operation.Should().NotBeNull();
+        operation!.OperationType.Should().Be("Rollout");
+        operation.Status.Should().Be("Pending");
+        operation.ReferenceId.Should().Be(rolloutDto.Id);
+        operation.CanCancel.Should().BeTrue();
+        operation.CanRetry.Should().BeFalse();
     }
 }
