@@ -4,7 +4,7 @@ using MSOSync.Persistence;
 
 namespace MSOSync.App.Health;
 
-public sealed class DatabaseHealthContributor(AppDbContext db)
+public sealed class DatabaseHealthContributor(IServiceScopeFactory scopeFactory)
     : ISystemHealthContributor
 {
     public string Name => "Database";
@@ -13,6 +13,9 @@ public sealed class DatabaseHealthContributor(AppDbContext db)
     {
         try
         {
+            await using var scope = scopeFactory.CreateAsyncScope();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
             cts.CancelAfter(TimeSpan.FromSeconds(3));
 
