@@ -1473,6 +1473,60 @@ namespace MSOSync.Persistence.Migrations
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("parameter_value");
 
+                    b.Property<string>("Category")
+                        .HasMaxLength(50)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(50)")
+                        .HasColumnName("category");
+
+                    b.Property<string>("DisplayName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("display_name");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)")
+                        .HasColumnName("description");
+
+                    b.Property<int?>("DisplayOrder")
+                        .HasColumnType("int")
+                        .HasColumnName("display_order");
+
+                    b.Property<string>("ValueType")
+                        .HasMaxLength(30)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(30)")
+                        .HasColumnName("value_type");
+
+                    b.Property<string>("MinimumValue")
+                        .HasMaxLength(100)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(100)")
+                        .HasColumnName("minimum_value");
+
+                    b.Property<string>("MaximumValue")
+                        .HasMaxLength(100)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(100)")
+                        .HasColumnName("maximum_value");
+
+                    b.Property<string>("AllowedValues")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("allowed_values");
+
+                    b.Property<string>("DependsOn")
+                        .HasMaxLength(200)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(200)")
+                        .HasColumnName("depends_on");
+
+                    b.Property<string>("ConflictsWith")
+                        .HasMaxLength(200)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(200)")
+                        .HasColumnName("conflicts_with");
+
                     b.HasKey("ParameterName");
 
                     b.ToTable("sync_parameter", "msosync");
