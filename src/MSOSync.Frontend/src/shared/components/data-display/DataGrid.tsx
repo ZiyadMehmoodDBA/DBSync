@@ -1,5 +1,5 @@
 import { AgGridReact } from 'ag-grid-react';
-import type { ColDef } from 'ag-grid-community';
+import type { ColDef, RowClickedEvent } from 'ag-grid-community';
 import { ErrorState } from '../feedback/ErrorState';
 import { EmptyState } from '../feedback/EmptyState';
 
@@ -12,6 +12,7 @@ interface Props<T extends object> {
   error?: unknown;
   onRetry?: () => void;
   paginationPageSize?: number;
+  onRowClicked?: (event: RowClickedEvent<T>) => void;
 }
 
 export function DataGrid<T extends object>({
@@ -23,6 +24,7 @@ export function DataGrid<T extends object>({
   error,
   onRetry,
   paginationPageSize = 20,
+  onRowClicked,
 }: Props<T>) {
   if (error) return <ErrorState error={error} onRetry={onRetry} />;
 
@@ -39,6 +41,7 @@ export function DataGrid<T extends object>({
           pagination
           paginationPageSize={paginationPageSize}
           defaultColDef={{ sortable: true, filter: true, resizable: true }}
+          onRowClicked={onRowClicked}
         />
       </div>
       {isEmpty && <EmptyState />}

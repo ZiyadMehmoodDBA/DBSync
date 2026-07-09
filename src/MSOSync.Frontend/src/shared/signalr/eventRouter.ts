@@ -2,6 +2,7 @@ import type { QueryClient } from '@tanstack/react-query';
 import { OperationsEventType, type OperationsEvent, type PermissionEvent, type ExportJobEvent } from './types';
 import type { ExportJobDto } from '../types/export';
 import { queryKeys } from '../queryKeys';
+import { operationKeys } from '../api/operations';
 
 export async function routeToCache(
   queryClient: QueryClient,
@@ -48,6 +49,9 @@ export async function routeToCache(
         queryClient.invalidateQueries({ queryKey: queryKeys.driftNodes() }),
         queryClient.invalidateQueries({ queryKey: queryKeys.configurationSummary() }),
       ]);
+      return;
+    case OperationsEventType.OperationChanged:
+      await queryClient.invalidateQueries({ queryKey: operationKeys.all });
       return;
   }
 }

@@ -30,6 +30,7 @@ export const OperationsEventType = {
   NodeLifecycleChanged:   'NodeLifecycleChanged',
   NodeMaintenanceChanged: 'NodeMaintenanceChanged',
   ConfigurationChanged:   'ConfigurationChanged',
+  OperationChanged:    'OperationChanged',
 } as const;
 
 export type OperationsEventType = (typeof OperationsEventType)[keyof typeof OperationsEventType];
