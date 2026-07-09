@@ -124,12 +124,22 @@ public sealed class OperationService(
                 $"Operation {operationId} does not support cancellation.");
 
         // Delegate domain-side cancellation first
-        if (op.ReferenceId.HasValue
-            && Enum.TryParse<OperationType>(op.OperationType, out var opType))
+        if (Enum.TryParse<OperationType>(op.OperationType, out var opType))
         {
             var handler = keyedServices.GetKeyedService<IOperationHandler>(opType);
             if (handler is not null)
-                await handler.CancelAsync(op.ReferenceId.Value, actorId, ct);
+            {
+                if (op.ReferenceId.HasValue)
+                {
+                    await handler.CancelAsync(op.ReferenceId.Value, actorId, ct);
+                }
+                else if (!string.IsNullOrEmpty(op.CorrelationId)
+                         && handler is MSOSync.Metadata.Operations.Handlers.DecommissionOperationHandler decomHandler)
+                {
+                    // Decommission uses correlationId (nodeId string) instead of a Guid referenceId
+                    await decomHandler.CancelByCorrelationAsync(op.CorrelationId, actorId, ct);
+                }
+            }
         }
 
         await db.Operations
