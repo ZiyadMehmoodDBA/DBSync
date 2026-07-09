@@ -70,8 +70,8 @@ export interface OverviewDto {
 
 export interface SystemInfoDto {
   version: string;
-  buildDate: string;
-  gitCommit: string;
+  buildDate: string | null;
+  gitCommit: string | null;
   dotNetRuntime: string;
   operatingSystem: string;
   databaseMigration: string;

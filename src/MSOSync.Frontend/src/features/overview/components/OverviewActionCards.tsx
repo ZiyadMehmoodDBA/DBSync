@@ -59,9 +59,9 @@ export function OverviewActionCards({ warnings }: Props) {
 
   return (
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-      {sorted.map((w) => (
+      {sorted.map((w, i) => (
         <Card
-          key={`${w.type}-${w.severity}`}
+          key={`${w.type}-${i}`}
           className="border-l-4"
           style={{ borderLeftColor: severityBorderColor(w.severity) }}
         >
