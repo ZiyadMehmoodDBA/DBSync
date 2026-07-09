@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { ColDef, ICellRendererParams } from 'ag-grid-community';
 import { DataGrid } from '@/shared/components/data-display/DataGrid';
@@ -55,23 +55,28 @@ export function JobsPage() {
   const [cancelTarget, setCancelTarget] = useState<string | null>(null);
   const [cursor, setCursor] = useState<string | undefined>(undefined);
   const [rows, setRows] = useState<OperationDto[]>([]);
+  const isResetRef = useRef(false);
 
   const { data, isLoading, isFetching, error, refetch } = useOperations({ ...filter, cursor });
   const cancelMutation = useCancelOperation();
   const retryMutation = useRetryOperation();
 
-  // Accumulate rows: reset on filter change, append when loading more via cursor
+  // Accumulate rows: reset on filter change, append when loading more via cursor.
+  // isResetRef is set synchronously in applyFilters before any state update, so it
+  // is never subject to stale closures — whichever fetch resolves first will see the
+  // correct flag value and replace (rather than append) the row list.
   useEffect(() => {
-    if (!data?.items) return;
-    if (cursor === undefined) {
+    if (!data) return;
+    if (isResetRef.current) {
+      isResetRef.current = false;
       setRows(data.items);
     } else {
-      setRows((prev) => [...prev, ...data.items]);
+      setRows(prev => cursor === undefined ? data.items : [...prev, ...data.items]);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data]);
+  }, [data, cursor]);
 
   const applyFilters = useCallback((type: string, status: string) => {
+    isResetRef.current = true;
     setCursor(undefined);
     setFilter({
       pageSize: 50,
