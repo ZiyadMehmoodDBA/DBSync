@@ -55,6 +55,10 @@ public sealed class OperationService(
     public async Task UpdateProgressAsync(
         Guid operationId, int percent, string? message, CancellationToken ct)
     {
+        var op = await db.Operations.AsNoTracking()
+            .FirstOrDefaultAsync(o => o.OperationId == operationId, ct)
+            ?? throw new KeyNotFoundException($"Operation {operationId} not found.");
+
         await db.Operations
             .Where(o => o.OperationId == operationId)
             .ExecuteUpdateAsync(s => s
