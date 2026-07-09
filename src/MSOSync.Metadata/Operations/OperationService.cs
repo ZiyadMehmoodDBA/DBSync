@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using MSOSync.Common.Exceptions;
 using MSOSync.Persistence;
 using MSOSync.Persistence.Entities;
 
@@ -57,7 +58,7 @@ public sealed class OperationService(
     {
         var op = await db.Operations.AsNoTracking()
             .FirstOrDefaultAsync(o => o.OperationId == operationId, ct)
-            ?? throw new KeyNotFoundException($"Operation {operationId} not found.");
+            ?? throw new NotFoundException($"Operation {operationId} not found.");
 
         await db.Operations
             .Where(o => o.OperationId == operationId)
@@ -112,7 +113,7 @@ public sealed class OperationService(
     {
         var op = await db.Operations.AsNoTracking()
             .FirstOrDefaultAsync(o => o.OperationId == operationId, ct)
-            ?? throw new KeyNotFoundException($"Operation {operationId} not found.");
+            ?? throw new NotFoundException($"Operation {operationId} not found.");
 
         if (op.Status is not ("Pending" or "Running"))
             throw new InvalidOperationException(
@@ -147,7 +148,7 @@ public sealed class OperationService(
     {
         var op = await db.Operations.AsNoTracking()
             .FirstOrDefaultAsync(o => o.OperationId == operationId, ct)
-            ?? throw new KeyNotFoundException($"Operation {operationId} not found.");
+            ?? throw new NotFoundException($"Operation {operationId} not found.");
 
         if (op.Status is not ("Failed" or "Cancelled"))
             throw new InvalidOperationException(
