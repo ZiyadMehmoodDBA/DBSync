@@ -179,6 +179,22 @@ public sealed class SystemFixture : WebApplicationFactory<Program>, IAsyncLifeti
             });
             await db.SaveChangesAsync();
         }
+
+        // Seed a Retention parameter for category-filter tests
+        if (!await db.Parameters.AnyAsync(p => p.ParameterName == "SYS_RETENTION_DAYS"))
+        {
+            db.Parameters.Add(new SyncParameter
+            {
+                ParameterName  = "SYS_RETENTION_DAYS",
+                ParameterValue = "90",
+                Category       = "Retention",
+                DisplayName    = "Retention Days",
+                Description    = "Data retention period in days — used only by integration tests",
+                ValueType      = "Integer",
+                DisplayOrder   = 998,
+            });
+            await db.SaveChangesAsync();
+        }
     }
 
     public new async Task DisposeAsync()

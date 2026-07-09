@@ -108,6 +108,48 @@ public sealed class WorkerStatusTests(SystemFixture fx)
             "after RecordTickComplete the execution state must be Idle");
     }
 
+    [Fact]
+    public async Task Registry_ThreeConsecutiveFailures_SetsWarningState()
+    {
+        await using var scope    = fx.Services.CreateAsyncScope();
+        var registry = scope.ServiceProvider.GetRequiredService<IWorkerStatusRegistry>();
+
+        registry.Register("test-warning-state", TimeSpan.FromSeconds(30));
+        var ex = new InvalidOperationException("simulated failure");
+        for (var i = 0; i < 3; i++)
+        {
+            registry.RecordTickStart("test-warning-state");
+            registry.RecordTickFailed("test-warning-state", ex);
+        }
+
+        var dto = registry.GetOne("test-warning-state");
+
+        dto.State.Should().Be(WorkerState.Warning,
+            "3 consecutive failures must transition the worker to Warning state");
+        dto.ConsecutiveFailures.Should().Be(3);
+    }
+
+    [Fact]
+    public async Task Registry_FiveConsecutiveFailures_SetsFailedState()
+    {
+        await using var scope    = fx.Services.CreateAsyncScope();
+        var registry = scope.ServiceProvider.GetRequiredService<IWorkerStatusRegistry>();
+
+        registry.Register("test-failed-state", TimeSpan.FromSeconds(30));
+        var ex = new InvalidOperationException("simulated failure");
+        for (var i = 0; i < 5; i++)
+        {
+            registry.RecordTickStart("test-failed-state");
+            registry.RecordTickFailed("test-failed-state", ex);
+        }
+
+        var dto = registry.GetOne("test-failed-state");
+
+        dto.State.Should().Be(WorkerState.Failed,
+            "5 consecutive failures must transition the worker to Failed state");
+        dto.ConsecutiveFailures.Should().Be(5);
+    }
+
     // ── HTTP endpoint tests ────────────────────────────────────────────────────
 
     [Fact]

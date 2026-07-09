@@ -64,16 +64,14 @@ public sealed class AdministrationTests(SystemFixture fx)
         var items = await resp.Content.ReadFromJsonAsync<JsonElement[]>(JsonOpts);
         items.Should().NotBeNull();
 
-        // Retention parameters may be empty if none are seeded
-        if (items!.Length > 0)
+        // SYS_RETENTION_DAYS is seeded in InitializeAsync — the array must never be empty
+        items!.Should().NotBeEmpty("a Retention parameter (SYS_RETENTION_DAYS) was seeded in InitializeAsync");
+        items.Should().AllSatisfy(p =>
         {
-            items.Should().AllSatisfy(p =>
-            {
-                p.TryGetProperty("category", out var cat).Should().BeTrue();
-                cat.GetString().Should().Be("Retention",
-                    "category filter must only return Retention parameters");
-            });
-        }
+            p.TryGetProperty("category", out var cat).Should().BeTrue("each parameter must have a category");
+            cat.GetString().Should().Be("Retention",
+                "category filter must only return Retention parameters");
+        });
     }
 
     [Fact]
