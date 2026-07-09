@@ -7,6 +7,9 @@ export interface OperationDto {
   operationType: OperationType;
   status: OperationStatus;
   result: OperationResult | null;
+  source: string;
+  referenceId: string | null;
+  metadataJson: string | null;
   progressPercent: number | null;
   progressMessage: string | null;
   queuePosition: number | null;

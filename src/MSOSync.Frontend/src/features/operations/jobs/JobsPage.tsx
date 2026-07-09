@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { ColDef, ICellRendererParams } from 'ag-grid-community';
 import { DataGrid } from '@/shared/components/data-display/DataGrid';
@@ -53,12 +53,26 @@ export function JobsPage() {
   const [selectedType, setSelectedType] = useState<string>('all');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [cancelTarget, setCancelTarget] = useState<string | null>(null);
+  const [cursor, setCursor] = useState<string | undefined>(undefined);
+  const [rows, setRows] = useState<OperationDto[]>([]);
 
-  const { data, isLoading, error, refetch } = useOperations(filter);
+  const { data, isLoading, isFetching, error, refetch } = useOperations({ ...filter, cursor });
   const cancelMutation = useCancelOperation();
   const retryMutation = useRetryOperation();
 
+  // Accumulate rows: reset on filter change, append when loading more via cursor
+  useEffect(() => {
+    if (!data?.items) return;
+    if (cursor === undefined) {
+      setRows(data.items);
+    } else {
+      setRows((prev) => [...prev, ...data.items]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data]);
+
   const applyFilters = useCallback((type: string, status: string) => {
+    setCursor(undefined);
     setFilter({
       pageSize: 50,
       types:    type   !== 'all' ? [type   as OperationType]   : undefined,
@@ -74,8 +88,39 @@ export function JobsPage() {
       cellRenderer: (p: ICellRendererParams<OperationDto>) => {
         if (!p.data) return null;
         const color = TYPE_BADGE_COLORS[p.data.operationType] ?? '';
-        return Badge({ className: `text-xs ${color}`, children: p.data.operationType });
+        return <Badge className={`text-xs ${color}`}>{p.data.operationType}</Badge>;
       },
+    },
+    {
+      field: 'status',
+      headerName: 'Status',
+      width: 130,
+      cellRenderer: (p: ICellRendererParams<OperationDto>) => {
+        if (!p.data) return null;
+        return <OperationStatusBadge status={p.data.status} result={p.data.result} />;
+      },
+    },
+    {
+      headerName: 'Progress',
+      width: 180,
+      sortable: false,
+      cellRenderer: (p: ICellRendererParams<OperationDto>) => {
+        if (!p.data) return null;
+        return (
+          <OperationProgressCell
+            status={p.data.status}
+            progressPercent={p.data.progressPercent}
+            progressMessage={p.data.progressMessage}
+          />
+        );
+      },
+    },
+    {
+      field: 'source',
+      headerName: 'Source',
+      width: 150,
+      cellRenderer: (p: ICellRendererParams<OperationDto>) =>
+        p.data ? <span className="text-xs">{p.data.source}</span> : null,
     },
     {
       field: 'summary',
@@ -87,28 +132,6 @@ export function JobsPage() {
         return (
           <span className="truncate text-sm">{p.data.summary ?? '—'}</span>
         );
-      },
-    },
-    {
-      field: 'status',
-      headerName: 'Status',
-      width: 130,
-      cellRenderer: (p: ICellRendererParams<OperationDto>) => {
-        if (!p.data) return null;
-        return OperationStatusBadge({ status: p.data.status, result: p.data.result });
-      },
-    },
-    {
-      headerName: 'Progress',
-      width: 180,
-      sortable: false,
-      cellRenderer: (p: ICellRendererParams<OperationDto>) => {
-        if (!p.data) return null;
-        return OperationProgressCell({
-          status:          p.data.status,
-          progressPercent: p.data.progressPercent,
-          progressMessage: p.data.progressMessage,
-        });
       },
     },
     {
@@ -198,7 +221,7 @@ export function JobsPage() {
         );
       },
     },
-  ], [cancelMutation.isPending, retryMutation]);
+  ], [cancelMutation.isPending, retryMutation.isPending]);
 
   return (
     <div className="flex flex-col gap-4 p-6">
@@ -257,7 +280,7 @@ export function JobsPage() {
 
       {/* Grid */}
       <DataGrid
-        rowData={data?.items}
+        rowData={rows}
         columnDefs={columnDefs}
         loading={isLoading}
         height={600}
@@ -272,6 +295,20 @@ export function JobsPage() {
           }
         }}
       />
+
+      {/* Load more */}
+      {data?.nextCursor != null && (
+        <div className="flex justify-center">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={isFetching}
+            onClick={() => setCursor(data.nextCursor!)}
+          >
+            {isFetching ? 'Loading…' : 'Load more'}
+          </Button>
+        </div>
+      )}
 
       {/* Cancel confirmation dialog */}
       <ConfirmDialog
