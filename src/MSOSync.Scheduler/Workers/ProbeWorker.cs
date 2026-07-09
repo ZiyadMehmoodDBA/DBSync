@@ -7,6 +7,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MSOSync.Common;
+using MSOSync.Common.Workers;
 using MSOSync.Metadata.Lifecycle;
 using MSOSync.Persistence;
 using MSOSync.Persistence.Entities;
@@ -19,15 +20,22 @@ namespace MSOSync.Scheduler.Workers;
 /// ExecuteUpdateAsync (bypasses RowVersion token). Does NOT write ConnectivityStatus or publish
 /// NodeConnectivityChangedEvent — that is owned by ConnectivityEvaluator (Invariant 3, spec §5.1).
 public sealed class ProbeWorker(
-    IServiceScopeFactory      scopeFactory,
-    IOptions<NodeProperties>  nodeProps,
+    IServiceScopeFactory       scopeFactory,
+    IOptions<NodeProperties>   nodeProps,
     IOptions<LifecycleOptions> lifecycleOptions,
-    IConfiguration            config,
-    ILogger<ProbeWorker>      logger) : BackgroundService
+    IConfiguration             config,
+    ILogger<ProbeWorker>       logger,
+    IWorkerStatusRegistry      registry) : BackgroundService
 {
     private static readonly Meter         Meter   = new("MSOSync.Probe", "1.0.0");
     private static readonly Counter<long> Success = Meter.CreateCounter<long>("msosync_probe_success_total");
     private static readonly Counter<long> Failure = Meter.CreateCounter<long>("msosync_probe_failure_total");
+
+    public override async Task StartAsync(CancellationToken cancellationToken)
+    {
+        registry.Register(nameof(ProbeWorker), TimeSpan.FromSeconds(60));
+        await base.StartAsync(cancellationToken);
+    }
 
     protected override async Task ExecuteAsync(CancellationToken ct)
     {
@@ -48,9 +56,17 @@ public sealed class ProbeWorker(
         using var timer = new PeriodicTimer(interval);
         while (await timer.WaitForNextTickAsync(ct))
         {
-            try { await RunProbeTickAsync(props.NodeId, ct); }
+            registry.RecordTickStart(nameof(ProbeWorker));
+            try
+            {
+                await RunProbeTickAsync(props.NodeId, ct);
+                registry.RecordTickComplete(nameof(ProbeWorker));
+            }
             catch (Exception ex) when (!ct.IsCancellationRequested)
-            { logger.LogError(ex, "ProbeWorker tick failed"); }
+            {
+                registry.RecordTickFailed(nameof(ProbeWorker), ex);
+                logger.LogError(ex, "ProbeWorker tick failed");
+            }
         }
     }
 

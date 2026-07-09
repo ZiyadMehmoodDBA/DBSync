@@ -1,5 +1,5 @@
 using MediatR;
-using MSOSync.App.Workers;
+using MSOSync.Common.Workers;
 
 namespace MSOSync.App.SignalR;
 

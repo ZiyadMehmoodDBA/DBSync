@@ -3,6 +3,7 @@ using MediatR;
 using Moq;
 using MSOSync.App.SignalR;
 using MSOSync.App.Workers;
+using MSOSync.Common.Workers;
 using Xunit;
 
 namespace MSOSync.AppTests.Workers;

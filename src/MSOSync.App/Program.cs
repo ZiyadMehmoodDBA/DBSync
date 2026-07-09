@@ -7,6 +7,7 @@ using MSOSync.Api.Exceptions;
 using MSOSync.App;
 using MSOSync.App.Export;
 using MSOSync.App.Workers;
+using MSOSync.Common.Workers;
 using MSOSync.Batch;
 using MSOSync.Common;
 using MSOSync.Engine;

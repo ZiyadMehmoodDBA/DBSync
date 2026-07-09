@@ -1,11 +1,3 @@
-namespace MSOSync.App.Workers;
-
-public interface IWorkerStatusRegistry
-{
-    void Register(string workerName, TimeSpan expectedInterval);
-    void RecordTickStart(string workerName, TickTrigger trigger = TickTrigger.Scheduled);
-    void RecordTickComplete(string workerName);
-    void RecordTickFailed(string workerName, Exception ex);
-    WorkerStatusDto GetOne(string workerName);
-    WorkerStatusDto[] GetAll();
-}
+// Forwarding: types have moved to MSOSync.Common.Workers to avoid circular project references.
+// All consumers that used MSOSync.App.Workers.IWorkerStatusRegistry continue to compile via this alias.
+global using IWorkerStatusRegistry = MSOSync.Common.Workers.IWorkerStatusRegistry;
