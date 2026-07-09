@@ -31,6 +31,7 @@ export const OperationsEventType = {
   NodeMaintenanceChanged: 'NodeMaintenanceChanged',
   ConfigurationChanged:   'ConfigurationChanged',
   OperationChanged:    'OperationChanged',
+  WorkerStatusChanged: 'WorkerStatusChanged',  // Epic 12C — worker health state transitions
 } as const;
 
 export type OperationsEventType = (typeof OperationsEventType)[keyof typeof OperationsEventType];
