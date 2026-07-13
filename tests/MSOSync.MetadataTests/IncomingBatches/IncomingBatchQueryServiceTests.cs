@@ -1,5 +1,6 @@
 using FluentAssertions;
 using MSOSync.Metadata.IncomingBatches;
+using MSOSync.Metadata.Pagination;
 using MSOSync.Persistence;
 using MSOSync.Persistence.Entities;
 using Xunit;
@@ -8,10 +9,12 @@ namespace MSOSync.MetadataTests.IncomingBatches;
 
 public sealed class IncomingBatchQueryServiceTests
 {
+    private static readonly CursorSigner _signer = new(new byte[32]);
+
     private static (IncomingBatchQueryService Svc, AppDbContext Db) Make()
     {
         var db  = TestDbContext.Create();
-        var svc = new IncomingBatchQueryService(db);
+        var svc = new IncomingBatchQueryService(db, _signer);
         return (svc, db);
     }
 

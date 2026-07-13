@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using MSOSync.Common.Pagination;
+using MSOSync.Metadata.Pagination;
 using MSOSync.Persistence;
 using MSOSync.Persistence.Entities;
 using System.Text.Json;
@@ -8,7 +9,8 @@ namespace MSOSync.Metadata.NodeManagement;
 
 public sealed class NodeManagementService(
     AppDbContext             db,
-    IRegistrationDiffService diff) : INodeManagementService
+    IRegistrationDiffService diff,
+    CursorSigner             cursorSigner) : INodeManagementService
 {
     private static readonly JsonSerializerOptions JsonOpts =
         new() { PropertyNameCaseInsensitive = true };
@@ -26,7 +28,7 @@ public sealed class NodeManagementService(
         {
             try
             {
-                var (cursorId, _) = CursorToken.Decode(filter.Cursor);
+                var (cursorId, _) = cursorSigner.Decode(filter.Cursor);
                 q = q.Where(e => e.RequestId < cursorId);
             }
             catch (ArgumentException) { /* invalid cursor — ignore */ }
@@ -53,7 +55,7 @@ public sealed class NodeManagementService(
         if (hasMore)
         {
             var last = items[^1];
-            nextCursor = CursorToken.Encode(last.Id, last.ReceivedAt.Ticks);
+            nextCursor = cursorSigner.Encode(last.Id, last.ReceivedAt.Ticks);
         }
 
         return new CursorPageResult<RegistrationSummaryDto>(

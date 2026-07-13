@@ -1,5 +1,6 @@
 using FluentAssertions;
 using MSOSync.Metadata.Operations;
+using MSOSync.Metadata.Pagination;
 using MSOSync.Persistence;
 using MSOSync.Persistence.Entities;
 using Xunit;
@@ -8,13 +9,15 @@ namespace MSOSync.MetadataTests.Operations;
 
 public sealed class OperationQueryServiceTests : IDisposable
 {
+    private static readonly CursorSigner _signer = new(new byte[32]);
+
     private readonly AppDbContext          _db;
     private readonly OperationQueryService _sut;
 
     public OperationQueryServiceTests()
     {
         _db  = TestDbContext.Create();
-        _sut = new OperationQueryService(_db);
+        _sut = new OperationQueryService(_db, _signer);
     }
 
     public void Dispose() => _db.Dispose();

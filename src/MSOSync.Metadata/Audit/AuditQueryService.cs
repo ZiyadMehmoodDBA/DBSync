@@ -1,10 +1,11 @@
 using Microsoft.EntityFrameworkCore;
 using MSOSync.Common.Pagination;
+using MSOSync.Metadata.Pagination;
 using MSOSync.Persistence;
 
 namespace MSOSync.Metadata.Audit;
 
-public sealed class AuditQueryService(AppDbContext db) : IAuditQueryService
+public sealed class AuditQueryService(AppDbContext db, CursorSigner cursorSigner) : IAuditQueryService
 {
     public async Task<CursorPageResult<AuditDto>> GetAuditsAsync(
         AuditFilter filter, CancellationToken ct = default)
@@ -20,7 +21,7 @@ public sealed class AuditQueryService(AppDbContext db) : IAuditQueryService
         var q = baseQ;
         if (filter.Cursor is not null)
         {
-            var (cursorId, _) = CursorToken.Decode(filter.Cursor);
+            var (cursorId, _) = cursorSigner.Decode(filter.Cursor);
             q = q.Where(a => a.AuditId < cursorId);
         }
 
@@ -44,7 +45,7 @@ public sealed class AuditQueryService(AppDbContext db) : IAuditQueryService
         if (hasMore)
         {
             var last = rows[^1];
-            nextCursor = CursorToken.Encode(last.AuditId, last.CreateTime.Ticks);
+            nextCursor = cursorSigner.Encode(last.AuditId, last.CreateTime.Ticks);
         }
 
         int? totalCount = null;

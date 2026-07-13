@@ -1,5 +1,6 @@
 using FluentAssertions;
 using MSOSync.Metadata.Events;
+using MSOSync.Metadata.Pagination;
 using MSOSync.Persistence;
 using MSOSync.Persistence.Entities;
 using Xunit;
@@ -8,10 +9,12 @@ namespace MSOSync.MetadataTests.Events;
 
 public sealed class EventQueryServiceTests
 {
+    private static readonly CursorSigner _signer = new(new byte[32]);
+
     private static (EventQueryService Svc, AppDbContext Db) Make()
     {
         var db  = TestDbContext.Create();
-        var svc = new EventQueryService(db);
+        var svc = new EventQueryService(db, _signer);
         return (svc, db);
     }
 

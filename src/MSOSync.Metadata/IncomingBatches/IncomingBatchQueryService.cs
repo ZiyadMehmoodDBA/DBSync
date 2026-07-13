@@ -1,10 +1,11 @@
 using Microsoft.EntityFrameworkCore;
 using MSOSync.Common.Pagination;
+using MSOSync.Metadata.Pagination;
 using MSOSync.Persistence;
 
 namespace MSOSync.Metadata.IncomingBatches;
 
-public sealed class IncomingBatchQueryService(AppDbContext db) : IIncomingBatchQueryService
+public sealed class IncomingBatchQueryService(AppDbContext db, CursorSigner cursorSigner) : IIncomingBatchQueryService
 {
     public async Task<CursorPageResult<IncomingBatchSummaryDto>> GetIncomingBatchesAsync(
         IncomingBatchFilter filter, CancellationToken ct = default)
@@ -20,7 +21,7 @@ public sealed class IncomingBatchQueryService(AppDbContext db) : IIncomingBatchQ
         var q = baseQ;
         if (filter.Cursor is not null)
         {
-            var (cursorId, _) = CursorToken.Decode(filter.Cursor);
+            var (cursorId, _) = cursorSigner.Decode(filter.Cursor);
             q = q.Where(b => b.BatchId < cursorId);
         }
 
@@ -46,7 +47,7 @@ public sealed class IncomingBatchQueryService(AppDbContext db) : IIncomingBatchQ
         if (hasMore)
         {
             var last = rows[^1];
-            nextCursor = CursorToken.Encode(last.BatchId, last.ReceivedTime.Ticks);
+            nextCursor = cursorSigner.Encode(last.BatchId, last.ReceivedTime.Ticks);
         }
 
         int? totalCount = null;

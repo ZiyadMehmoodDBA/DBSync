@@ -1,5 +1,6 @@
 using FluentAssertions;
 using MSOSync.Metadata.Audit;
+using MSOSync.Metadata.Pagination;
 using MSOSync.Persistence;
 using MSOSync.Persistence.Entities;
 using Xunit;
@@ -8,13 +9,15 @@ namespace MSOSync.MetadataTests.Audit;
 
 public sealed class AuditQueryServiceTests : IDisposable
 {
+    private static readonly CursorSigner _signer = new(new byte[32]);
+
     private readonly AppDbContext      _db;
     private readonly AuditQueryService _sut;
 
     public AuditQueryServiceTests()
     {
         _db  = TestDbContext.Create();
-        _sut = new AuditQueryService(_db);
+        _sut = new AuditQueryService(_db, _signer);
     }
 
     public void Dispose() => _db.Dispose();

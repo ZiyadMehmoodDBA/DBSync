@@ -22,6 +22,7 @@ using MSOSync.Metadata.Configuration;
 using MSOSync.Metadata.Operations;
 using MSOSync.Metadata.Operations.Handlers;
 using MSOSync.Metadata.Overview;
+using MSOSync.Metadata.Pagination;
 
 namespace MSOSync.Metadata;
 
@@ -130,6 +131,9 @@ public static class MetadataServiceExtensions
         // Epic 12C — Overview
         services.AddSingleton<OverviewSnapshotCache>();
         services.AddScoped<IOverviewQueryService, OverviewQueryService>();
+
+        // Epic 12C.0 — Cursor HMAC signing
+        services.AddSingleton<CursorSigner>();
 
         // Epic 12C — Correlation Timeline
         services.AddScoped<CorrelationTimelineAssembler>();

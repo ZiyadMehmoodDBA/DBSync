@@ -1,10 +1,11 @@
 using Microsoft.EntityFrameworkCore;
 using MSOSync.Common.Pagination;
+using MSOSync.Metadata.Pagination;
 using MSOSync.Persistence;
 
 namespace MSOSync.Metadata.Events;
 
-public sealed class EventQueryService(AppDbContext db) : IEventQueryService
+public sealed class EventQueryService(AppDbContext db, CursorSigner cursorSigner) : IEventQueryService
 {
     public async Task<CursorPageResult<EventSummaryDto>> GetEventsAsync(
         EventFilter filter, CancellationToken ct = default)
@@ -22,7 +23,7 @@ public sealed class EventQueryService(AppDbContext db) : IEventQueryService
         var q = baseQ;
         if (filter.Cursor is not null)
         {
-            var (cursorId, _) = CursorToken.Decode(filter.Cursor);
+            var (cursorId, _) = cursorSigner.Decode(filter.Cursor);
             q = q.Where(e => e.EventId < cursorId);
         }
 
@@ -51,7 +52,7 @@ public sealed class EventQueryService(AppDbContext db) : IEventQueryService
         if (hasMore)
         {
             var last = rows[^1];
-            nextCursor = CursorToken.Encode(last.EventId, last.CreateTime.Ticks);
+            nextCursor = cursorSigner.Encode(last.EventId, last.CreateTime.Ticks);
         }
 
         int? totalCount = null;
