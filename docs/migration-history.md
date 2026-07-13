@@ -18,8 +18,8 @@ All EF Core migrations in `src/MSOSync.Persistence/Migrations/`. Applied in orde
 | M012 | `M012_Transport.cs` | Transport columns on sync_node; sync_node_db_connection | 6 |
 | M013 | `M013_ApplyEngine.cs` | pk_columns_json on sync_trigger | 7 |
 | M014 | `M014_SecurityAndHeartbeat.cs` | Heartbeat columns on sync_node; token_lookup_hash on sync_user_refresh_token | 8 |
-| M015 | `20260624145922_M015_OperationalReadAPIs.cs` | sync_registration_request | 9A |
-| M016 | `M016_NodeDbConnection.cs` | sync_node_db_connection | 6/9B |
+| M015 | `20260624145922_M015_OperationalReadAPIs.cs` | `create_time` column on `sync_batch_error`; performance indexes on `sync_data_event` and `sync_batch_error` | 9A |
+| M016 | `M016_NodeDbConnection.cs` | DB connection columns (`db_server`, `db_name`, `db_auth_mode`, `db_user`, `db_password_encrypted`) on `sync_node` | 6/9B |
 | M017 | `20260702105508_M017_UserPreferences.cs` | sync_user_preference | 11E |
 | M018 | `20260702122912_M018_Permissions.cs` | sync_permission, sync_role_permission, sync_user_permission | 11F |
 | M019 | `20260704145235_M019_ExportJobs.cs` | sync_export_job | 11G |
