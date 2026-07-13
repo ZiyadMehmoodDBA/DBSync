@@ -1,29 +1,54 @@
 # MSOSync Migration History
 
-Migrations in apply order. All migrations target the `msosync` schema on SQL Server.
+All EF Core migrations in `src/MSOSync.Persistence/Migrations/`. Applied in order.
 
-| # | Migration Name | Tables Created / Modified | Date |
-|---|----------------|---------------------------|------|
-| M001 | `20260619000001_CreateSchema` | Creates `msosync` schema | 2026-06-19 |
-| M002 | `20260619000002_CoreTables` | Creates: `sync_node_group`, `sync_node`, `sync_node_security`, `sync_channel`, `sync_parameter`, `sync_parameter_hist` | 2026-06-19 |
-| M003 | `20260619000003_TriggerAndRoutingTables` | Creates: `sync_trigger`, `sync_trigger_hist`, `sync_router`, `sync_trigger_router` | 2026-06-19 |
-| M004 | `20260619000004_EventTables` | Creates: `sync_data_event`, `sync_data_event_batch` | 2026-06-19 |
-| M005 | `20260619000005_BatchTables` | Creates: `sync_outgoing_batch`, `sync_incoming_batch`, `sync_batch_error` | 2026-06-19 |
-| M006 | `20260619000006_MonitoringTables` | Creates: `sync_monitor`, `sync_runtime_stats`, `sync_audit` | 2026-06-19 |
-| M007 | `20260619000007_SecurityTables` | Creates: `sync_user`, `sync_role`, `sync_user_role` | 2026-06-19 |
-| M008 | `20260619000008_SeedData` | Seeds: roles (ADMIN/OPERATOR/VIEWER), default channel, default parameters | 2026-06-19 |
-| M009 | `20260619000009_RefreshTokenAndLockout` | Adds lockout columns to `sync_user`; creates `sync_user_refresh_token` | 2026-06-19 |
-| M010 | `20260619000010_NodeSecurityHashes` | Adds `current_token_hash`, `next_token_hash` to `sync_node_security` | 2026-06-19 |
-| M011 | `20260619000011_RemovePlaintextNodeToken` | Drops `node_token` from `sync_node_security`; adds `rotation_scheduled` | 2026-06-19 |
-| M012 | `20260619000012_Transport` | Adds `transport_mode` to `sync_node`; adds `batch_sequence`, `source_node_id`, `received_time` to `sync_incoming_batch` | 2026-06-19 |
-| M013 | `20260623000000_M013_ApplyEngine` | Adds `pk_columns_json` to `sync_trigger` | 2026-06-23 |
-| M014 | `M014_SecurityAndHeartbeat` | Adds heartbeat columns to `sync_node` (`upstream_node_id`, `last_probe_time`, `last_probe_latency_ms`, `connectivity_status`); adds `token_lookup_hash` to `sync_user_refresh_token` | 2026-06-23 |
-| M015 | `20260624145922_M015_OperationalReadAPIs` | Adds `create_time` to `sync_batch_error`; adds performance indexes on `sync_data_event`, `sync_incoming_batch`, `sync_outgoing_batch`, `sync_audit` | 2026-06-24 |
-| M016 | `M016_NodeDbConnection` | Adds DB connection columns to `sync_node` (`db_server`, `db_name`, `db_auth_mode`, `db_user`, `db_password_encrypted`) | 2026-06-24 |
-| M017 | `20260702105508_M017_UserPreferences` | Creates `sync_user_preference` | 2026-07-02 |
-| M018 | `20260702122912_M018_Permissions` | Creates `sync_permission`, `sync_role_permission`; seeds 12 permission keys and role assignments | 2026-07-02 |
-| M019 | `20260704145235_M019_ExportJobs` | Creates `sync_export_job` | 2026-07-04 |
-| M020 | `20260706115852_M020_AddRegistrationMetadata` | Adds `metadata_json`, `node_name`, `processed_at`, `processed_by`, `registration_status`, `registration_type`, `row_version` to `sync_registration_request`; adds indexes | 2026-07-06 |
-| M021 | `20260706131159_M021_AddNodeTypeExternalId` | Adds `external_id`, `node_name`, `node_type` to `sync_node` | 2026-07-06 |
-| M022 | `20260707074932_M022_NodeLifecycle` | Adds lifecycle/state columns to `sync_node`; creates `sync_node_bootstrap_token`, `sync_node_connectivity_history`, `sync_node_lifecycle_history`; seeds `PROVISION_NODES` and `MANAGE_NODE_LIFECYCLE` permissions | 2026-07-07 |
-| M023 | `20260708091004_M023_ConfigurationManagement` | Creates `sync_configuration_template`, `sync_configuration_template_version`, `sync_node_configuration_override`, `sync_node_configuration_history`, `sync_configuration_rollout`; seeds `MANAGE_CONFIGURATIONS` permission | 2026-07-08 |
+| Migration | File | Description | Epic |
+|-----------|------|-------------|------|
+| M001 | `M001_CreateSchema.cs` | Create `msosync` schema | 2 |
+| M002 | `M002_CoreTables.cs` | Core tables: sync_node, sync_channel, sync_router | 2 |
+| M003 | `M003_TriggerAndRoutingTables.cs` | sync_trigger, sync_router_rule | 2 |
+| M004 | `M004_EventTables.cs` | sync_data_event, sync_incoming_event | 2 |
+| M005 | `M005_BatchTables.cs` | sync_outgoing_batch, sync_batch_error, sync_incoming_batch | 2 |
+| M006 | `M006_MonitoringTables.cs` | sync_lock, sync_metrics_snapshot | 2 |
+| M007 | `M007_SecurityTables.cs` | sync_user, sync_role, sync_user_role, sync_node_security, sync_audit | 3 |
+| M008 | `M008_SeedData.cs` | Seed: 3 roles (ADMIN/OPERATOR/VIEWER), default channel (config, priority 100), 6 parameters | 3 |
+| M009 | `M009_RefreshTokenAndLockout.cs` | sync_user_refresh_token; LockedUntil + PasswordChangedAt on sync_user | 3 |
+| M010 | `M010_NodeSecurityHashes.cs` | current_token_hash + next_token_hash on sync_node_security | 3 |
+| M011 | `M011_RemovePlaintextNodeToken.cs` | Drop plaintext node_token column from sync_node | 4 |
+| M012 | `M012_Transport.cs` | Transport columns on sync_node; sync_node_db_connection | 6 |
+| M013 | `M013_ApplyEngine.cs` | pk_columns_json on sync_trigger | 7 |
+| M014 | `M014_SecurityAndHeartbeat.cs` | Heartbeat columns on sync_node; token_lookup_hash on sync_user_refresh_token | 8 |
+| M015 | `20260624145922_M015_OperationalReadAPIs.cs` | sync_registration_request | 9A |
+| M016 | `M016_NodeDbConnection.cs` | sync_node_db_connection | 6/9B |
+| M017 | `20260702105508_M017_UserPreferences.cs` | sync_user_preference | 11E |
+| M018 | `20260702122912_M018_Permissions.cs` | sync_permission, sync_role_permission, sync_user_permission | 11F |
+| M019 | `20260704145235_M019_ExportJobs.cs` | sync_export_job | 11G |
+| M020 | `20260706115852_M020_AddRegistrationMetadata.cs` | Registration metadata columns on sync_registration_request | 12A |
+| M021 | `20260706131159_M021_AddNodeTypeExternalId.cs` | node_type + external_id + node_name on sync_node | 12A |
+| M022 | `20260707074932_M022_NodeLifecycle.cs` | NodeLifecycleState enum column; sync_node_lifecycle_history; sync_node_connectivity_history; sync_node_bootstrap_token; PROVISION_NODES + MANAGE_NODE_LIFECYCLE permission seeds | 12B-1 |
+| M023 | `20260708091004_M023_ConfigurationManagement.cs` | sync_configuration_template; sync_configuration_template_version; sync_node_configuration_override; sync_node_configuration_history; sync_configuration_rollout; MANAGE_CONFIGURATIONS seed | 12B-2 |
+| M024 | `M024_OperationsFoundation.cs` | sync_operation table + 4 indexes | 12C |
+| M025 | `M025_ParameterMetadata.cs` | Metadata columns on sync_parameter (category, display_name, description, etc.); 10 new parameters (5 feature flags + 5 retention policies) | 12C |
+| M026 | `20260709143230_M026_SnapshotSync.cs` | Correlation indexes on sync_audit, sync_node_lifecycle_history, sync_node_configuration_history | 12C |
+
+**Total: 26 migrations, 36 tables in `msosync` schema as of M026.**
+
+## Permission Inventory (15 total as of M026)
+
+| Constant | String Value | Default Role |
+|----------|-------------|--------------|
+| `SystemPermissions.ViewEvents` | `VIEW_EVENTS` | VIEWER, OPERATOR, ADMIN |
+| `SystemPermissions.ViewMetrics` | `VIEW_METRICS` | VIEWER, OPERATOR, ADMIN |
+| `SystemPermissions.ViewAudit` | `VIEW_AUDIT` | VIEWER, OPERATOR, ADMIN |
+| `SystemPermissions.ViewTopology` | `VIEW_TOPOLOGY` | VIEWER, OPERATOR, ADMIN |
+| `SystemPermissions.ExportData` | `EXPORT_DATA` | OPERATOR, ADMIN |
+| `SystemPermissions.RetryBatches` | `RETRY_BATCHES` | OPERATOR, ADMIN |
+| `SystemPermissions.ApproveNodes` | `APPROVE_NODES` | OPERATOR, ADMIN |
+| `SystemPermissions.ReleaseLocks` | `RELEASE_LOCKS` | OPERATOR, ADMIN |
+| `SystemPermissions.EditParameters` | `EDIT_PARAMETERS` | OPERATOR, ADMIN |
+| `SystemPermissions.ManageTriggers` | `MANAGE_TRIGGERS` | OPERATOR, ADMIN |
+| `SystemPermissions.ManageRouters` | `MANAGE_ROUTERS` | OPERATOR, ADMIN |
+| `SystemPermissions.ManageNodeLifecycle` | `MANAGE_NODE_LIFECYCLE` | OPERATOR, ADMIN |
+| `SystemPermissions.ManageUsers` | `MANAGE_USERS` | ADMIN only |
+| `SystemPermissions.ProvisionNodes` | `PROVISION_NODES` | ADMIN only |
+| `SystemPermissions.ManageConfigurations` | `MANAGE_CONFIGURATIONS` | ADMIN only |
