@@ -72,6 +72,10 @@ public sealed class AdminBootstrapper(
             logger.LogInformation("Admin user '{Username}' created", adminUser);
             registry.RecordTickComplete(nameof(AdminBootstrapper));
         }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             logger.LogError(ex, "AdminBootstrapper failed during startup — admin user may not be available");
