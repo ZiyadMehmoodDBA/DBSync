@@ -257,10 +257,9 @@ public sealed class WorkerStatusRegistry(
         var newState = dto.HealthState;
         var prevState = _lastHealthState.GetOrAdd(workerName, WorkerHealthState.Healthy);
 
-        if (newState != prevState)
+        // Only publish if we win the CAS; prevents duplicate events under concurrent ticks
+        if (newState != prevState && _lastHealthState.TryUpdate(workerName, newState, prevState))
         {
-            _lastHealthState[workerName] = newState;
-            // Fire-and-forget; we're in a sync context
             var evt = new WorkerStatusChangedEvent(workerName, prevState, newState, DateTime.UtcNow);
             _ = publisher.Publish(evt).ContinueWith(
                 t => logger.LogError(t.Exception,
