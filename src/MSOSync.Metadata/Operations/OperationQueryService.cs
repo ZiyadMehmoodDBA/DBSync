@@ -31,7 +31,7 @@ public sealed class OperationQueryService(AppDbContext db, CursorSigner cursorSi
             && Guid.TryParse(filter.InitiatedBy, out var initiatedByGuid))
             query = query.Where(o => o.InitiatedBy == initiatedByGuid);
 
-        // Cursor is the StartedAt tick value of the last item, HMAC-signed
+        // Cursor encodes (StartedAt ticks, OperationId hash) for deterministic pagination
         if (!string.IsNullOrEmpty(filter.Cursor))
         {
             try
@@ -43,7 +43,7 @@ public sealed class OperationQueryService(AppDbContext db, CursorSigner cursorSi
             catch (ArgumentException) { /* invalid cursor — ignore */ }
         }
 
-        query = query.OrderByDescending(o => o.StartedAt);
+        query = query.OrderByDescending(o => o.StartedAt).ThenByDescending(o => o.OperationId);
 
         // Fetch one extra to detect next page
         var rows = await query.Take(pageSize + 1).ToListAsync(ct);
@@ -52,7 +52,7 @@ public sealed class OperationQueryService(AppDbContext db, CursorSigner cursorSi
         if (rows.Count > pageSize)
         {
             rows.RemoveAt(pageSize);
-            nextCursor = cursorSigner.Encode(0L, rows[^1].StartedAt.Ticks);
+            nextCursor = cursorSigner.Encode(rows[^1].OperationId.GetHashCode(), rows[^1].StartedAt.Ticks);
         }
 
         // Compute queue position for Pending operations

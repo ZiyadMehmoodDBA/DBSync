@@ -8,12 +8,6 @@ public sealed class OverviewSnapshotCache(IMemoryCache cache)
     private static readonly TimeSpan Ttl = TimeSpan.FromSeconds(5);
     private readonly SemaphoreSlim _refreshLock = new(1, 1);
 
-    public bool TryGet(out OverviewDto? dto)
-        => cache.TryGetValue(Key, out dto);
-
-    public void Set(OverviewDto dto)
-        => cache.Set(Key, dto, Ttl);
-
     public void Invalidate()
         => cache.Remove(Key);
 
