@@ -33,7 +33,8 @@ public sealed class ProbeWorker(
 
     public override async Task StartAsync(CancellationToken cancellationToken)
     {
-        registry.Register(nameof(ProbeWorker), TimeSpan.FromSeconds(60));
+        var intervalSeconds = config.GetValue<int>("Heartbeat:ProbeIntervalSeconds", 60);
+        registry.Register(nameof(ProbeWorker), TimeSpan.FromSeconds(intervalSeconds));
         await base.StartAsync(cancellationToken);
     }
 
