@@ -1,3 +1,4 @@
+using FluentAssertions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
@@ -152,6 +153,42 @@ public sealed class OverviewQueryServiceTests : IDisposable
         var dto = await svc.GetAsync(CancellationToken.None);
 
         Assert.DoesNotContain(dto.Warnings, w => w.Type == "NodeOffline");
+    }
+
+    [Fact]
+    public async Task GetOrCreateAsync_ConcurrentCacheMiss_FactoryCalledOnce()
+    {
+        var callCount = 0;
+        var tcs = new TaskCompletionSource();
+
+        async Task<OverviewDto> SlowFactory(CancellationToken ct)
+        {
+            Interlocked.Increment(ref callCount);
+            await tcs.Task; // block until released
+            return new OverviewDto(
+                Health: new OverviewHealthWidget("Healthy", "Healthy", "Healthy"),
+                Operations: new OverviewOperationsWidget(0, 0, 0, 0),
+                Nodes: new OverviewNodesWidget(0, 0, 0, 0, 0, 0),
+                Configuration: new OverviewConfigurationWidget(0, 0, 0),
+                Warnings: [],
+                RecentActivity: [],
+                System: new OverviewSystemWidget("test", "M026", "Test", "0d 00:00:00",
+                    "Configured", DateTime.UtcNow),
+                LastRefreshedAt: DateTime.UtcNow);
+        }
+
+        // Fire 10 concurrent cache-miss requests
+        var tasks = Enumerable.Range(0, 10)
+            .Select(_ => _snapshotCache.GetOrCreateAsync(SlowFactory, CancellationToken.None))
+            .ToArray();
+
+        // Give all tasks time to reach the factory / semaphore
+        await Task.Delay(50);
+        tcs.SetResult(); // release the factory
+
+        await Task.WhenAll(tasks);
+
+        callCount.Should().Be(1, "only one request should reach the factory");
     }
 
     public void Dispose()

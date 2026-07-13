@@ -15,11 +15,11 @@ public sealed class OverviewQueryService(
     OverviewSnapshotCache cache,
     IHostEnvironment env) : IOverviewQueryService
 {
-    public async Task<OverviewDto> GetAsync(CancellationToken ct)
-    {
-        if (cache.TryGet(out var cached) && cached is not null)
-            return cached;
+    public Task<OverviewDto> GetAsync(CancellationToken ct)
+        => cache.GetOrCreateAsync(BuildSnapshotAsync, ct);
 
+    private async Task<OverviewDto> BuildSnapshotAsync(CancellationToken ct)
+    {
         var now = DateTime.UtcNow;
         var todayUtc = now.Date;
 
@@ -32,12 +32,10 @@ public sealed class OverviewQueryService(
         var totalNodes = allNodes.Count;
         var activeNodes = allNodes.Count(n => n.LifecycleState == NodeLifecycleState.Active && !n.MaintenanceMode);
         var maintenanceNodes = allNodes.Count(n => n.MaintenanceMode);
-        // "Offline" = Decommissioned + Rejected + Disabled
         var offlineNodes = allNodes.Count(n =>
             n.LifecycleState is NodeLifecycleState.Decommissioned
                              or NodeLifecycleState.Rejected
                              or NodeLifecycleState.Disabled);
-        // "Degraded" = Recovery + Decommissioning
         var degradedNodes = allNodes.Count(n =>
             n.LifecycleState is NodeLifecycleState.Recovery
                              or NodeLifecycleState.Decommissioning);
@@ -132,7 +130,7 @@ public sealed class OverviewQueryService(
 
         var version = Assembly.GetEntryAssembly()?.GetName().Version?.ToString() ?? "12C";
 
-        var dto = new OverviewDto(
+        return new OverviewDto(
             Health: new OverviewHealthWidget(clusterHealth, workerHealthLevel, nodeHealthLevel),
             Operations: new OverviewOperationsWidget(runningOps, succeededOps, failedOps, queuedOps),
             Nodes: new OverviewNodesWidget(totalNodes, activeNodes, offlineNodes, maintenanceNodes, degradedNodes, pendingRegistrations),
@@ -141,15 +139,12 @@ public sealed class OverviewQueryService(
             RecentActivity: recentActivity,
             System: new OverviewSystemWidget(
                 Version: version,
-                DatabaseMigration: "M025",
+                DatabaseMigration: "M026",
                 Environment: env.EnvironmentName,
                 Uptime: uptimeStr,
                 SignalRStatus: "Configured",
                 LastRefreshedAt: now),
             LastRefreshedAt: now);
-
-        cache.Set(dto);
-        return dto;
     }
 
     private static string DeriveWorkerHealth(WorkerStatusDto[] workers)
@@ -183,8 +178,6 @@ public sealed class OverviewQueryService(
     private static string? DeriveEventDeepLink(string? actionName, string? entityId) =>
         actionName switch
         {
-            // NODE_ events: ObjectName is audit detail text (e.g. "node:x Pending->Active corr:y"),
-            // not a bare node ID. Return null to avoid broken deep-links.
             var a when a is not null && a.StartsWith("EXPORT_") => "/operations/jobs",
             _ => null
         };
