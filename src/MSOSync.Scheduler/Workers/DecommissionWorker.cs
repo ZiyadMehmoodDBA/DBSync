@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MSOSync.Common;
 using MSOSync.Common.Exceptions;
+using MSOSync.Common.Workers;
 using MSOSync.Metadata.Lifecycle;
 using MSOSync.Metadata.NodeManagement;
 using MSOSync.Persistence;
@@ -16,12 +17,22 @@ namespace MSOSync.Scheduler.Workers;
 /// Finalizes drains ONLY through NodeLifecycleService.FinalizeDecommissionAsync — no side door
 /// (spec §4.7, §5.5). Never writes lifecycle state directly.
 public sealed class DecommissionWorker(
-    IServiceScopeFactory scopeFactory,
-    IOptions<NodeProperties> nodeProps,
-    IOptions<LifecycleOptions> lifecycleOptions,
-    ILogger<DecommissionWorker> logger) : BackgroundService
+    IServiceScopeFactory        scopeFactory,
+    IOptions<NodeProperties>    nodeProps,
+    IOptions<LifecycleOptions>  lifecycleOptions,
+    ILogger<DecommissionWorker> logger,
+    IWorkerStatusRegistry       registry) : BackgroundService
 {
     private int _running;
+
+    public override async Task StartAsync(CancellationToken cancellationToken)
+    {
+        var interval = TimeSpan.FromSeconds(lifecycleOptions.Value.DecommissionWorkerIntervalSeconds > 0
+            ? lifecycleOptions.Value.DecommissionWorkerIntervalSeconds
+            : 30);
+        registry.Register(nameof(DecommissionWorker), interval);
+        await base.StartAsync(cancellationToken);
+    }
 
     protected override async Task ExecuteAsync(CancellationToken ct)
     {
@@ -45,9 +56,17 @@ public sealed class DecommissionWorker(
                 logger.LogWarning("DecommissionWorker tick skipped — previous tick still running");
                 continue;
             }
-            try { await RunTickAsync(ct); }
+            registry.RecordTickStart(nameof(DecommissionWorker));
+            try
+            {
+                await RunTickAsync(ct);
+                registry.RecordTickComplete(nameof(DecommissionWorker));
+            }
             catch (Exception ex) when (!ct.IsCancellationRequested)
-            { logger.LogError(ex, "DecommissionWorker tick failed"); }
+            {
+                registry.RecordTickFailed(nameof(DecommissionWorker), ex);
+                logger.LogError(ex, "DecommissionWorker tick failed");
+            }
             finally { Interlocked.Exchange(ref _running, 0); }
         }
     }

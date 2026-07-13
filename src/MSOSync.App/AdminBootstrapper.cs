@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using MSOSync.Common.Workers;
 using MSOSync.Persistence;
 using MSOSync.Persistence.Entities;
 using MSOSync.Security;
@@ -12,10 +13,14 @@ namespace MSOSync.App;
 public sealed class AdminBootstrapper(
     IServiceScopeFactory scopeFactory,
     IConfiguration configuration,
-    ILogger<AdminBootstrapper> logger) : IHostedService
+    ILogger<AdminBootstrapper> logger,
+    IWorkerStatusRegistry registry) : IHostedService
 {
     public async Task StartAsync(CancellationToken ct)
     {
+        registry.Register(nameof(AdminBootstrapper), TimeSpan.FromDays(365)); // one-shot; interval is irrelevant
+        registry.RecordTickStart(nameof(AdminBootstrapper), TickTrigger.Startup);
+
         var adminUser = configuration["Admin:Username"]
             ?? Environment.GetEnvironmentVariable("MSOSYNC_ADMIN_USER");
         var adminPassword = configuration["Admin:Password"]
@@ -24,6 +29,7 @@ public sealed class AdminBootstrapper(
         if (string.IsNullOrEmpty(adminUser) || string.IsNullOrEmpty(adminPassword))
         {
             logger.LogDebug("MSOSYNC_ADMIN_USER / MSOSYNC_ADMIN_PASSWORD not set — skipping admin bootstrap");
+            registry.RecordTickComplete(nameof(AdminBootstrapper));
             return;
         }
 
@@ -34,6 +40,7 @@ public sealed class AdminBootstrapper(
         if (await db.Users.AnyAsync(u => u.Username == adminUser, ct))
         {
             logger.LogDebug("Admin user '{Username}' already exists — skipping bootstrap", adminUser);
+            registry.RecordTickComplete(nameof(AdminBootstrapper));
             return;
         }
 
@@ -43,6 +50,7 @@ public sealed class AdminBootstrapper(
         if (adminRole == null)
         {
             logger.LogWarning("ADMIN role not found in database — run migrations first");
+            registry.RecordTickComplete(nameof(AdminBootstrapper));
             return;
         }
 
@@ -60,6 +68,7 @@ public sealed class AdminBootstrapper(
         await db.SaveChangesAsync(ct);
 
         logger.LogInformation("Admin user '{Username}' created", adminUser);
+        registry.RecordTickComplete(nameof(AdminBootstrapper));
     }
 
     public Task StopAsync(CancellationToken ct) => Task.CompletedTask;

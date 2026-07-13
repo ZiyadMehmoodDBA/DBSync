@@ -10,6 +10,7 @@ using MSOSync.Metadata.Audit;
 using MSOSync.Metadata.Events;
 using MSOSync.Metadata.Lifecycle;
 using MSOSync.Metadata.NodeManagement;
+using MSOSync.Metadata.Operations;
 using MSOSync.Persistence;
 using MSOSync.Persistence.Entities;
 using MSOSync.Security;
@@ -52,6 +53,18 @@ public sealed class NodeLifecycleServiceCommandTests
             var hasher  = new BCryptPasswordHasher();
             BootstrapTokens = new BootstrapTokenService(Db, hasher, options);
 
+            var operationSvc = new Mock<IOperationService>();
+            operationSvc.Setup(o => o.CreateAsync(
+                It.IsAny<OperationType>(), It.IsAny<Guid?>(), It.IsAny<Guid?>(),
+                It.IsAny<OperationSource>(), It.IsAny<string>(), It.IsAny<bool>(),
+                It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string?>(),
+                It.IsAny<CancellationToken>()))
+                .ReturnsAsync(Guid.NewGuid());
+            operationSvc.Setup(o => o.CompleteAsync(
+                It.IsAny<Guid>(), It.IsAny<OperationResult>(), It.IsAny<string?>(),
+                It.IsAny<CancellationToken>()))
+                .Returns(Task.CompletedTask);
+
             Svc = new NodeLifecycleService(
                 Db,
                 new RegistrationDiffService(),
@@ -64,7 +77,8 @@ public sealed class NodeLifecycleServiceCommandTests
                 new NodeLifecycleLockRegistry(),
                 options,
                 new ConfigurationBuilder().Build(),
-                NullLogger<NodeLifecycleService>.Instance);
+                NullLogger<NodeLifecycleService>.Instance,
+                operationSvc.Object);
         }
 
         public async Task<SyncNode> SeedNodeAsync(

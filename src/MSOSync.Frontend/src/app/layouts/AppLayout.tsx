@@ -4,25 +4,25 @@ import {
   LayoutDashboard,
   Network,
   Server,
-  Cable,
-  Zap,
   GitBranch,
   Activity,
-  ArrowDownCircle,
-  ArrowUpCircle,
   AlertTriangle,
   BarChart2,
   Users,
-  Settings,
   FileText,
-  Lock,
-  User,
   ShieldCheck,
-  Download,
   Sun,
   Moon,
   LogOut,
   Cpu,
+  Settings2,
+  Briefcase,
+  HeartPulse,
+  Flag,
+  SlidersHorizontal,
+  Archive,
+  Stethoscope,
+  PieChart,
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Separator } from '../../components/ui/separator';
@@ -39,56 +39,50 @@ import type { Theme } from '../../shared/types/preferences';
 
 type NavItem = { label: string; path: string; icon: React.ElementType; requiredPermission?: PermissionKey };
 
-const NAV_GROUPS: { heading: string; items: NavItem[] }[] = [
+const NAV_GROUPS: { heading: string | null; items: NavItem[] }[] = [
   {
-    heading: 'Operational',
+    heading: null,
     items: [
-      { label: 'Dashboard',        path: '/dashboard',        icon: LayoutDashboard },
-      { label: 'Events',           path: '/events',           icon: Activity },
-      { label: 'Incoming Batches', path: '/incoming-batches', icon: ArrowDownCircle },
-      { label: 'Outgoing Batches', path: '/outgoing-batches', icon: ArrowUpCircle },
-      { label: 'Batch Errors',     path: '/batch-errors',     icon: AlertTriangle },
-      { label: 'Metrics',          path: '/metrics',          icon: BarChart2, requiredPermission: PermissionKeys.ViewMetrics },
+      { label: 'Overview', path: '/overview', icon: LayoutDashboard },
     ],
   },
   {
-    heading: 'Topology',
+    heading: 'Operations',
     items: [
-      { label: 'Topology',  path: '/topology',  icon: Network, requiredPermission: PermissionKeys.ViewTopology },
-      { label: 'Node Management', path: '/node-management', icon: Server, requiredPermission: PermissionKeys.ViewTopology },
-      { label: 'Channels',  path: '/channels',  icon: Cable },
-      { label: 'Triggers',  path: '/triggers',  icon: Zap },
-      { label: 'Routers',   path: '/routers',   icon: GitBranch },
+      { label: 'Nodes',         path: '/operations/nodes',         icon: Server,      requiredPermission: PermissionKeys.ViewTopology },
+      { label: 'Configuration', path: '/operations/configuration', icon: Settings2,   requiredPermission: PermissionKeys.ManageConfigurations },
+      { label: 'Jobs',          path: '/operations/jobs',          icon: Briefcase },
+      { label: 'Health',        path: '/operations/health',        icon: HeartPulse },
+      { label: 'Activity',      path: '/operations/activity',      icon: Activity,    requiredPermission: PermissionKeys.ViewAudit },
+    ],
+  },
+  {
+    heading: 'Platform',
+    items: [
+      { label: 'Node Management', path: '/node-management',            icon: GitBranch,  requiredPermission: PermissionKeys.ViewTopology },
+      { label: 'Templates',       path: '/configuration/templates',    icon: Cpu,        requiredPermission: PermissionKeys.ManageConfigurations },
+      { label: 'Assignments',     path: '/configuration/assignments',  icon: Server,     requiredPermission: PermissionKeys.ManageConfigurations },
+      { label: 'Drift',           path: '/configuration/drift',        icon: AlertTriangle, requiredPermission: PermissionKeys.ManageConfigurations },
+      { label: 'Topology',        path: '/topology',                   icon: Network,    requiredPermission: PermissionKeys.ViewTopology },
+      { label: 'Metrics',         path: '/metrics',                    icon: BarChart2,  requiredPermission: PermissionKeys.ViewMetrics },
     ],
   },
   {
     heading: 'Administration',
     items: [
-      { label: 'Users',      path: '/users',               icon: Users,       requiredPermission: PermissionKeys.ManageUsers },
-      { label: 'Roles',      path: '/administration/roles', icon: ShieldCheck, requiredPermission: PermissionKeys.ManageUsers },
-      { label: 'Parameters', path: '/parameters', icon: Settings },
-      { label: 'Audit',      path: '/audit',      icon: FileText,  requiredPermission: PermissionKeys.ViewAudit },
-      { label: 'Locks',      path: '/locks',      icon: Lock },
+      { label: 'Users',         path: '/administration/users',         icon: Users,           requiredPermission: PermissionKeys.ManageUsers },
+      { label: 'Roles',         path: '/administration/roles',         icon: ShieldCheck,     requiredPermission: PermissionKeys.ManageUsers },
+      { label: 'Feature Flags', path: '/administration/feature-flags', icon: Flag,            requiredPermission: PermissionKeys.ManageConfigurations },
+      { label: 'Settings',      path: '/administration/settings',      icon: SlidersHorizontal, requiredPermission: PermissionKeys.ManageConfigurations },
+      { label: 'Retention',     path: '/administration/retention',     icon: Archive,         requiredPermission: PermissionKeys.ManageConfigurations },
+      { label: 'License',       path: '/administration/license',       icon: FileText },
+      { label: 'Diagnostics',   path: '/administration/diagnostics',   icon: Stethoscope,     requiredPermission: PermissionKeys.ManageConfigurations },
     ],
   },
   {
-    heading: 'Configuration',
+    heading: null,
     items: [
-      { label: 'Templates',   path: '/configuration/templates',   icon: Cpu,      requiredPermission: PermissionKeys.ManageConfigurations },
-      { label: 'Assignments', path: '/configuration/assignments',  icon: Server,   requiredPermission: PermissionKeys.ManageConfigurations },
-      { label: 'Drift',       path: '/configuration/drift',        icon: AlertTriangle, requiredPermission: PermissionKeys.ManageConfigurations },
-    ],
-  },
-  {
-    heading: 'Downloads',
-    items: [
-      { label: 'Downloads', path: '/downloads', icon: Download, requiredPermission: PermissionKeys.ExportData },
-    ],
-  },
-  {
-    heading: 'Account',
-    items: [
-      { label: 'Profile', path: '/profile', icon: User },
+      { label: 'Dashboard', path: '/dashboard/summary', icon: PieChart },
     ],
   },
 ];
@@ -122,7 +116,7 @@ function SignalRIndicator() {
   );
 }
 
-function NavGroup({ heading, items }: { heading: string; items: NavItem[] }) {
+function NavGroup({ heading, items }: { heading: string | null; items: NavItem[] }) {
   const canViewMetrics         = useHasPermission(PermissionKeys.ViewMetrics);
   const canViewTopology        = useHasPermission(PermissionKeys.ViewTopology);
   const canViewAudit           = useHasPermission(PermissionKeys.ViewAudit);
@@ -156,9 +150,11 @@ function NavGroup({ heading, items }: { heading: string; items: NavItem[] }) {
 
   return (
     <div className="flex flex-col gap-1">
-      <p className="px-3 text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 mb-1">
-        {heading}
-      </p>
+      {heading && (
+        <p className="px-3 text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 mb-1">
+          {heading}
+        </p>
+      )}
       {visibleItems.map(({ label, path, icon: Icon }) => (
         <NavLink
           key={path}
@@ -229,8 +225,8 @@ export function AppLayout() {
         </div>
         <Separator />
         <nav className="flex flex-col gap-4 p-3 flex-1">
-          {NAV_GROUPS.map((g) => (
-            <NavGroup key={g.heading} heading={g.heading} items={g.items} />
+          {NAV_GROUPS.map((g, groupIndex) => (
+            <NavGroup key={groupIndex} heading={g.heading} items={g.items} />
           ))}
         </nav>
       </aside>

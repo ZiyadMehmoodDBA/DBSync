@@ -62,8 +62,6 @@ public sealed class SecurityFixture : WebApplicationFactory<Program>, IAsyncLife
         testBuilder.Services.AddFluentValidationAutoValidation();
         testBuilder.Services.AddValidatorsFromAssemblyContaining<AuthController>();
 
-        testBuilder.Services.AddHostedService<AdminBootstrapper>();
-
         var app = testBuilder.Build();
 
         app.UseRateLimiter();

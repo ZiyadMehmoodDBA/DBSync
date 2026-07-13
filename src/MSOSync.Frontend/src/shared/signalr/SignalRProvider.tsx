@@ -6,6 +6,7 @@ import { useSignalR } from './useSignalR';
 import { routeToCache, routePermissionEvent, routeExportJobEvent } from './eventRouter';
 import { routeToToast } from './notifications';
 import type { OperationsEvent, PermissionEvent, ExportJobEvent } from './types';
+import { systemKeys } from '../api/system';
 
 interface Props {
   children: ReactNode;
@@ -39,6 +40,10 @@ export function SignalRProvider({ children }: Props) {
     [queryClient],
   );
 
+  const handleOverviewRefreshed = useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: systemKeys.overview });
+  }, [queryClient]);
+
   const { connectionState, lastConnectedAt, lastDisconnectedAt } = useSignalR({
     getAccessToken,
     isAuthenticated: accessToken !== null,
@@ -46,6 +51,7 @@ export function SignalRProvider({ children }: Props) {
     onEvent: handleEvent,
     onPermissionEvent: handlePermissionEvent,
     onExportJobEvent: handleExportJobEvent,
+    onOverviewRefreshed: handleOverviewRefreshed,
   });
 
   return (

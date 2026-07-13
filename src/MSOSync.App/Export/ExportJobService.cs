@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using MSOSync.Metadata.Audit;
 using MSOSync.Metadata.Export;
+using MSOSync.Metadata.Operations;
 using MSOSync.Persistence;
 using MSOSync.Persistence.Entities;
 
@@ -13,7 +14,8 @@ public sealed class ExportJobService(
     AppDbContext db,
     IMediator mediator,
     IAuditService auditSvc,
-    IOptions<ExportOptions> opts)
+    IOptions<ExportOptions> opts,
+    IOperationService operationService)
     : IExportJobService
 {
     private static readonly Meter               s_meter     = new("MSOSync.Export");
@@ -44,6 +46,19 @@ public sealed class ExportJobService(
         await auditSvc.WriteAsync("EXPORT_JOB_CREATED",
             $"Job {job.JobId} ({job.ResourceType}/{job.Format})",
             job.RequestedBy, ct);
+
+        var operationId = await operationService.CreateAsync(
+            type:          OperationType.Export,
+            referenceId:   job.JobId,
+            initiatedBy:   null,
+            source:        OperationSource.User,
+            correlationId: job.JobId.ToString(),
+            canCancel:     true,
+            canRetry:      false,
+            summary:       $"Export {job.ResourceType} to {job.Format}",
+            metadataJson:  $"{{\"format\":\"{job.Format}\",\"resourceType\":\"{job.ResourceType}\"}}",
+            ct:            ct);
+
         return job;
     }
 
@@ -97,6 +112,10 @@ public sealed class ExportJobService(
             .Where(j => j.JobId == jobId)
             .ExecuteUpdateAsync(s => s.SetProperty(j => j.ProgressPercent, progressPercent), ct);
         await PublishAsync(jobId, ct);
+
+        var opId = await FindOperationIdAsync(jobId, ct);
+        if (opId.HasValue)
+            await operationService.UpdateProgressAsync(opId.Value, progressPercent, null, ct);
     }
 
     public async Task CompleteJobAsync(Guid jobId, string outputPath, long rowCount, CancellationToken ct)
@@ -123,6 +142,11 @@ public sealed class ExportJobService(
             $"Job {jobId} ({job.ResourceType}/{job.Format}) rows={rowCount} duration={duration:F1}s",
             job.RequestedBy, ct);
         await PublishAsync(jobId, ct);
+
+        var opId = await FindOperationIdAsync(jobId, ct);
+        if (opId.HasValue)
+            await operationService.CompleteAsync(opId.Value, OperationResult.Success,
+                $"Exported {rowCount} rows to {Path.GetFileName(outputPath)}", ct);
     }
 
     public async Task FailJobAsync(Guid jobId, string errorMessage, CancellationToken ct)
@@ -136,6 +160,10 @@ public sealed class ExportJobService(
                 .SetProperty(j => j.ExpiresAt,    DateTimeOffset.UtcNow.AddHours(opts.Value.RetentionHours)), ct);
         s_failed.Add(1);
         await PublishAsync(jobId, ct);
+
+        var opId = await FindOperationIdAsync(jobId, ct);
+        if (opId.HasValue)
+            await operationService.CompleteAsync(opId.Value, OperationResult.Failure, errorMessage, ct);
     }
 
     public async Task SoftDeleteJobAsync(Guid jobId, CancellationToken ct)
@@ -161,6 +189,15 @@ public sealed class ExportJobService(
             .Where(j => j.Status == ExportJobStatus.Completed || j.Status == ExportJobStatus.Failed)
             .Where(j => j.ExpiresAt != null && j.ExpiresAt < DateTimeOffset.UtcNow)
             .ExecuteUpdateAsync(s => s.SetProperty(j => j.Status, ExportJobStatus.Expired), ct);
+    }
+
+    private async Task<Guid?> FindOperationIdAsync(Guid jobId, CancellationToken ct)
+    {
+        var op = await db.Operations.AsNoTracking()
+            .Where(o => o.ReferenceId == jobId && o.OperationType == "Export")
+            .OrderByDescending(o => o.StartedAt)
+            .FirstOrDefaultAsync(ct);
+        return op?.OperationId;
     }
 
     private async Task PublishAsync(Guid jobId, CancellationToken ct)

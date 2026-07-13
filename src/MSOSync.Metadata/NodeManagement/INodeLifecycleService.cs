@@ -32,5 +32,8 @@ public interface INodeLifecycleService
     // worker-only (System/Timeout trigger)
     Task FinalizeDecommissionAsync(string nodeId, LifecycleTrigger trigger, string reason, CancellationToken ct = default);
 
+    // ── 12C — Decommission cancellation (cancel-able within grace period) ─────────
+    Task CancelDecommissionAsync(string nodeId, string actorUsername, CancellationToken ct = default);
+
     // recovery approve/reject ride the existing registration ApproveAsync/RejectAsync by RegistrationType
 }

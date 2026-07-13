@@ -21,7 +21,7 @@ public sealed class MetadataController(
         var triggersTask   = triggers.GetTriggersAsync(ct);
         var routersTask    = routers.GetRoutersAsync(ct);
         var channelsTask   = channels.GetChannelsAsync(ct);
-        var parametersTask = parameters.GetParametersAsync(ct);
+        var parametersTask = parameters.GetParametersAsync(null, ct);
 
         await Task.WhenAll(nodesTask, triggersTask, routersTask, channelsTask, parametersTask);
 

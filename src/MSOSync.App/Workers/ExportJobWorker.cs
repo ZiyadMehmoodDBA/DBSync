@@ -4,6 +4,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MSOSync.App.Export;
+using MSOSync.Common.Workers;
 using MSOSync.Metadata.Audit;
 using MSOSync.Metadata.Events;
 using MSOSync.Metadata.Export;
@@ -16,26 +17,37 @@ namespace MSOSync.App.Workers;
 public sealed class ExportJobWorker(
     IServiceScopeFactory scopeFactory,
     IOptions<ExportOptions> opts,
-    ILogger<ExportJobWorker> logger)
+    ILogger<ExportJobWorker> logger,
+    IWorkerStatusRegistry registry)
     : BackgroundService
 {
+    public override async Task StartAsync(CancellationToken cancellationToken)
+    {
+        registry.Register(nameof(ExportJobWorker), TimeSpan.FromSeconds(5));
+        await base.StartAsync(cancellationToken);
+    }
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         Directory.CreateDirectory(opts.Value.BasePath);
 
         while (!stoppingToken.IsCancellationRequested)
         {
+            registry.RecordTickStart(nameof(ExportJobWorker));
             try
             {
                 await ProcessNextJobAsync(stoppingToken);
+                registry.RecordTickComplete(nameof(ExportJobWorker));
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
+                registry.RecordTickComplete(nameof(ExportJobWorker));
                 break;
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Unhandled error in ExportJobWorker loop");
+                registry.RecordTickFailed(nameof(ExportJobWorker), ex);
+                logger.LogError(ex, "ExportJobWorker tick failed");
             }
 
             await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);

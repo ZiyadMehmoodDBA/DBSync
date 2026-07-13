@@ -17,12 +17,12 @@ public sealed class PersistenceTests(DatabaseFixture fixture) : IClassFixture<Da
     }
 
     [Fact]
-    public async Task SchemaCreated_All35TablesExist()
+    public async Task SchemaCreated_All36TablesExist()
     {
         var count = await fixture.Db.Database
             .SqlQuery<int>($"SELECT COUNT(1) AS Value FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = 'msosync'")
             .SingleAsync();
-        count.Should().Be(35);
+        count.Should().Be(36);
     }
 
     [Fact]
@@ -46,7 +46,7 @@ public sealed class PersistenceTests(DatabaseFixture fixture) : IClassFixture<Da
     public async Task SeedData_ParametersPresent()
     {
         var count = await fixture.Db.Parameters.AsNoTracking().CountAsync();
-        count.Should().Be(6);
+        count.Should().Be(16);
 
         var interval = await fixture.Db.Parameters.AsNoTracking()
             .FirstOrDefaultAsync(p => p.ParameterName == "sync.interval.seconds");

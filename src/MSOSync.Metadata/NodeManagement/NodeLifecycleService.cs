@@ -9,6 +9,7 @@ using MSOSync.Common.Exceptions;
 using MSOSync.Metadata.Audit;
 using MSOSync.Metadata.Events;
 using MSOSync.Metadata.Lifecycle;
+using MSOSync.Metadata.Operations;
 using MSOSync.Persistence;
 using MSOSync.Persistence.Entities;
 using MSOSync.Security;
@@ -37,7 +38,8 @@ public sealed class NodeLifecycleService(
     NodeLifecycleLockRegistry     locks,
     IOptions<LifecycleOptions>    options,
     IConfiguration                configuration,
-    ILogger<NodeLifecycleService> logger) : INodeLifecycleService
+    ILogger<NodeLifecycleService> logger,
+    IOperationService             operationService) : INodeLifecycleService
 {
     private static readonly JsonSerializerOptions JsonOpts =
         new() { PropertyNameCaseInsensitive = true };
@@ -619,17 +621,85 @@ public sealed class NodeLifecycleService(
             },
             metadataJson: $$"""{"graceMinutes":{{(int)grace.TotalMinutes}},"initialOpenBatches":{{openBatches}}}""",
             ct: ct);
+
+        // Track this decommission as an Operation so operators can monitor/cancel it.
+        // referenceId is null because NodeId is a string, not a Guid.
+        // The node is identified via correlationId (nodeId string) for JOIN with lifecycle history.
+        await operationService.CreateAsync(
+            type:          OperationType.Decommission,
+            referenceId:   null,
+            initiatedBy:   Guid.TryParse(actorUsername, out var actorGuid) ? actorGuid : (Guid?)null,
+            source:        OperationSource.User,
+            correlationId: nodeId,
+            canCancel:     true,
+            canRetry:      false,
+            summary:       $"Decommission node {nodeId}",
+            metadataJson:  $"{{\"nodeId\":\"{nodeId}\",\"graceMinutes\":{gracePeriodMinutes ?? options.Value.DecommissionGraceMinutes}}}",
+            ct:            ct);
     }
 
-    public Task ForceCompleteDecommissionAsync(string nodeId, string actorUsername, CancellationToken ct = default)
-        => ExecuteTransitionAsync(nodeId, NodeLifecycleState.Decommissioned, LifecycleTrigger.Manual,
+    public async Task ForceCompleteDecommissionAsync(string nodeId, string actorUsername, CancellationToken ct = default)
+    {
+        await ExecuteTransitionAsync(nodeId, NodeLifecycleState.Decommissioned, LifecycleTrigger.Manual,
             actorUsername, "forced by operator", NodeManagementAuditActions.NodeDecommissionForced,
             mutate: (node, _) => { FreeExternalId(node); return Task.CompletedTask; }, ct: ct);
 
-    public Task FinalizeDecommissionAsync(string nodeId, LifecycleTrigger trigger, string reason, CancellationToken ct = default)
-        => ExecuteTransitionAsync(nodeId, NodeLifecycleState.Decommissioned, trigger,
+        var op = await db.Operations.AsNoTracking()
+            .Where(o => o.CorrelationId == nodeId
+                     && o.OperationType == "Decommission"
+                     && o.Status != "Completed" && o.Status != "Cancelled" && o.Status != "Failed")
+            .OrderByDescending(o => o.StartedAt)
+            .FirstOrDefaultAsync(ct);
+
+        if (op is not null)
+            await operationService.CompleteAsync(op.OperationId, OperationResult.Success,
+                $"Node {nodeId} decommissioned (forced by operator)", ct);
+    }
+
+    public async Task FinalizeDecommissionAsync(string nodeId, LifecycleTrigger trigger, string reason, CancellationToken ct = default)
+    {
+        await ExecuteTransitionAsync(nodeId, NodeLifecycleState.Decommissioned, trigger,
             "system", reason, NodeManagementAuditActions.NodeDecommissionCompleted,
             mutate: (node, _) => { FreeExternalId(node); return Task.CompletedTask; }, ct: ct);
+
+        var op = await db.Operations.AsNoTracking()
+            .Where(o => o.CorrelationId == nodeId
+                     && o.OperationType == "Decommission"
+                     && o.Status != "Completed" && o.Status != "Cancelled" && o.Status != "Failed")
+            .OrderByDescending(o => o.StartedAt)
+            .FirstOrDefaultAsync(ct);
+
+        if (op is not null)
+            await operationService.CompleteAsync(op.OperationId, OperationResult.Success,
+                $"Node {nodeId} fully decommissioned", ct);
+    }
+
+    // ── 12C — Decommission cancellation ───────────────────────────────────────
+
+    public Task CancelDecommissionAsync(string nodeId, string actorUsername, CancellationToken ct = default)
+    {
+        // Transition: Decommissioning → Disabled.
+        // This is the only safe cancellation target — it is always reachable from Decommissioning
+        // (the state machine allows Decommissioning → Disabled via a manual override trigger).
+        // The node security was revoked at drain start (spec §4.7); it stays revoked here
+        // because the node must re-authenticate via a new bootstrap token before being re-used.
+        return ExecuteTransitionAsync(
+            nodeId,
+            NodeLifecycleState.Disabled,
+            LifecycleTrigger.Manual,
+            actorUsername,
+            "Decommission cancelled by operator",
+            NodeManagementAuditActions.NodeDecommissionCancelled,
+            mutate: (node, _) =>
+            {
+                node.DecommissionReason                 = null;
+                node.DecommissionStartedAt              = null;
+                node.DecommissionGraceUntil             = null;
+                node.DecommissionInitialOpenBatches     = null;
+                return Task.CompletedTask;
+            },
+            ct: ct);
+    }
 
     // ExternalId freed only when Decommissioned (spec §2.2 note). Preserve traceability in NodeName.
     private static void FreeExternalId(SyncNode node)

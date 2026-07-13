@@ -8,6 +8,7 @@ using MSOSync.Common.Exceptions;
 using MSOSync.Metadata.Audit;
 using MSOSync.Metadata.Lifecycle;
 using MSOSync.Metadata.NodeManagement;
+using MSOSync.Metadata.Operations;
 using MSOSync.Persistence.Entities;
 using MSOSync.Security;
 using Xunit;
@@ -19,11 +20,18 @@ public sealed class NodeLifecycleServiceTests
     private static NodeLifecycleService MakeService(out MSOSync.Persistence.AppDbContext db)
     {
         db = TestDbContext.Create();
-        var diffSvc   = new RegistrationDiffService();
-        var auditSvc  = new Mock<IAuditService>();
-        var mediator  = new Mock<IMediator>();
-        var options   = Options.Create(new LifecycleOptions());
-        var hasher    = new BCryptPasswordHasher();
+        var diffSvc       = new RegistrationDiffService();
+        var auditSvc      = new Mock<IAuditService>();
+        var mediator      = new Mock<IMediator>();
+        var options       = Options.Create(new LifecycleOptions());
+        var hasher        = new BCryptPasswordHasher();
+        var operationSvc  = new Mock<IOperationService>();
+        operationSvc.Setup(o => o.CreateAsync(
+            It.IsAny<OperationType>(), It.IsAny<Guid?>(), It.IsAny<Guid?>(),
+            It.IsAny<OperationSource>(), It.IsAny<string>(), It.IsAny<bool>(),
+            It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string?>(),
+            It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Guid.NewGuid());
         return new NodeLifecycleService(
             db,
             diffSvc,
@@ -36,7 +44,8 @@ public sealed class NodeLifecycleServiceTests
             new NodeLifecycleLockRegistry(),
             options,
             new ConfigurationBuilder().Build(),
-            NullLogger<NodeLifecycleService>.Instance);
+            NullLogger<NodeLifecycleService>.Instance,
+            operationSvc.Object);
     }
 
     [Fact]

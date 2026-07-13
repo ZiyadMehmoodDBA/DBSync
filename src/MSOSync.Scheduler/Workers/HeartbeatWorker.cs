@@ -5,6 +5,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MSOSync.Common;
+using MSOSync.Common.Workers;
 using MSOSync.Transport;
 
 namespace MSOSync.Scheduler.Workers;
@@ -15,22 +16,33 @@ public sealed class HeartbeatWorker : BackgroundService
     private static readonly Counter<long>  Sent  = Meter.CreateCounter<long>(
         "msosync_heartbeat_sent_total", description: "Total heartbeat POST requests sent");
 
-    private readonly IServiceScopeFactory     _scopeFactory;
-    private readonly IOptions<NodeProperties> _nodeProps;
-    private readonly IConfiguration           _config;
-    private readonly ILogger<HeartbeatWorker> _logger;
-    private readonly DateTime                 _startTime = DateTime.UtcNow;
+    private readonly IServiceScopeFactory      _scopeFactory;
+    private readonly IOptions<NodeProperties>  _nodeProps;
+    private readonly IConfiguration            _config;
+    private readonly ILogger<HeartbeatWorker>  _logger;
+    private readonly IWorkerStatusRegistry     _registry;
+    private readonly DateTime                  _startTime = DateTime.UtcNow;
 
     public HeartbeatWorker(
         IServiceScopeFactory     scopeFactory,
         IOptions<NodeProperties> nodeProps,
         IConfiguration           config,
-        ILogger<HeartbeatWorker> logger)
+        ILogger<HeartbeatWorker> logger,
+        IWorkerStatusRegistry    registry)
     {
         _scopeFactory = scopeFactory;
         _nodeProps    = nodeProps;
         _config       = config;
         _logger       = logger;
+        _registry     = registry;
+    }
+
+    public override async Task StartAsync(CancellationToken cancellationToken)
+    {
+        var intervalSeconds = _config.GetValue<int>("Heartbeat:IntervalSeconds", 30);
+        if (intervalSeconds <= 0) intervalSeconds = 30;
+        _registry.Register(nameof(HeartbeatWorker), TimeSpan.FromSeconds(intervalSeconds));
+        await base.StartAsync(cancellationToken);
     }
 
     protected override async Task ExecuteAsync(CancellationToken ct)
@@ -42,6 +54,7 @@ public sealed class HeartbeatWorker : BackgroundService
         using var timer = new PeriodicTimer(interval);
         while (await timer.WaitForNextTickAsync(ct))
         {
+            _registry.RecordTickStart(nameof(HeartbeatWorker));
             try
             {
                 await using var scope      = _scopeFactory.CreateAsyncScope();
@@ -62,9 +75,11 @@ public sealed class HeartbeatWorker : BackgroundService
                     ct);
 
                 Sent.Add(1);
+                _registry.RecordTickComplete(nameof(HeartbeatWorker));
             }
             catch (Exception ex) when (!ct.IsCancellationRequested)
             {
+                _registry.RecordTickFailed(nameof(HeartbeatWorker), ex);
                 _logger.LogWarning(ex, "HeartbeatWorker: heartbeat send failed");
             }
         }

@@ -4,6 +4,7 @@ using Microsoft.Extensions.Caching.Memory;
 using Moq;
 using MSOSync.Common;
 using MSOSync.Common.Exceptions;
+using MSOSync.Metadata.Audit;
 using MSOSync.Metadata.Events;
 using MSOSync.Metadata.Services;
 using MSOSync.Persistence;
@@ -17,13 +18,15 @@ public sealed class ParameterMetadataServiceTests
     private static ParameterMetadataService CreateService(
         out AppDbContext db,
         Mock<IMediator>? mediatorMock = null,
-        Mock<ICurrentUserService>? userMock = null)
+        Mock<ICurrentUserService>? userMock = null,
+        Mock<IAuditService>? auditMock = null)
     {
         db = TestDbContext.Create();
         var cache = new MemoryCache(new MemoryCacheOptions());
         var mediator = (mediatorMock ?? new Mock<IMediator>()).Object;
         var user = (userMock ?? new Mock<ICurrentUserService>()).Object;
-        return new ParameterMetadataService(db, cache, mediator, user);
+        var audit = (auditMock ?? new Mock<IAuditService>()).Object;
+        return new ParameterMetadataService(db, cache, mediator, user, audit);
     }
 
     [Fact]
@@ -64,12 +67,12 @@ public sealed class ParameterMetadataServiceTests
         await db.SaveChangesAsync();
 
         var before = await svc.GetParameterAsync("sync.batch.size");
-        before!.Value.Should().Be("100");
+        before!.ParameterValue.Should().Be("100");
 
         await svc.UpdateParameterAsync("sync.batch.size", "999");
 
         var after = await svc.GetParameterAsync("sync.batch.size");
-        after!.Value.Should().Be("999");
+        after!.ParameterValue.Should().Be("999");
     }
 
     [Fact]

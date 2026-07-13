@@ -19,6 +19,9 @@ using MSOSync.Metadata.NodeManagement;
 using MSOSync.Metadata.Preferences;
 using MSOSync.Metadata.Users;
 using MSOSync.Metadata.Configuration;
+using MSOSync.Metadata.Operations;
+using MSOSync.Metadata.Operations.Handlers;
+using MSOSync.Metadata.Overview;
 
 namespace MSOSync.Metadata;
 
@@ -116,6 +119,20 @@ public static class MetadataServiceExtensions
         services.AddSingleton<IDriftDetector, DriftDetector>();
         services.AddScoped<INodeConfigurationService, NodeConfigurationService>();
         services.AddScoped<HeartbeatProcessor>();
+
+        // Epic 12C — Operations registry
+        services.AddScoped<IOperationService, OperationService>();
+        services.AddKeyedScoped<IOperationHandler, ExportOperationHandler>(OperationType.Export);
+        services.AddKeyedScoped<IOperationHandler, RolloutOperationHandler>(OperationType.Rollout);
+        services.AddKeyedScoped<IOperationHandler, DecommissionOperationHandler>(OperationType.Decommission);
+        services.AddScoped<IOperationQueryService, OperationQueryService>();
+
+        // Epic 12C — Overview
+        services.AddSingleton<OverviewSnapshotCache>();
+        services.AddScoped<IOverviewQueryService, OverviewQueryService>();
+
+        // Epic 12C — Correlation Timeline
+        services.AddScoped<CorrelationTimelineAssembler>();
 
         return services;
     }

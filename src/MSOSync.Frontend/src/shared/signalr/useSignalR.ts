@@ -11,6 +11,7 @@ interface UseSignalROptions {
   onEvent: (event: OperationsEvent) => void;
   onPermissionEvent?: (event: PermissionEvent) => void;
   onExportJobEvent?: (event: ExportJobEvent) => void;
+  onOverviewRefreshed?: () => void;
 }
 
 export function useSignalR({
@@ -20,6 +21,7 @@ export function useSignalR({
   onEvent,
   onPermissionEvent,
   onExportJobEvent,
+  onOverviewRefreshed,
 }: UseSignalROptions) {
   const [connectionState, setConnectionState] = useState<ConnectionState>('disconnected');
   const [lastConnectedAt, setLastConnectedAt] = useState<Date | undefined>();
@@ -72,6 +74,10 @@ export function useSignalR({
       onExportJobEvent?.(event);
     });
 
+    conn.on('OverviewRefreshed', () => {
+      onOverviewRefreshed?.();
+    });
+
     try {
       await conn.start();
       setConnectionState('connected');
@@ -80,7 +86,7 @@ export function useSignalR({
       setConnectionState('disconnected');
       connectionRef.current = null;
     }
-  }, [queryClient, onEvent, onPermissionEvent, onExportJobEvent]);
+  }, [queryClient, onEvent, onPermissionEvent, onExportJobEvent, onOverviewRefreshed]);
 
   const stopConnection = useCallback(async () => {
     if (!connectionRef.current) return;

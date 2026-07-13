@@ -18,7 +18,9 @@ public static class PersistenceServiceExtensions
 
         services.AddDbContext<AppDbContext>(opts =>
             opts.UseSqlServer(connectionString, sql =>
-                sql.MigrationsHistoryTable("__EFMigrationsHistory", schema)));
+                sql.MigrationsHistoryTable("__EFMigrationsHistory", schema))
+                .ConfigureWarnings(w => w.Ignore(
+                    Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning)));
 
         services.AddScoped<GetPendingBatchesQuery>();
         services.AddScoped<GetOfflineNodesQuery>();

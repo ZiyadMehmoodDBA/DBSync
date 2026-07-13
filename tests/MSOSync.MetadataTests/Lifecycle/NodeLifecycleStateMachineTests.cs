@@ -28,6 +28,7 @@ public sealed class NodeLifecycleStateMachineTests
         (NodeLifecycleState.Recovery,            NodeLifecycleState.Decommissioning),
         (NodeLifecycleState.Disabled,            NodeLifecycleState.Decommissioning),
         (NodeLifecycleState.Decommissioning,     NodeLifecycleState.Decommissioned),
+        (NodeLifecycleState.Decommissioning,     NodeLifecycleState.Disabled),      // cancel-decommission path (12C)
     ];
 
     public static TheoryData<NodeLifecycleState, NodeLifecycleState> AllPairs()
