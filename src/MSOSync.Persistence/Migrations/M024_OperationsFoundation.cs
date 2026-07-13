@@ -72,50 +72,11 @@ namespace MSOSync.Persistence.Migrations
                 table: "sync_operation",
                 column: "correlation_id");
 
-            // Cross-table correlation index on sync_audit
-            migrationBuilder.CreateIndex(
-                name: "IX_sync_audit_correlation_create_time",
-                schema: "msosync",
-                table: "sync_audit",
-                columns: new[] { "correlation_id", "create_time" });
-
-            // Cross-table correlation index on sync_node_lifecycle_history
-            // Guard: only add if the column exists (it was added in M022).
-            // In SQL Server you can check INFORMATION_SCHEMA at migration time,
-            // but since this column was guaranteed by M022, we add it unconditionally.
-            migrationBuilder.CreateIndex(
-                name: "IX_node_lifecycle_history_correlation_id",
-                schema: "msosync",
-                table: "sync_node_lifecycle_history",
-                column: "correlation_id");
-
-            // Cross-table correlation index on sync_node_configuration_history
-            migrationBuilder.CreateIndex(
-                name: "IX_node_config_history_correlation_id",
-                schema: "msosync",
-                table: "sync_node_configuration_history",
-                column: "correlation_id");
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            // Remove cross-table indexes first (they don't depend on the new table)
-            migrationBuilder.DropIndex(
-                name: "IX_node_config_history_correlation_id",
-                schema: "msosync",
-                table: "sync_node_configuration_history");
-
-            migrationBuilder.DropIndex(
-                name: "IX_node_lifecycle_history_correlation_id",
-                schema: "msosync",
-                table: "sync_node_lifecycle_history");
-
-            migrationBuilder.DropIndex(
-                name: "IX_sync_audit_correlation_create_time",
-                schema: "msosync",
-                table: "sync_audit");
-
             migrationBuilder.DropTable(
                 name: "sync_operation",
                 schema: "msosync");

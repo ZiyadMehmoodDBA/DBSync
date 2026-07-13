@@ -33,5 +33,7 @@ public sealed class SyncNodeLifecycleHistoryConfiguration : IEntityTypeConfigura
             .HasConstraintName("FK_node_lifecycle_history_node").OnDelete(DeleteBehavior.NoAction);
         builder.HasIndex(e => new { e.NodeId, e.OccurredAt })
             .IsDescending(false, true).HasDatabaseName("IX_node_lifecycle_history_node_time");
+        builder.HasIndex(e => e.CorrelationId)
+            .HasDatabaseName("IX_node_lifecycle_history_correlation_id");
     }
 }

@@ -10,7 +10,7 @@ namespace MSOSync.Metadata.Operations;
 public sealed class OperationService(
     AppDbContext             db,
     IPublisher               publisher,
-    IKeyedServiceProvider    keyedServices) : IOperationService
+    IServiceProvider         serviceProvider) : IOperationService
 {
     public async Task<Guid> CreateAsync(
         OperationType   type,
@@ -126,7 +126,7 @@ public sealed class OperationService(
         // Delegate domain-side cancellation first
         if (Enum.TryParse<OperationType>(op.OperationType, out var opType))
         {
-            var handler = keyedServices.GetKeyedService<IOperationHandler>(opType);
+            var handler = serviceProvider.GetKeyedService<IOperationHandler>(opType);
             if (handler is not null)
             {
                 if (op.ReferenceId.HasValue)
@@ -172,7 +172,7 @@ public sealed class OperationService(
         if (op.ReferenceId.HasValue
             && Enum.TryParse<OperationType>(op.OperationType, out var opType))
         {
-            var handler = keyedServices.GetKeyedService<IOperationHandler>(opType);
+            var handler = serviceProvider.GetKeyedService<IOperationHandler>(opType);
             if (handler is not null)
                 await handler.RetryAsync(op.ReferenceId.Value, actorId, ct);
         }

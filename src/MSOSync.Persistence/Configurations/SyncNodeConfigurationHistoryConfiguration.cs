@@ -32,5 +32,7 @@ public sealed class SyncNodeConfigurationHistoryConfiguration
 
         builder.HasIndex(e => new { e.NodeId, e.OccurredAt })
             .HasDatabaseName("IX_node_config_history_node_time");
+        builder.HasIndex(e => e.CorrelationId)
+            .HasDatabaseName("IX_node_config_history_correlation_id");
     }
 }
