@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -31,7 +31,7 @@ using MSOSync.Metadata.Configuration;
 
 namespace MSOSync.IntegrationTests.Operations;
 
-// ── Fixture ───────────────────────────────────────────────────────────────────
+// â”€â”€ Fixture â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 public sealed class OperationsFixture : WebApplicationFactory<Program>, IAsyncLifetime
 {
@@ -109,8 +109,7 @@ public sealed class OperationsFixture : WebApplicationFactory<Program>, IAsyncLi
 
     public async Task InitializeAsync()
     {
-        var opts = new DbContextOptionsBuilder<AppDbContext>()
-            .UseSqlServer(ConnStr).Options;
+        var opts = AppDbContext.CreateOptionsBuilder(ConnStr).Options;
         await using var db = new AppDbContext(opts);
 
         if (await db.Database.CanConnectAsync())
@@ -157,8 +156,7 @@ public sealed class OperationsFixture : WebApplicationFactory<Program>, IAsyncLi
 
     public new async Task DisposeAsync()
     {
-        var opts = new DbContextOptionsBuilder<AppDbContext>()
-            .UseSqlServer(ConnStr).Options;
+        var opts = AppDbContext.CreateOptionsBuilder(ConnStr).Options;
         await using var db = new AppDbContext(opts);
         await db.Database.ExecuteSqlRawAsync(
             "ALTER DATABASE [MSOSyncOperations_Test] SET SINGLE_USER WITH ROLLBACK IMMEDIATE");
@@ -188,13 +186,13 @@ public sealed class OperationsFixture : WebApplicationFactory<Program>, IAsyncLi
 [CollectionDefinition("Operations")]
 public sealed class OperationsCollection : ICollectionFixture<OperationsFixture> { }
 
-// ── Tests ─────────────────────────────────────────────────────────────────────
+// â”€â”€ Tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 [Collection("Operations")]
 public sealed class OperationsIntegrationTests(OperationsFixture fixture)
     : IClassFixture<OperationsFixture>
 {
-    // ── List returns created operations ──────────────────────────────────────
+    // â”€â”€ List returns created operations â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     [Fact]
     public async Task GetOperations_AdminToken_Returns200WithItems()
@@ -212,7 +210,7 @@ public sealed class OperationsIntegrationTests(OperationsFixture fixture)
         body.GetProperty("items").GetArrayLength().Should().BeGreaterThan(0);
     }
 
-    // ── Cancel a running rollout operation ──────────────────────────────────
+    // â”€â”€ Cancel a running rollout operation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     [Fact]
     public async Task CancelRolloutOperation_UpdatesOperationStatusToCancelled()
@@ -259,7 +257,7 @@ public sealed class OperationsIntegrationTests(OperationsFixture fixture)
         rollout!.Status.Should().Be("Cancelled");
     }
 
-    // ── Viewer cannot cancel ──────────────────────────────────────────────────
+    // â”€â”€ Viewer cannot cancel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     [Fact]
     public async Task CancelOperation_ViewerToken_Returns403()
@@ -278,7 +276,7 @@ public sealed class OperationsIntegrationTests(OperationsFixture fixture)
         resp.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
-    // ── StartRollout creates operation row ─────────────────────────────────
+    // â”€â”€ StartRollout creates operation row â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     [Fact]
     public async Task StartRollout_CreatesOperation_WithStatusPending()
@@ -335,3 +333,4 @@ public sealed class OperationsIntegrationTests(OperationsFixture fixture)
         operation.CanRetry.Should().BeFalse();
     }
 }
+

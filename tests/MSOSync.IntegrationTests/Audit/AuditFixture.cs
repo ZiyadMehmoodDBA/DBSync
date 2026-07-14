@@ -85,8 +85,7 @@ public sealed class AuditFixture : WebApplicationFactory<Program>, IAsyncLifetim
 
     public async Task InitializeAsync()
     {
-        var opts = new DbContextOptionsBuilder<AppDbContext>()
-            .UseSqlServer(ConnStr).Options;
+        var opts = AppDbContext.CreateOptionsBuilder(ConnStr).Options;
         await using var db = new AppDbContext(opts);
 
         // Drop and recreate for a clean slate on every run
@@ -161,8 +160,7 @@ public sealed class AuditFixture : WebApplicationFactory<Program>, IAsyncLifetim
 
     public new async Task DisposeAsync()
     {
-        var opts = new DbContextOptionsBuilder<AppDbContext>()
-            .UseSqlServer(ConnStr).Options;
+        var opts = AppDbContext.CreateOptionsBuilder(ConnStr).Options;
         await using var db = new AppDbContext(opts);
         await db.Database.ExecuteSqlRawAsync(
             "ALTER DATABASE [MSOSyncAudit_Test] SET SINGLE_USER WITH ROLLBACK IMMEDIATE");

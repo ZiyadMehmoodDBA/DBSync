@@ -14,9 +14,7 @@ public sealed class DatabaseFixture : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        var opts = new DbContextOptionsBuilder<AppDbContext>()
-            .UseSqlServer(ConnectionString)
-            .Options;
+        var opts = AppDbContext.CreateOptionsBuilder(ConnectionString).Options;
 
         Db = new AppDbContext(opts);
         await Db.Database.MigrateAsync();

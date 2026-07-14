@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Builder;
@@ -83,9 +83,10 @@ public sealed class DashboardFixture : WebApplicationFactory<Program>, IAsyncLif
 
     public async Task InitializeAsync()
     {
-        var opts = new DbContextOptionsBuilder<AppDbContext>()
-            .UseSqlServer(ConnStr).Options;
+        var opts = AppDbContext.CreateOptionsBuilder(ConnStr).Options;
         await using var db = new AppDbContext(opts);
+        if (await db.Database.CanConnectAsync())
+            await db.Database.EnsureDeletedAsync();
         await db.Database.MigrateAsync();
 
         foreach (var role in new[] { "ADMIN", "OPERATOR", "VIEWER" })
@@ -117,8 +118,6 @@ public sealed class DashboardFixture : WebApplicationFactory<Program>, IAsyncLif
 
     private static async Task SeedAsync(AppDbContext db)
     {
-        if (await db.Nodes.AnyAsync()) return;
-
         db.Nodes.AddRange(
             new SyncNode { NodeId = "hub-1",   GroupId = "g1", SyncUrl = "http://hub-1",   LifecycleState = NodeLifecycleState.Active, ConnectivityStatus = ConnectivityStatus.Reachable  },
             new SyncNode { NodeId = "hub-2",   GroupId = "g1", SyncUrl = "http://hub-2",   LifecycleState = NodeLifecycleState.Active, ConnectivityStatus = ConnectivityStatus.Reachable  },
@@ -140,13 +139,20 @@ public sealed class DashboardFixture : WebApplicationFactory<Program>, IAsyncLif
         await db.SaveChangesAsync();
 
         db.Audits.AddRange(
-            new SyncAudit { AuditId = 1, Username = "alice", ActionName = "UPDATE", ObjectName = "SyncNode",    CreateTime = DateTime.UtcNow.AddMinutes(-30) },
-            new SyncAudit { AuditId = 2, Username = "bob",   ActionName = "DELETE", ObjectName = "SyncTrigger", CreateTime = DateTime.UtcNow.AddMinutes(-20) },
-            new SyncAudit { AuditId = 3, Username = "alice", ActionName = "CREATE", ObjectName = "SyncRouter",  CreateTime = DateTime.UtcNow.AddMinutes(-10) });
+            new SyncAudit { Username = "alice", ActionName = "UPDATE", ObjectName = "SyncNode",    CreateTime = DateTime.UtcNow.AddMinutes(-30) },
+            new SyncAudit { Username = "bob",   ActionName = "DELETE", ObjectName = "SyncTrigger", CreateTime = DateTime.UtcNow.AddMinutes(-20) },
+            new SyncAudit { Username = "alice", ActionName = "CREATE", ObjectName = "SyncRouter",  CreateTime = DateTime.UtcNow.AddMinutes(-10) });
         await db.SaveChangesAsync();
     }
 
-    public new Task DisposeAsync() => Task.CompletedTask;
+    public new async Task DisposeAsync()
+    {
+        var opts = AppDbContext.CreateOptionsBuilder(ConnStr).Options;
+        await using var db = new AppDbContext(opts);
+        if (await db.Database.CanConnectAsync())
+            await db.Database.EnsureDeletedAsync();
+        await base.DisposeAsync();
+    }
 
     public async Task<string> GetViewerTokenAsync()
     {
@@ -164,3 +170,4 @@ public sealed class DashboardFixture : WebApplicationFactory<Program>, IAsyncLif
 
 [CollectionDefinition("Dashboard")]
 public sealed class DashboardCollectionDefinition : ICollectionFixture<DashboardFixture> { }
+

@@ -1,4 +1,4 @@
-// tests/MSOSync.IntegrationTests/Heartbeat/HeartbeatFixture.cs
+﻿// tests/MSOSync.IntegrationTests/Heartbeat/HeartbeatFixture.cs
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Builder;
@@ -83,8 +83,7 @@ public sealed class HeartbeatFixture : WebApplicationFactory<Program>, IAsyncLif
 
     public async Task InitializeAsync()
     {
-        var opts = new DbContextOptionsBuilder<AppDbContext>()
-            .UseSqlServer(ConnStr).Options;
+        var opts = AppDbContext.CreateOptionsBuilder(ConnStr).Options;
         await using var db = new AppDbContext(opts);
         await db.Database.MigrateAsync();
 
@@ -124,8 +123,7 @@ public sealed class HeartbeatFixture : WebApplicationFactory<Program>, IAsyncLif
 
     public new async Task DisposeAsync()
     {
-        var opts = new DbContextOptionsBuilder<AppDbContext>()
-            .UseSqlServer(ConnStr).Options;
+        var opts = AppDbContext.CreateOptionsBuilder(ConnStr).Options;
         await using var db = new AppDbContext(opts);
         await db.Database.ExecuteSqlRawAsync(
             "ALTER DATABASE [MSOSyncHeartbeat_Test] SET SINGLE_USER WITH ROLLBACK IMMEDIATE");
@@ -136,3 +134,4 @@ public sealed class HeartbeatFixture : WebApplicationFactory<Program>, IAsyncLif
 
 [CollectionDefinition("Heartbeat")]
 public sealed class HeartbeatCollection : ICollectionFixture<HeartbeatFixture> { }
+

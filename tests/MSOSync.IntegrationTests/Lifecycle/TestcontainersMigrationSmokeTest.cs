@@ -1,4 +1,4 @@
-using FluentAssertions;
+﻿using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using MSOSync.Persistence;
 using Xunit;
@@ -12,8 +12,7 @@ public sealed class TestcontainersMigrationSmokeTest(TestcontainersLifecycleFixt
     [Fact]
     public async Task MigrateAsync_FromEmpty_AllTablesExist()
     {
-        var opts = new DbContextOptionsBuilder<AppDbContext>()
-            .UseSqlServer(fx.ConnectionString).Options;
+        var opts = AppDbContext.CreateOptionsBuilder(fx.ConnectionString).Options;
 
         await using var db = new AppDbContext(opts);
 
@@ -31,3 +30,4 @@ public sealed class TestcontainersMigrationSmokeTest(TestcontainersLifecycleFixt
         tableCount.Should().Be(35, "all migrations should create 35 tables in msosync schema");
     }
 }
+

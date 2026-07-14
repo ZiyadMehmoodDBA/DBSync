@@ -10,9 +10,7 @@ public sealed class AppDbContextFactory : IDesignTimeDbContextFactory<AppDbConte
         var connectionString = Environment.GetEnvironmentVariable("MSOSYNC_CONN")
             ?? "Server=(localdb)\\mssqllocaldb;Database=MSOSync;Trusted_Connection=True;";
 
-        var opts = new DbContextOptionsBuilder<AppDbContext>()
-            .UseSqlServer(connectionString)
-            .Options;
+        var opts = AppDbContext.CreateOptionsBuilder(connectionString).Options;
 
         return new AppDbContext(opts);
     }

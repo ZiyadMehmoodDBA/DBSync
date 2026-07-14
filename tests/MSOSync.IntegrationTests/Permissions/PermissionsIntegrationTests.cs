@@ -94,8 +94,7 @@ public sealed class PermissionsFixture : WebApplicationFactory<Program>, IAsyncL
 
     public async Task InitializeAsync()
     {
-        var opts = new DbContextOptionsBuilder<AppDbContext>()
-            .UseSqlServer(ConnStr).Options;
+        var opts = AppDbContext.CreateOptionsBuilder(ConnStr).Options;
         await using var db = new AppDbContext(opts);
 
         // Drop and recreate for a clean slate on every run
@@ -147,8 +146,7 @@ public sealed class PermissionsFixture : WebApplicationFactory<Program>, IAsyncL
 
     public new async Task DisposeAsync()
     {
-        var opts = new DbContextOptionsBuilder<AppDbContext>()
-            .UseSqlServer(ConnStr).Options;
+        var opts = AppDbContext.CreateOptionsBuilder(ConnStr).Options;
         await using var db = new AppDbContext(opts);
         await db.Database.ExecuteSqlRawAsync(
             "ALTER DATABASE [MSOSyncPermissions_Test] SET SINGLE_USER WITH ROLLBACK IMMEDIATE");
@@ -339,8 +337,8 @@ public sealed class PermissionsIntegrationTests(PermissionsFixture fx)
 
         var viewer = await fx.ViewerClientAsync();
         var perms  = await viewer.GetFromJsonAsync<EffectivePermissionsDto>("/api/v1/me/permissions");
-        // OPERATOR defaults: 11 permissions
-        perms!.Permissions.Should().HaveCount(11);
+        // OPERATOR defaults: 12 permissions (11 from M018 + MANAGE_NODE_LIFECYCLE from M022)
+        perms!.Permissions.Should().HaveCount(12);
 
         // Cleanup: reset VIEWER to defaults so other tests are not affected
         await admin.PostAsync("/api/v1/roles/VIEWER/reset", null);

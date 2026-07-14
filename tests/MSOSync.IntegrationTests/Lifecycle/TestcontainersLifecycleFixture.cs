@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using MSOSync.Persistence;
 using Testcontainers.MsSql;
 using Xunit;
@@ -8,7 +8,7 @@ namespace MSOSync.IntegrationTests.Lifecycle;
 public sealed class TestcontainersLifecycleFixture : IAsyncLifetime
 {
     // Build is deferred to InitializeAsync so that fixture construction never
-    // throws when Docker is unavailable — the test itself will fail (or be
+    // throws when Docker is unavailable â€” the test itself will fail (or be
     // filtered via --filter "Category!=Testcontainers") instead of crashing.
     private MsSqlContainer? _container;
 
@@ -23,8 +23,7 @@ public sealed class TestcontainersLifecycleFixture : IAsyncLifetime
 
         await _container.StartAsync();
 
-        var opts = new DbContextOptionsBuilder<AppDbContext>()
-            .UseSqlServer(ConnectionString).Options;
+        var opts = AppDbContext.CreateOptionsBuilder(ConnectionString).Options;
 
         await using var db = new AppDbContext(opts);
         await db.Database.MigrateAsync();
@@ -40,3 +39,4 @@ public sealed class TestcontainersLifecycleFixture : IAsyncLifetime
 [CollectionDefinition("Testcontainers-Lifecycle")]
 public sealed class TestcontainersLifecycleCollection
     : ICollectionFixture<TestcontainersLifecycleFixture> { }
+

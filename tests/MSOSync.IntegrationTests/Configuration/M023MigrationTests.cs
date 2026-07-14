@@ -1,4 +1,4 @@
-// tests/MSOSync.IntegrationTests/Configuration/M023MigrationTests.cs
+﻿// tests/MSOSync.IntegrationTests/Configuration/M023MigrationTests.cs
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -19,8 +19,7 @@ public sealed class M023MigrationTests : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        var opts = new DbContextOptionsBuilder<AppDbContext>()
-            .UseSqlServer(ConnStr).Options;
+        var opts = AppDbContext.CreateOptionsBuilder(ConnStr).Options;
         _db = new AppDbContext(opts);
 
         if (await _db.Database.CanConnectAsync())
@@ -116,7 +115,7 @@ public sealed class M023MigrationTests : IAsyncLifetime
 
         await ApplyM023Async();
 
-        // configuration_state is nullable with no default — existing nodes get null, not None
+        // configuration_state is nullable with no default â€” existing nodes get null, not None
         var node = await _db.Nodes.AsNoTracking().FirstAsync(n => n.NodeId == "pre-m023-node");
         node.ConfigurationState.Should().BeNull("M023 adds configuration_state as nullable with no backfill");
         node.AssignedTemplateId.Should().BeNull();
@@ -175,3 +174,4 @@ public sealed class M023MigrationTests : IAsyncLifetime
         colExists.Should().BeNull("rollback must remove assigned_template_id column");
     }
 }
+

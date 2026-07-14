@@ -1,4 +1,4 @@
-// tests/MSOSync.IntegrationTests/Configuration/ConfigurationFixture.cs
+﻿// tests/MSOSync.IntegrationTests/Configuration/ConfigurationFixture.cs
 using System.Net.Http.Json;
 using FluentValidation;
 using FluentValidation.AspNetCore;
@@ -98,8 +98,7 @@ public sealed class ConfigurationFixture : WebApplicationFactory<Program>, IAsyn
 
     public async Task InitializeAsync()
     {
-        var opts = new DbContextOptionsBuilder<AppDbContext>()
-            .UseSqlServer(ConnStr).Options;
+        var opts = AppDbContext.CreateOptionsBuilder(ConnStr).Options;
         await using var db = new AppDbContext(opts);
 
         if (await db.Database.CanConnectAsync())
@@ -122,7 +121,7 @@ public sealed class ConfigurationFixture : WebApplicationFactory<Program>, IAsyn
         await GrantAsync(db, "ADMIN",    SystemPermissions.ManageNodeLifecycle);
         await GrantAsync(db, "ADMIN",    SystemPermissions.ManageConfigurations);
         await GrantAsync(db, "OPERATOR", SystemPermissions.ViewTopology);
-        // OPERATOR intentionally lacks ManageConfigurations — used for 403 tests
+        // OPERATOR intentionally lacks ManageConfigurations â€” used for 403 tests
         await db.SaveChangesAsync();
 
         if (!await db.NodeGroups.AnyAsync(g => g.GroupId == "cfg-group"))
@@ -155,8 +154,7 @@ public sealed class ConfigurationFixture : WebApplicationFactory<Program>, IAsyn
 
     public new async Task DisposeAsync()
     {
-        var opts = new DbContextOptionsBuilder<AppDbContext>()
-            .UseSqlServer(ConnStr).Options;
+        var opts = AppDbContext.CreateOptionsBuilder(ConnStr).Options;
         await using var db = new AppDbContext(opts);
         try
         {
@@ -262,3 +260,4 @@ public sealed class ConfigurationFixture : WebApplicationFactory<Program>, IAsyn
 
 [CollectionDefinition("Configuration")]
 public sealed class ConfigurationCollection : ICollectionFixture<ConfigurationFixture> { }
+

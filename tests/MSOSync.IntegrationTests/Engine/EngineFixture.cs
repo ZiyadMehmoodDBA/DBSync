@@ -41,9 +41,7 @@ public sealed class EngineFixture : WebApplicationFactory<Program>, IAsyncLifeti
 
     public AppDbContext CreateDbContext()
     {
-        var opts = new DbContextOptionsBuilder<AppDbContext>()
-            .UseSqlServer(_connStr!)
-            .Options;
+        var opts = AppDbContext.CreateOptionsBuilder(_connStr!).Options;
         return new AppDbContext(opts);
     }
 

@@ -84,9 +84,7 @@ public sealed class SecurityFixture : WebApplicationFactory<Program>, IAsyncLife
     public async Task InitializeAsync()
     {
         // Migrate and seed outside the app pipeline so AdminBootstrapper is a no-op.
-        var opts = new DbContextOptionsBuilder<AppDbContext>()
-            .UseSqlServer(ConnStr)
-            .Options;
+        var opts = AppDbContext.CreateOptionsBuilder(ConnStr).Options;
 
         await using var db = new AppDbContext(opts);
         await db.Database.MigrateAsync();
@@ -123,9 +121,7 @@ public sealed class SecurityFixture : WebApplicationFactory<Program>, IAsyncLife
 
     public new async Task DisposeAsync()
     {
-        var opts = new DbContextOptionsBuilder<AppDbContext>()
-            .UseSqlServer(ConnStr)
-            .Options;
+        var opts = AppDbContext.CreateOptionsBuilder(ConnStr).Options;
         await using var db = new AppDbContext(opts);
         await db.Database.ExecuteSqlRawAsync(
             "ALTER DATABASE [MSOSyncSecurity_Test] SET SINGLE_USER WITH ROLLBACK IMMEDIATE");

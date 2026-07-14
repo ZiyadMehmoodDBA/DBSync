@@ -1,4 +1,4 @@
-using System.Net.Http.Headers;
+﻿using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using FluentValidation;
@@ -96,8 +96,7 @@ public sealed class NodeManagementFixture : WebApplicationFactory<Program>, IAsy
 
     public async Task InitializeAsync()
     {
-        var opts = new DbContextOptionsBuilder<AppDbContext>()
-            .UseSqlServer(ConnStr).Options;
+        var opts = AppDbContext.CreateOptionsBuilder(ConnStr).Options;
         await using var db = new AppDbContext(opts);
 
         if (await db.Database.CanConnectAsync())
@@ -168,7 +167,7 @@ public sealed class NodeManagementFixture : WebApplicationFactory<Program>, IAsy
     {
         if (await db.RegistrationRequests.AnyAsync()) return;
 
-        // Seed a SyncNode for re-registration tests — NodeLifecycleService checks Status == "REGISTERED"
+        // Seed a SyncNode for re-registration tests â€” NodeLifecycleService checks Status == "REGISTERED"
         var node = new SyncNode
         {
             NodeId         = "node-ext-001",
@@ -212,8 +211,7 @@ public sealed class NodeManagementFixture : WebApplicationFactory<Program>, IAsy
 
     public new async Task DisposeAsync()
     {
-        var opts = new DbContextOptionsBuilder<AppDbContext>()
-            .UseSqlServer(ConnStr).Options;
+        var opts = AppDbContext.CreateOptionsBuilder(ConnStr).Options;
         await using var db = new AppDbContext(opts);
         await db.Database.ExecuteSqlRawAsync(
             "ALTER DATABASE [MSOSyncNodeMgmt_Test] SET SINGLE_USER WITH ROLLBACK IMMEDIATE");
@@ -243,3 +241,4 @@ public sealed class NodeManagementFixture : WebApplicationFactory<Program>, IAsy
 
 [CollectionDefinition("NodeManagement")]
 public sealed class NodeManagementCollection : ICollectionFixture<NodeManagementFixture> { }
+

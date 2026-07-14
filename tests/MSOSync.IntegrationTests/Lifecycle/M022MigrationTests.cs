@@ -1,4 +1,4 @@
-using FluentAssertions;
+﻿using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
@@ -9,7 +9,7 @@ using Xunit;
 namespace MSOSync.IntegrationTests.Lifecycle;
 
 /// <summary>
-/// M022 legacy conversion tests — use their own LocalDB database (NOT the shared Lifecycle fixture).
+/// M022 legacy conversion tests â€” use their own LocalDB database (NOT the shared Lifecycle fixture).
 /// Each test class creates + drops its own DB so tests can run independently.
 /// </summary>
 public sealed class M022MigrationTests : IAsyncLifetime
@@ -22,8 +22,7 @@ public sealed class M022MigrationTests : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        var opts = new DbContextOptionsBuilder<AppDbContext>()
-            .UseSqlServer(ConnStr).Options;
+        var opts = AppDbContext.CreateOptionsBuilder(ConnStr).Options;
         _db = new AppDbContext(opts);
 
         // Drop and recreate for a clean slate
@@ -160,3 +159,4 @@ public sealed class M022MigrationTests : IAsyncLifetime
         operatorHasLifecycle.Should().BeTrue("OPERATOR must have MANAGE_NODE_LIFECYCLE per M022 seed");
     }
 }
+

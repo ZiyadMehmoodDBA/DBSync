@@ -1,4 +1,4 @@
-using System.Net.Http.Headers;
+﻿using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using FluentValidation;
@@ -107,8 +107,7 @@ public sealed class LifecycleFixture : WebApplicationFactory<Program>, IAsyncLif
 
     public async Task InitializeAsync()
     {
-        var opts = new DbContextOptionsBuilder<AppDbContext>()
-            .UseSqlServer(ConnStr).Options;
+        var opts = AppDbContext.CreateOptionsBuilder(ConnStr).Options;
         await using var db = new AppDbContext(opts);
 
         if (await db.Database.CanConnectAsync())
@@ -195,8 +194,7 @@ public sealed class LifecycleFixture : WebApplicationFactory<Program>, IAsyncLif
 
     public new async Task DisposeAsync()
     {
-        var opts = new DbContextOptionsBuilder<AppDbContext>()
-            .UseSqlServer(ConnStr).Options;
+        var opts = AppDbContext.CreateOptionsBuilder(ConnStr).Options;
         await using var db = new AppDbContext(opts);
         try
         {
@@ -208,7 +206,7 @@ public sealed class LifecycleFixture : WebApplicationFactory<Program>, IAsyncLif
         await base.DisposeAsync();
     }
 
-    // ── Client helpers ─────────────────────────────────────────────────────────
+    // â”€â”€ Client helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     public async Task<HttpClient> ViewerClientAsync()   => await MakeClientAsync(ViewerUsername,   ViewerPassword);
     public async Task<HttpClient> ApproverClientAsync() => await MakeClientAsync(ApproverUsername, ApproverPassword);
@@ -230,7 +228,7 @@ public sealed class LifecycleFixture : WebApplicationFactory<Program>, IAsyncLif
         return client;
     }
 
-    // ── Lifecycle test helpers ─────────────────────────────────────────────────
+    // â”€â”€ Lifecycle test helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     /// <summary>Creates a SyncNode in the given lifecycle state, returns NodeId.</summary>
     public async Task<string> SeedNodeAsync(
@@ -338,3 +336,4 @@ public sealed class LifecycleFixture : WebApplicationFactory<Program>, IAsyncLif
 
 [CollectionDefinition("Lifecycle")]
 public sealed class LifecycleCollection : ICollectionFixture<LifecycleFixture> { }
+

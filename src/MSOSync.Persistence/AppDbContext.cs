@@ -52,14 +52,19 @@ public class AppDbContext : DbContext
     public DbSet<SyncNotification>     Notifications     => Set<SyncNotification>();
     public DbSet<SyncUserNotification> UserNotifications => Set<SyncUserNotification>();
 
-    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-    {
-        optionsBuilder.ConfigureWarnings(w =>
-            w.Ignore(RelationalEventId.PendingModelChangesWarning));
-    }
-
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
+    }
+
+    /// <summary>
+    /// Creates a DbContextOptions builder for AppDbContext with warning suppression configured.
+    /// Use this in test fixtures and design-time contexts where OnConfiguring is not invoked.
+    /// </summary>
+    public static DbContextOptionsBuilder<AppDbContext> CreateOptionsBuilder(string connectionString)
+    {
+        return new DbContextOptionsBuilder<AppDbContext>()
+            .UseSqlServer(connectionString)
+            .ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning));
     }
 }

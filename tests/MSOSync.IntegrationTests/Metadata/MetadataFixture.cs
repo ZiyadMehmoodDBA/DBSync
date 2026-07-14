@@ -86,9 +86,7 @@ public sealed class MetadataFixture : WebApplicationFactory<Program>, IAsyncLife
         await _container.StartAsync();
 
         var connStr = _container.GetConnectionString();
-        var opts = new DbContextOptionsBuilder<AppDbContext>()
-            .UseSqlServer(connStr)
-            .Options;
+        var opts = AppDbContext.CreateOptionsBuilder(connStr).Options;
 
         await using var db = new AppDbContext(opts);
         await db.Database.MigrateAsync();

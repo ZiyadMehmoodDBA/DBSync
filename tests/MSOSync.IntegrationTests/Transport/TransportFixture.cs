@@ -42,9 +42,7 @@ public sealed class TransportFixture : WebApplicationFactory<Program>, IAsyncLif
 
     public AppDbContext CreateDbContext()
     {
-        var opts = new DbContextOptionsBuilder<AppDbContext>()
-            .UseSqlServer(_connStr!)
-            .Options;
+        var opts = AppDbContext.CreateOptionsBuilder(_connStr!).Options;
         return new AppDbContext(opts);
     }
 

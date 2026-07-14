@@ -1,4 +1,4 @@
-// tests/MSOSync.IntegrationTests/Metrics/MetricsFixture.cs
+﻿// tests/MSOSync.IntegrationTests/Metrics/MetricsFixture.cs
 using System.Text.Json;
 using FluentValidation;
 using FluentValidation.AspNetCore;
@@ -84,8 +84,7 @@ public sealed class MetricsFixture : WebApplicationFactory<Program>, IAsyncLifet
 
     public async Task InitializeAsync()
     {
-        var opts = new DbContextOptionsBuilder<AppDbContext>()
-            .UseSqlServer(ConnStr).Options;
+        var opts = AppDbContext.CreateOptionsBuilder(ConnStr).Options;
         await using var db = new AppDbContext(opts);
         await db.Database.MigrateAsync();
 
@@ -152,7 +151,7 @@ public sealed class MetricsFixture : WebApplicationFactory<Program>, IAsyncLifet
         db.BatchErrors.Add(new SyncBatchError { BatchId = ob2.BatchId, ErrorMessage = "conflict", CreateTime = DateTime.UtcNow.AddHours(-1) });
         await db.SaveChangesAsync();
 
-        // RuntimeStats (2 snapshots — no NodeId on this entity)
+        // RuntimeStats (2 snapshots â€” no NodeId on this entity)
         db.RuntimeStats.AddRange(
             new SyncRuntimeStats { HeapUsed = 512_000_000L, HeapMax = 1_024_000_000L, ThreadCount = 20, CpuPercent = 12.5m, GcCount = 100L, GcTimeMs = 200L, UptimeMs = 3_600_000L, CreateTime = DateTime.UtcNow.AddMinutes(-10) },
             new SyncRuntimeStats { HeapUsed = 600_000_000L, HeapMax = 1_024_000_000L, ThreadCount = 22, CpuPercent = 18.0m, GcCount = 110L, GcTimeMs = 220L, UptimeMs = 3_660_000L, CreateTime = DateTime.UtcNow.AddMinutes(-5)  });
@@ -181,8 +180,7 @@ public sealed class MetricsFixture : WebApplicationFactory<Program>, IAsyncLifet
 
     public new async Task DisposeAsync()
     {
-        var opts = new DbContextOptionsBuilder<AppDbContext>()
-            .UseSqlServer(ConnStr).Options;
+        var opts = AppDbContext.CreateOptionsBuilder(ConnStr).Options;
         await using var db = new AppDbContext(opts);
         await db.Database.ExecuteSqlRawAsync(
             "ALTER DATABASE [MSOSyncMetrics_Test] SET SINGLE_USER WITH ROLLBACK IMMEDIATE");
@@ -193,3 +191,4 @@ public sealed class MetricsFixture : WebApplicationFactory<Program>, IAsyncLifet
 
 [CollectionDefinition("Metrics")]
 public sealed class MetricsCollection : ICollectionFixture<MetricsFixture> { }
+

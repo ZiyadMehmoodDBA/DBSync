@@ -1,4 +1,4 @@
-using System.Net.Http.Json;
+﻿using System.Net.Http.Json;
 using System.Text.Json;
 using FluentValidation;
 using FluentValidation.AspNetCore;
@@ -83,8 +83,7 @@ public sealed class TopologyFixture : WebApplicationFactory<Program>, IAsyncLife
 
     public async Task InitializeAsync()
     {
-        var opts = new DbContextOptionsBuilder<AppDbContext>()
-            .UseSqlServer(ConnStr).Options;
+        var opts = AppDbContext.CreateOptionsBuilder(ConnStr).Options;
         await using var db = new AppDbContext(opts);
         await db.Database.MigrateAsync();
 
@@ -135,7 +134,7 @@ public sealed class TopologyFixture : WebApplicationFactory<Program>, IAsyncLife
             new SyncNode { NodeId = "store-1", GroupId = "group-store", SyncUrl = "http://store-1", LifecycleState = NodeLifecycleState.Active, ConnectivityStatus = ConnectivityStatus.Reachable });
         await db.SaveChangesAsync();
 
-        // Router: hub → store
+        // Router: hub â†’ store
         db.Routers.Add(new SyncRouter
         {
             RouterId        = "router-hub-store",
@@ -173,8 +172,7 @@ public sealed class TopologyFixture : WebApplicationFactory<Program>, IAsyncLife
 
     public new async Task DisposeAsync()
     {
-        var opts = new DbContextOptionsBuilder<AppDbContext>()
-            .UseSqlServer(ConnStr).Options;
+        var opts = AppDbContext.CreateOptionsBuilder(ConnStr).Options;
         await using var db = new AppDbContext(opts);
         await db.Database.ExecuteSqlRawAsync(
             "ALTER DATABASE [MSOSyncTopology_Test] SET SINGLE_USER WITH ROLLBACK IMMEDIATE");
@@ -185,3 +183,4 @@ public sealed class TopologyFixture : WebApplicationFactory<Program>, IAsyncLife
 
 [CollectionDefinition("Topology")]
 public sealed class TopologyCollection : ICollectionFixture<TopologyFixture> { }
+

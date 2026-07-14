@@ -1,4 +1,4 @@
-// tests/MSOSync.IntegrationTests/Export/ExportJobIntegrationTests.cs
+﻿// tests/MSOSync.IntegrationTests/Export/ExportJobIntegrationTests.cs
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -30,7 +30,7 @@ using Xunit;
 
 namespace MSOSync.IntegrationTests.Export;
 
-// ── Fixture ───────────────────────────────────────────────────────────────────
+// â”€â”€ Fixture â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 public sealed class ExportJobFixture : WebApplicationFactory<Program>, IAsyncLifetime
 {
@@ -110,8 +110,7 @@ public sealed class ExportJobFixture : WebApplicationFactory<Program>, IAsyncLif
 
     public async Task InitializeAsync()
     {
-        var opts = new DbContextOptionsBuilder<AppDbContext>()
-            .UseSqlServer(ConnStr).Options;
+        var opts = AppDbContext.CreateOptionsBuilder(ConnStr).Options;
         await using var db = new AppDbContext(opts);
 
         if (await db.Database.CanConnectAsync())
@@ -176,8 +175,7 @@ public sealed class ExportJobFixture : WebApplicationFactory<Program>, IAsyncLif
 
     public new async Task DisposeAsync()
     {
-        var opts = new DbContextOptionsBuilder<AppDbContext>()
-            .UseSqlServer(ConnStr).Options;
+        var opts = AppDbContext.CreateOptionsBuilder(ConnStr).Options;
         await using var db = new AppDbContext(opts);
         await db.Database.ExecuteSqlRawAsync(
             "ALTER DATABASE [MSOSyncExportJobs_Test] SET SINGLE_USER WITH ROLLBACK IMMEDIATE");
@@ -208,7 +206,7 @@ public sealed class ExportJobFixture : WebApplicationFactory<Program>, IAsyncLif
 [CollectionDefinition("ExportJobs")]
 public sealed class ExportJobCollection : ICollectionFixture<ExportJobFixture> { }
 
-// ── Tests ─────────────────────────────────────────────────────────────────────
+// â”€â”€ Tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 [Collection("ExportJobs")]
 public sealed class ExportJobIntegrationTests(ExportJobFixture fx)
@@ -292,3 +290,4 @@ public sealed class ExportJobIntegrationTests(ExportJobFixture fx)
         download.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 }
+

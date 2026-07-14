@@ -1,4 +1,4 @@
-// tests/MSOSync.IntegrationTests/Users/UsersFixture.cs
+﻿// tests/MSOSync.IntegrationTests/Users/UsersFixture.cs
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Builder;
@@ -84,8 +84,7 @@ public sealed class UsersFixture : WebApplicationFactory<Program>, IAsyncLifetim
 
     public async Task InitializeAsync()
     {
-        var opts = new DbContextOptionsBuilder<AppDbContext>()
-            .UseSqlServer(ConnStr).Options;
+        var opts = AppDbContext.CreateOptionsBuilder(ConnStr).Options;
         await using var db = new AppDbContext(opts);
         await db.Database.MigrateAsync();
 
@@ -114,8 +113,7 @@ public sealed class UsersFixture : WebApplicationFactory<Program>, IAsyncLifetim
 
     public new async Task DisposeAsync()
     {
-        var opts = new DbContextOptionsBuilder<AppDbContext>()
-            .UseSqlServer(ConnStr).Options;
+        var opts = AppDbContext.CreateOptionsBuilder(ConnStr).Options;
         await using var db = new AppDbContext(opts);
         await db.Database.ExecuteSqlRawAsync(
             "ALTER DATABASE [MSOSyncUsers_Test] SET SINGLE_USER WITH ROLLBACK IMMEDIATE");
@@ -138,3 +136,4 @@ public sealed class UsersFixture : WebApplicationFactory<Program>, IAsyncLifetim
 
 [CollectionDefinition("Users")]
 public sealed class UsersCollection : ICollectionFixture<UsersFixture> { }
+

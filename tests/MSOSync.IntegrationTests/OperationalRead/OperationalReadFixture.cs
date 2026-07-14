@@ -1,4 +1,4 @@
-// tests/MSOSync.IntegrationTests/OperationalRead/OperationalReadFixture.cs
+﻿// tests/MSOSync.IntegrationTests/OperationalRead/OperationalReadFixture.cs
 using System.Text.Json;
 using FluentValidation;
 using FluentValidation.AspNetCore;
@@ -84,8 +84,7 @@ public sealed class OperationalReadFixture : WebApplicationFactory<Program>, IAs
 
     public async Task InitializeAsync()
     {
-        var opts = new DbContextOptionsBuilder<AppDbContext>()
-            .UseSqlServer(ConnStr).Options;
+        var opts = AppDbContext.CreateOptionsBuilder(ConnStr).Options;
         await using var db = new AppDbContext(opts);
         await db.Database.MigrateAsync();
 
@@ -161,7 +160,7 @@ public sealed class OperationalReadFixture : WebApplicationFactory<Program>, IAs
             await db.SaveChangesAsync();
         }
 
-        // Seed OutgoingBatches (2 rows) — needed as FK parent for SyncBatchError.BatchId
+        // Seed OutgoingBatches (2 rows) â€” needed as FK parent for SyncBatchError.BatchId
         // BatchId is identity (ValueGeneratedOnAdd); we query back the generated IDs.
         long[] outgoingBatchIds;
         if (!await db.OutgoingBatches.AnyAsync())
@@ -213,8 +212,7 @@ public sealed class OperationalReadFixture : WebApplicationFactory<Program>, IAs
 
     public new async Task DisposeAsync()
     {
-        var opts = new DbContextOptionsBuilder<AppDbContext>()
-            .UseSqlServer(ConnStr).Options;
+        var opts = AppDbContext.CreateOptionsBuilder(ConnStr).Options;
         await using var db = new AppDbContext(opts);
         await db.Database.ExecuteSqlRawAsync(
             "ALTER DATABASE [MSOSyncOperationalRead_Test] SET SINGLE_USER WITH ROLLBACK IMMEDIATE");
@@ -224,6 +222,7 @@ public sealed class OperationalReadFixture : WebApplicationFactory<Program>, IAs
 }
 
 // Registers the fixture for sharing across all [Collection("OperationalRead")] test classes.
-// ICollectionFixture<T> (not IClassFixture<T>) — one instance shared, not one per class.
+// ICollectionFixture<T> (not IClassFixture<T>) â€” one instance shared, not one per class.
 [CollectionDefinition("OperationalRead")]
 public sealed class OperationalReadCollection : ICollectionFixture<OperationalReadFixture> { }
+
