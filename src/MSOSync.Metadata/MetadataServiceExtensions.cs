@@ -20,6 +20,7 @@ using MSOSync.Metadata.Preferences;
 using MSOSync.Metadata.Users;
 using MSOSync.Metadata.Configuration;
 using MSOSync.Metadata.Notifications;
+using MSOSync.Metadata.Notifications.Handlers;
 using MSOSync.Metadata.Operations;
 using MSOSync.Metadata.Operations.Handlers;
 using MSOSync.Metadata.Overview;
@@ -145,6 +146,14 @@ public static class MetadataServiceExtensions
         // Epic 13 — Notifications
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<INotificationQueryService, NotificationQueryService>();
+
+        // Epic 13 — Notification handlers (event → notification converters, MSOSync.Metadata events)
+        services.AddScoped<NodeRecoveryNotificationHandler>();
+        services.AddScoped<NodeRejectedNotificationHandler>();
+        services.AddScoped<NodeDecommissionedNotificationHandler>();
+        services.AddScoped<AccountLockedNotificationHandler>();
+        services.AddScoped<TokenReuseNotificationHandler>();
+        services.AddScoped<OperationFailedNotificationHandler>();
 
         return services;
     }

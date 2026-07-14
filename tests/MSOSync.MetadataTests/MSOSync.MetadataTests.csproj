@@ -19,5 +19,6 @@
     <ProjectReference Include="..\..\src\MSOSync.Common\MSOSync.Common.csproj" />
     <ProjectReference Include="..\..\src\MSOSync.Security\MSOSync.Security.csproj" />
     <ProjectReference Include="..\..\src\MSOSync.Api\MSOSync.Api.csproj" />
+    <ProjectReference Include="..\..\src\MSOSync.App\MSOSync.App.csproj" />
   </ItemGroup>
 </Project>
