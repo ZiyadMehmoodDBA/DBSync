@@ -20,7 +20,7 @@ public sealed class NotificationService(AppDbContext db, IPublisher publisher) :
         NotificationAudience  audience,
         CancellationToken     ct = default)
     {
-        string? dedupKey = sourceEntityId is not null ? $"{eventType}:{sourceEntityId}" : null;
+        string? dedupKey = sourceEntityId is not null ? $"{eventType}:{sourceEntityType}:{sourceEntityId}" : null;
 
         if (dedupKey is not null)
         {
@@ -38,6 +38,9 @@ public sealed class NotificationService(AppDbContext db, IPublisher publisher) :
             }
         }
 
+        var userIds = await ResolveUserIdsAsync(audience, ct);
+        if (userIds.Count == 0) return;
+
         var now = DateTime.UtcNow;
         var notification = new SyncNotification
         {
@@ -54,9 +57,6 @@ public sealed class NotificationService(AppDbContext db, IPublisher publisher) :
         };
         db.Notifications.Add(notification);
         await db.SaveChangesAsync(ct);
-
-        var userIds = await ResolveUserIdsAsync(audience, ct);
-        if (userIds.Count == 0) return;
 
         db.UserNotifications.AddRange(userIds.Select(uid => new SyncUserNotification
         {

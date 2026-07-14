@@ -62,7 +62,8 @@ public sealed class NotificationServiceTests : IDisposable
     public async Task CreateAsync_Operators_SkipsViewerRole()
     {
         await SeedUserAsync("viewer2", "VIEWER");
-        var op = await SeedUserAsync("op1", "OPERATOR");
+        var op    = await SeedUserAsync("op1",    "OPERATOR");
+        var admin = await SeedUserAsync("admin4", "ADMIN");
 
         await _sut.CreateAsync(
             NotificationEventType.NodeInRecovery, NotificationSeverity.Warning,
@@ -71,8 +72,8 @@ public sealed class NotificationServiceTests : IDisposable
             NotificationAudience.Operators);
 
         var rows = await _db.UserNotifications.ToListAsync();
-        rows.Should().ContainSingle();
-        rows[0].UserId.Should().Be(op.UserId);
+        rows.Should().HaveCount(2);
+        rows.Select(r => r.UserId).Should().BeEquivalentTo(new[] { op.UserId, admin.UserId });
     }
 
     [Fact]
@@ -170,5 +171,6 @@ public sealed class NotificationServiceTests : IDisposable
 
         var rows = await _db.UserNotifications.ToListAsync();
         rows.Should().BeEmpty();
+        (await _db.Notifications.ToListAsync()).Should().BeEmpty();
     }
 }
