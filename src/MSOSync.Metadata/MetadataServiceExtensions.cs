@@ -138,6 +138,9 @@ public static class MetadataServiceExtensions
         // Epic 12C — Correlation Timeline
         services.AddScoped<CorrelationTimelineAssembler>();
 
+        // Epic 12C — Node Sync Scope
+        services.AddScoped<INodeScopeService, NodeScopeService>();
+
         return services;
     }
 }
