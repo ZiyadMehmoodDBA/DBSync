@@ -1,7 +1,7 @@
 # Epic 13: Alerting & Notification Center — Design Spec
 
 **Date:** 2026-07-14  
-**Status:** Approved
+**Status:** Approved (v2 — post-review refinements)
 
 ---
 
@@ -11,64 +11,120 @@ Deliver an in-app notification system that automatically converts critical domai
 
 ## Scope
 
-In-app delivery only. Email and webhook channels are deferred. No user-defined alert rules — specific event types are hardcoded to always produce notifications. Notifications accumulate without auto-deletion (retention cleanup deferred).
+In-app delivery only. Email and webhook channels are deferred. No user-defined alert rules — specific event types trigger notifications automatically. Notifications accumulate without auto-deletion (retention deferred; `IsArchived` is included today to make retention cheap later). `sync_user_notification_preferences` is reserved but not implemented.
 
 ---
 
 ## Architecture
 
-### Layers
-
 ```
 Domain Event (MediatR INotification)
         │
         ▼
-Notification Handler (MSOSync.Metadata/Notifications/Handlers/)
-        │  calls NotificationService.CreateAsync(...)
+Notification Handler  (MSOSync.Metadata/Notifications/Handlers/)
+        │  calls INotificationService.CreateAsync(...)
         ▼
 NotificationService
-        │  inserts sync_notification + fan-out sync_user_notification rows
+        │  1. dedup check (same DedupKey within 10 min window → bump OccurrenceCount)
+        │  2. INSERT sync_notification
+        │  3. bulk INSERT sync_user_notification rows (AddRange + single SaveChangesAsync)
+        │  4. publish NotificationCreatedDomainEvent via MediatR
         ▼
-OperationsHub.NotifyNotificationCreated(userId, dto)
-        │  SignalR M12 push per user
+NotificationPublisher : INotificationHandler<NotificationCreatedDomainEvent>
+        │  calls IOperationsHubPublisher.NotifyNotificationCreated(userId, dto)
+        │  fire-and-forget per user; errors logged, not thrown
+        ▼
+OperationsHub → SignalR M12 push to "user-{userId}" group
+        │
         ▼
 Frontend SignalR hook → bell badge update + toast
 ```
 
+`NotificationService` writes data only. `NotificationPublisher` handles all SignalR delivery — same pattern as `NodeLifecycleService` → `NodeOperationsPublisher`. Service layer never touches the hub directly.
+
 ### Project placement
 
-- Backend: `MSOSync.Metadata` (service + handlers + query service + DTOs)
+- Domain events + handlers + services: `MSOSync.Metadata`
 - Controller: `MSOSync.Api` (existing controllers assembly)
 - Frontend: `MSOSync.Frontend/src/features/notifications/`
 - Migration: `MSOSync.Persistence` (M028)
 
 ---
 
+## Enums
+
+### NotificationEventType
+
+```csharp
+public enum NotificationEventType
+{
+    WorkerFailed,
+    WorkerWarning,
+    NodeUnreachable,
+    NodeInRecovery,
+    NodeRejected,
+    NodeDecommissioned,
+    SchedulerRecovered,
+    AccountLocked,
+    TokenReuseDetected,
+    OperationFailed
+}
+```
+
+EF config: `HasConversion<string>()` — persisted as the enum member name string.
+
+### NotificationSeverity
+
+```csharp
+public enum NotificationSeverity { Info, Warning, Critical, Security }
+```
+
+EF config: `HasConversion<string>()`.
+
+### NotificationAudience
+
+```csharp
+public enum NotificationAudience { AllUsers, Operators, Administrators }
+```
+
+Audience resolution in `NotificationService`: query `SyncUser JOIN SyncUserRole JOIN SyncRole WHERE Enabled = true`, filter by role name — `AllUsers` = all enabled users, `Operators` = OPERATOR or ADMIN roles, `Administrators` = ADMIN role only.
+
+---
+
 ## Data Model
 
-### Migration M028 — two new tables
+### Migration M028
 
 ```sql
 CREATE TABLE msosync.sync_notification (
-    notification_id BIGINT IDENTITY(1,1) NOT NULL,
-    event_type      NVARCHAR(50)   NOT NULL,   -- WORKER_FAILED, NODE_UNREACHABLE, ...
-    severity        NVARCHAR(20)   NOT NULL,   -- Critical | Warning | Info | Security
-    title           NVARCHAR(200)  NOT NULL,
-    body            NVARCHAR(1000) NOT NULL,
-    target_route    NVARCHAR(200)  NULL,       -- deep-link, e.g. /admin/system
-    correlation_id  NVARCHAR(100)  NULL,
-    created_at      DATETIME2      NOT NULL DEFAULT SYSUTCDATETIME(),
+    notification_id   BIGINT IDENTITY(1,1) NOT NULL,
+    event_type        NVARCHAR(50)   NOT NULL,   -- NotificationEventType enum name
+    severity          NVARCHAR(20)   NOT NULL,   -- NotificationSeverity enum name
+    title             NVARCHAR(200)  NOT NULL,
+    body              NVARCHAR(1000) NOT NULL,
+    source_entity_type NVARCHAR(50)  NULL,       -- Node | Worker | Operation | Template
+    source_entity_id  NVARCHAR(200)  NULL,       -- e.g. nodeId, workerName, operationId
+    dedup_key         NVARCHAR(260)  NULL,       -- "{EventType}:{SourceEntityId}" for deduplication
+    occurrence_count  INT            NOT NULL DEFAULT 1,
+    correlation_id    NVARCHAR(100)  NULL,
+    created_at        DATETIME2      NOT NULL DEFAULT SYSUTCDATETIME(),
+    last_occurred_at  DATETIME2      NOT NULL DEFAULT SYSUTCDATETIME(),
     CONSTRAINT PK_sync_notification PRIMARY KEY (notification_id)
 );
 
+CREATE INDEX IX_sn_dedup ON msosync.sync_notification (dedup_key, created_at DESC)
+    WHERE dedup_key IS NOT NULL;
+
 CREATE TABLE msosync.sync_user_notification (
-    user_id         INT    NOT NULL,
-    notification_id BIGINT NOT NULL,
-    is_read         BIT    NOT NULL DEFAULT 0,
+    user_id         INT      NOT NULL,
+    notification_id BIGINT   NOT NULL,
+    is_read         BIT      NOT NULL DEFAULT 0,
     read_at         DATETIME2 NULL,
+    is_archived     BIT      NOT NULL DEFAULT 0,   -- reserved for future retention
+    archived_at     DATETIME2 NULL,
     CONSTRAINT PK_sync_user_notification PRIMARY KEY (user_id, notification_id),
-    CONSTRAINT FK_sun_user    FOREIGN KEY (user_id)         REFERENCES msosync.sync_user(user_id),
-    CONSTRAINT FK_sun_notif   FOREIGN KEY (notification_id) REFERENCES msosync.sync_notification(notification_id)
+    CONSTRAINT FK_sun_user   FOREIGN KEY (user_id)         REFERENCES msosync.sync_user(user_id),
+    CONSTRAINT FK_sun_notif  FOREIGN KEY (notification_id) REFERENCES msosync.sync_notification(notification_id)
         ON DELETE CASCADE
 );
 
@@ -83,100 +139,148 @@ CREATE INDEX IX_sun_user_unread ON msosync.sync_user_notification (user_id, is_r
 
 ## Backend
 
-### NotificationAudience enum
-
-```csharp
-public enum NotificationAudience { All, OperatorAndAbove, AdminOnly }
-```
-
-Audience resolution: `NotificationService` queries `SyncUser JOIN SyncUserRole JOIN SyncRole WHERE Enabled = true` and filters by role name — `All` = every enabled user, `OperatorAndAbove` = users with role OPERATOR or ADMIN, `AdminOnly` = users with role ADMIN.
-
 ### INotificationService
 
 ```csharp
 public interface INotificationService
 {
     Task CreateAsync(
-        string eventType, string severity, string title, string body,
-        string? targetRoute, string? correlationId,
-        NotificationAudience audience,
-        CancellationToken ct = default);
+        NotificationEventType eventType,
+        NotificationSeverity  severity,
+        string                title,
+        string                body,
+        string?               sourceEntityType,
+        string?               sourceEntityId,
+        string?               correlationId,
+        NotificationAudience  audience,
+        CancellationToken     ct = default);
 }
 ```
 
-`NotificationService` (scoped):
-1. Inserts one `SyncNotification` row.
-2. Queries `SyncUser` where `Enabled = true`, filtered by audience role.
-3. Bulk-inserts `SyncUserNotification` rows.
-4. For each affected user, calls `IOperationsHubPublisher.NotifyNotificationCreated(userId, dto)` (fire-and-forget, errors logged not thrown).
+**`NotificationService` (scoped) — implementation contract:**
+
+1. Build `dedupKey = $"{eventType}:{sourceEntityId}"` (null if `sourceEntityId` is null).
+2. If `dedupKey` is not null: query `sync_notification WHERE dedup_key = @key AND created_at >= NOW() - 10min`. If found: increment `OccurrenceCount`, set `LastOccurredAt = UtcNow`, call `SaveChangesAsync`, **return early** (no fan-out, no event).
+3. Insert one `SyncNotification` row.
+4. Query enabled users filtered by audience (single query with role join).
+5. **Bulk insert** `SyncUserNotification` rows using `AddRange` + single `SaveChangesAsync` — never loop with individual saves.
+6. Publish `NotificationCreatedDomainEvent(notificationId, [userIds], pushDto)` via `IPublisher`.
+
+### NotificationCreatedDomainEvent
+
+```csharp
+public sealed record NotificationCreatedDomainEvent(
+    long                  NotificationId,
+    IReadOnlyList<int>    UserIds,
+    NotificationPushDto   PushDto) : INotification;
+```
+
+### NotificationPublisher
+
+```csharp
+public sealed class NotificationPublisher(IOperationsHubPublisher hub, ILogger<NotificationPublisher> logger)
+    : INotificationHandler<NotificationCreatedDomainEvent>
+{
+    public async Task Handle(NotificationCreatedDomainEvent evt, CancellationToken ct)
+    {
+        foreach (var userId in evt.UserIds)
+        {
+            try { await hub.NotifyNotificationCreated(userId, evt.PushDto); }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to push notification {Id} to user {UserId}",
+                    evt.NotificationId, userId);
+            }
+        }
+    }
+}
+```
 
 ### INotificationQueryService
 
 ```csharp
 public interface INotificationQueryService
 {
-    Task<NotificationPageDto> GetPagedAsync(int userId, int page, int pageSize, CancellationToken ct);
+    Task<NotificationPageDto> GetPagedAsync(
+        int userId, string? cursor, int pageSize,
+        bool unreadOnly, NotificationSeverity? severityFilter,
+        CancellationToken ct);
+
     Task<int>  GetUnreadCountAsync(int userId, CancellationToken ct);
     Task       MarkReadAsync(int userId, long notificationId, CancellationToken ct);
     Task       MarkAllReadAsync(int userId, CancellationToken ct);
 }
 ```
 
+Pagination uses cursor-based pattern consistent with `EventQueryService`, `AuditQueryService`, etc. Cursor encodes `(notificationId, createdAt.Ticks)` via `CursorSigner`.
+
 ### DTOs
 
 ```csharp
 public sealed record NotificationDto(
-    long   NotificationId,
-    string EventType,
-    string Severity,
-    string Title,
-    string Body,
-    string? TargetRoute,
-    string? CorrelationId,
-    DateTime CreatedAt,
-    bool   IsRead,
-    DateTime? ReadAt);
+    long                  NotificationId,
+    NotificationEventType EventType,
+    NotificationSeverity  Severity,
+    string                Title,
+    string                Body,
+    string?               SourceEntityType,
+    string?               SourceEntityId,
+    string?               CorrelationId,
+    DateTime              CreatedAt,
+    DateTime              LastOccurredAt,
+    int                   OccurrenceCount,
+    bool                  IsRead,
+    DateTime?             ReadAt);
 
 public sealed record NotificationPageDto(
     IReadOnlyList<NotificationDto> Items,
-    int Page,
-    int PageSize,
-    int TotalUnread);
+    string?  NextCursor,
+    int      TotalUnread);
 
 public sealed record NotificationPushDto(
-    long   NotificationId,
-    string Severity,
-    string Title,
-    int    UnreadCount);   // total unread for this user after creation
+    long                  NotificationId,
+    NotificationEventType EventType,
+    NotificationSeverity  Severity,
+    string                Title,
+    string                Body,
+    string?               SourceEntityType,
+    string?               SourceEntityId,
+    DateTime              CreatedAt,
+    int                   UnreadCount);   // total unread for this user after creation
 ```
+
+`NotificationPushDto` carries enough for the bell popover to render without a refetch.
 
 ### NotificationController — `/api/v1/notifications`
 
 | Method | Route | Auth | Description |
 |--------|-------|------|-------------|
-| GET | `/` | Any role | Paged list. Query params: `page=1`, `pageSize=20`, `unreadOnly=false` |
+| GET | `/` | Any role | Cursor-paged list. Params: `cursor`, `pageSize=20`, `unreadOnly=false`, `severity` |
 | GET | `/unread-count` | Any role | Returns `{ "count": N }` |
 | POST | `/{id}/read` | Any role | Marks one notification read |
+| PATCH | `/{id}` | Any role | Body `{ "isRead": true/false }` — REST-idiomatic; supports future "mark unread" |
 | POST | `/read-all` | Any role | Marks all of current user's notifications read |
 
-All routes require JWT. Current user resolved via `ICurrentUserService`.
+All routes require JWT. Current user resolved via `ICurrentUserService.UserId`.
 
-### MediatR Notification Handlers
+### MediatR Notification Handlers (10)
 
-Ten handlers in `MSOSync.Metadata/Notifications/Handlers/`. All implement `INotificationHandler<TEvent>` and inject `INotificationService`.
+All in `MSOSync.Metadata/Notifications/Handlers/`, implement `INotificationHandler<TEvent>`, inject `INotificationService`.
 
-| Handler | Trigger Condition | EventType constant | Severity | Audience |
-|---------|------------------|--------------------|----------|----------|
-| `WorkerFailedNotificationHandler` | `WorkerStatusChangedEvent` where `NewState == WorkerHealthState.Failed` | `WORKER_FAILED` | Critical | All |
-| `WorkerWarningNotificationHandler` | `WorkerStatusChangedEvent` where `NewState == WorkerHealthState.Warning` | `WORKER_WARNING` | Warning | OperatorAndAbove |
-| `NodeUnreachableNotificationHandler` | `NodeConnectivityChangedEvent` where `Status == ConnectivityStatus.Unreachable` | `NODE_UNREACHABLE` | Warning | All |
-| `NodeRecoveryNotificationHandler` | `NodeLifecycleChangedEvent` where `NewState == NodeLifecycleState.Recovery` | `NODE_IN_RECOVERY` | Warning | OperatorAndAbove |
-| `NodeRejectedNotificationHandler` | `NodeLifecycleChangedEvent` where `NewState == NodeLifecycleState.Rejected` | `NODE_REJECTED` | Info | All |
-| `NodeDecommissionedNotificationHandler` | `NodeLifecycleChangedEvent` where `NewState == NodeLifecycleState.Decommissioned` | `NODE_DECOMMISSIONED` | Info | All |
-| `SchedulerRecoveryNotificationHandler` | `SchedulerRecoveryEvent` | `SCHEDULER_RECOVERED` | Warning | AdminOnly |
-| `AccountLockedNotificationHandler` | `AccountLockedEvent` | `ACCOUNT_LOCKED` | Security | AdminOnly |
-| `TokenReuseNotificationHandler` | `TokenReuseDetectedEvent` | `TOKEN_REUSE_DETECTED` | Security | AdminOnly |
-| `OperationFailedNotificationHandler` | `OperationChangedEvent` where `Status == "Failed"` | `OPERATION_FAILED` | Warning | OperatorAndAbove |
+| Handler | Trigger | EventType | Severity | SourceEntityType | Audience |
+|---------|---------|-----------|----------|-----------------|----------|
+| `WorkerFailedNotificationHandler` | `WorkerStatusChangedEvent` where `NewState == Failed` | `WorkerFailed` | Critical | Worker | AllUsers |
+| `WorkerWarningNotificationHandler` | `WorkerStatusChangedEvent` where `NewState == Warning` | `WorkerWarning` | Warning | Worker | Operators |
+| `NodeUnreachableNotificationHandler` | `NodeConnectivityChangedEvent` where `Status == Unreachable` | `NodeUnreachable` | Warning | Node | AllUsers |
+| `NodeRecoveryNotificationHandler` | `NodeLifecycleChangedEvent` where `NewState == Recovery` | `NodeInRecovery` | Warning | Node | Operators |
+| `NodeRejectedNotificationHandler` | `NodeLifecycleChangedEvent` where `NewState == Rejected` | `NodeRejected` | Info | Node | AllUsers |
+| `NodeDecommissionedNotificationHandler` | `NodeLifecycleChangedEvent` where `NewState == Decommissioned` | `NodeDecommissioned` | Info | Node | AllUsers |
+| `SchedulerRecoveryNotificationHandler` | `SchedulerRecoveryEvent` | `SchedulerRecovered` | Warning | Worker | Administrators |
+| `AccountLockedNotificationHandler` | `AccountLockedEvent` | `AccountLocked` | Security | — | Administrators |
+| `TokenReuseNotificationHandler` | `TokenReuseDetectedEvent` | `TokenReuseDetected` | Security | — | Administrators |
+| `OperationFailedNotificationHandler` | `OperationChangedEvent` where `Status == "Failed"` | `OperationFailed` | Warning | Operation | Operators |
+
+`SourceEntityId` maps to the natural identifier of the source: nodeId for Node, workerName for Worker, operationId (string) for Operation.
 
 ### SignalR — M12 NotificationReceived
 
@@ -187,7 +291,9 @@ Add `NotificationReceived = 12` to the existing `OperationsEventType` enum.
 Task NotifyNotificationCreated(int userId, NotificationPushDto dto);
 ```
 
-`OperationsHubPublisher` implementation sends to the connection group for that specific user (user group key: `$"user-{userId}"`). Frontend clients join their user group on connect (in addition to the existing "operators" group).
+`OperationsHubPublisher` sends to `$"user-{userId}"` SignalR group.
+
+**User group lifecycle:** On hub connect, `OnConnectedAsync` adds the connection to both the existing `"operators"` group **and** `$"user-{userId}"`. This means all browser tabs open for the same user (same `userId`, different `connectionId`) all receive their personal notifications. No frontend changes needed — the hub handles grouping server-side.
 
 ---
 
@@ -197,71 +303,106 @@ Task NotifyNotificationCreated(int userId, NotificationPushDto dto);
 
 ```
 src/features/notifications/
-  NotificationsPage.tsx          — full notifications page (/notifications)
-  NotificationBell.tsx           — bell icon + badge + popover
-  NotificationItem.tsx           — single notification row
-  hooks.ts                       — useUnreadCount, useNotifications, useMarkRead, useMarkAllRead
-  api.ts                         — API client functions
-  types.ts                       — NotificationDto, NotificationPageDto
+  NotificationsPage.tsx        — /notifications full page
+  NotificationBell.tsx         — bell + badge + popover (5 most recent)
+  NotificationItem.tsx         — single row component
+  hooks.ts                     — useUnreadCount, useNotifications, useMarkRead, useMarkAllRead
+  api.ts                       — typed API client
+  types.ts                     — NotificationDto, NotificationPageDto, enums
+  routing.ts                   — getTargetRoute(entityType, entityId) → string | null
 ```
+
+### routing.ts — frontend derives routes from entity type
+
+```typescript
+export function getTargetRoute(
+  entityType: string | null | undefined,
+  entityId: string | null | undefined
+): string | null {
+  switch (entityType) {
+    case 'Node':      return entityId ? `/operations/nodes/${entityId}` : '/operations/nodes';
+    case 'Worker':    return '/admin/system';
+    case 'Operation': return entityId ? `/operations/jobs/${entityId}` : '/operations/jobs';
+    default:          return null;
+  }
+}
+```
+
+Backend stores entity type and id; frontend owns routing knowledge.
 
 ### NotificationBell
 
-- Positioned in existing `AppShell` top navigation, right of search / left of user avatar
-- `useUnreadCount()` fetches `/api/v1/notifications/unread-count` on mount (staleTime 60s)
-- Badge renders when count > 0, shows count (capped at "99+")
-- Click → Popover showing last 5 notifications (`pageSize=5, page=1`)
-- Popover footer: "Mark all read" button + "View all notifications →" link to `/notifications`
-- M12 SignalR event increments count optimistically and triggers toast (using existing toast infrastructure)
+- Positioned in existing `AppShell` top navigation bar, right of search, left of user avatar
+- `useUnreadCount()` fetches `GET /unread-count` on mount (`staleTime: 60_000`)
+- Badge: visible when count > 0, capped at "99+"
+- Click → Popover: 5 most recent notifications, "Mark all read" button, "View all →" link
+- M12 SignalR event: update `unreadCount` query cache directly (`queryClient.setQueryData`) + show toast
+- Clicking a notification item: `POST /{id}/read` then navigate to `getTargetRoute(...)` if not null
 
 ### /notifications page
 
-- Accessible to all authenticated users
-- Tab filters: All / Unread / Critical / Security
-- List items: severity-colored left border, title (bold if unread), body (truncated 120 chars), time ago, click → marks read + follows `targetRoute` if present
-- "Mark all read" button in page header (disabled if unreadCount === 0)
-- Pagination: page-based, 20 per page, previous/next controls
-- Empty state: "No notifications" with icon
+- Accessible to all authenticated users (`/notifications` route)
+- Tab filters: **All / Unread / Critical / Security**
+- List rows: severity-colored left border, bold title if unread, body truncated at 120 chars, time-ago, OccurrenceCount badge when > 1
+- Click row: marks read + navigates to deep link if available
+- "Mark all read" in page header (disabled when unreadCount === 0)
+- Cursor-based pagination: "Load more" button, `pageSize=20`
+- Empty state: icon + "No notifications"
 
 ### Hooks
 
 ```typescript
-// useUnreadCount — integrates with M12 SignalR push
+// Fetches + listens to M12 for live count
 function useUnreadCount(): number
 
-// useNotifications — TanStack Query paginated
-function useNotifications(filter: 'all' | 'unread' | 'critical' | 'security', page: number):
-  UseQueryResult<NotificationPageDto>
+// Cursor-paged, supports filter tabs
+function useNotifications(
+  filter: 'all' | 'unread' | 'critical' | 'security',
+  pageSize?: number
+): { items: NotificationDto[], loadMore: () => void, hasMore: boolean, isLoading: boolean }
 
-// mutations
+// Mutations invalidate ['notifications'] and ['unread-count']
 function useMarkRead(): UseMutationResult<void, Error, { notificationId: number }>
 function useMarkAllRead(): UseMutationResult<void, Error, void>
 ```
 
-`useMarkRead` and `useMarkAllRead` invalidate both `['notifications']` and `['unread-count']` query keys.
+### SignalR M12 integration
 
-### SignalR integration
+In the existing operations event handler map (where M1–M11 are handled):
 
-In the existing `useOperationsEvents` hook (or wherever M1–M11 are handled), add M12 handler:
 ```typescript
-case OperationsEventType.NotificationReceived:
+case OperationsEventType.NotificationReceived: {
+  const payload = event.payload as NotificationPushDto;
   queryClient.setQueryData(['unread-count'], payload.unreadCount);
-  toast({ title: payload.title, variant: severityToVariant(payload.severity) });
   queryClient.invalidateQueries({ queryKey: ['notifications'] });
+  toast({
+    title: payload.title,
+    variant: severityToVariant(payload.severity),
+    description: payload.body?.slice(0, 80)
+  });
   break;
+}
 ```
 
-User-specific SignalR group: on hub connect, server adds connection to `$"user-{userId}"` group. Frontend needs no changes — the hub handles grouping server-side.
+Helper:
+```typescript
+function severityToVariant(s: string): 'default' | 'destructive' | 'warning' {
+  if (s === 'Critical' || s === 'Security') return 'destructive';
+  if (s === 'Warning') return 'warning';
+  return 'default';
+}
+```
 
 ---
 
 ## DI Registration
 
 In `MetadataServiceExtensions.AddMetadata(...)`:
+
 ```csharp
 services.AddScoped<INotificationService, NotificationService>();
 services.AddScoped<INotificationQueryService, NotificationQueryService>();
-// MediatR handlers auto-discovered via assembly scan (already registered)
+// NotificationPublisher + 10 handlers auto-discovered via MediatR assembly scan
 ```
 
 ---
@@ -269,22 +410,36 @@ services.AddScoped<INotificationQueryService, NotificationQueryService>();
 ## Testing
 
 **Unit tests** (`MSOSync.MetadataTests`):
-- `NotificationServiceTests` — verify fan-out creates correct number of `SyncUserNotification` rows; verify audience filtering (All vs OperatorAndAbove vs AdminOnly)
-- `WorkerFailedNotificationHandlerTests` — verify handler calls service with correct eventType/severity
-- `NotificationQueryServiceTests` — verify paging, unread count, mark-read
+- `NotificationServiceTests`:
+  - Fan-out creates correct `SyncUserNotification` count for each `NotificationAudience` value
+  - Deduplication: second call within 10-min window with same dedup_key increments `OccurrenceCount`, does not insert new row
+  - Deduplication: call outside window creates new row
+  - Bulk insert (single `SaveChangesAsync` call, not N individual calls)
+- `WorkerFailedNotificationHandlerTests`: handler calls service with `WorkerFailed`, `Critical`, `AllUsers`
+- `NotificationQueryServiceTests`:
+  - Cursor pagination returns correct page and NextCursor
+  - `unreadOnly=true` filters read notifications
+  - `GetUnreadCountAsync` returns 0 after `MarkAllReadAsync`
+  - Pagination ordering is consistent (descending by notificationId)
 
 **Integration tests** (`MSOSync.IntegrationTests`):
-- `NotificationControllerTests` — GET `/notifications`, GET `/unread-count`, POST `/{id}/read`, POST `/read-all` — verify auth, correct data, unread count decrements
+- `NotificationControllerTests`:
+  - `GET /notifications` requires auth, returns paged result
+  - `GET /unread-count` returns correct integer
+  - `POST /{id}/read` sets `IsRead=true`, decrements unread count
+  - `POST /read-all` sets all `IsRead=true` for requesting user only, not other users
+  - `PATCH /{id}` with `{ "isRead": true }` same effect as POST read
+  - Concurrent `POST /{id}/read` for same id is idempotent (no 500)
+  - SignalR push: `NotifyNotificationCreated` called with correct userId after `CreateAsync`
 
 ---
 
 ## Global Constraints
 
-- Zero build warnings
-- No new features beyond spec
-- `TreatWarningsAsErrors` enforced
-- Do not commit `.env` files or secrets
-- Stage files by name only
+- Zero build warnings (`TreatWarningsAsErrors` enforced)
+- No new features beyond this spec
+- Do not commit `.env` files, secrets, or plaintext credentials
+- Stage files by name only — never `git add .` or `git add -A`
 - Branch: main
 
 ---
@@ -293,7 +448,8 @@ services.AddScoped<INotificationQueryService, NotificationQueryService>();
 
 - Email / SMTP delivery
 - Webhook delivery
-- User notification preferences (opt-in/opt-out per type)
-- Notification retention / auto-cleanup
+- `sync_user_notification_preferences` table (reserved; service intentionally designed for future preference filtering injection point at `NotificationService.CreateAsync`)
+- Notification retention / auto-archive worker (columns `IsArchived`/`ArchivedAt` present today)
 - Alert silencing / snooze
 - Escalation rules
+- Per-user opt-out per notification type
