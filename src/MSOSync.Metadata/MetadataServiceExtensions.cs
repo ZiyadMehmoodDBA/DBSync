@@ -19,6 +19,7 @@ using MSOSync.Metadata.NodeManagement;
 using MSOSync.Metadata.Preferences;
 using MSOSync.Metadata.Users;
 using MSOSync.Metadata.Configuration;
+using MSOSync.Metadata.Notifications;
 using MSOSync.Metadata.Operations;
 using MSOSync.Metadata.Operations.Handlers;
 using MSOSync.Metadata.Overview;
@@ -140,6 +141,10 @@ public static class MetadataServiceExtensions
 
         // Epic 12C — Node Sync Scope
         services.AddScoped<INodeScopeService, NodeScopeService>();
+
+        // Epic 13 — Notifications
+        services.AddScoped<INotificationService, NotificationService>();
+        services.AddScoped<INotificationQueryService, NotificationQueryService>();
 
         return services;
     }
