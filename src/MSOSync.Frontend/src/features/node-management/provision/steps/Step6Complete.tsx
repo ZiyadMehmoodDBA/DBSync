@@ -10,7 +10,7 @@ interface Props {
   onRestart: () => void;
 }
 
-export function Step5Complete({ nodeId, token, onRestart }: Props) {
+export function Step6Complete({ nodeId, token, onRestart }: Props) {
   const [revealed, setRevealed] = useState(false);
   const pkgMutation = useProvisionPackage();
 
@@ -49,7 +49,7 @@ export function Step5Complete({ nodeId, token, onRestart }: Props) {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-base font-semibold">Step 5: Complete</h2>
+        <h2 className="text-base font-semibold">Step 6: Complete</h2>
         <p className="text-sm text-neutral-500 mt-1">
           Node <strong>{nodeId}</strong> has been provisioned.
         </p>

@@ -1,11 +1,13 @@
+// src/MSOSync.Frontend/src/features/node-management/provision/components/ProvisionWizard.tsx
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useNodeManagement } from '../../NodeManagementProvider';
 import { Step1NodeType }    from '../steps/Step1NodeType';
 import { Step2Credentials } from '../steps/Step2Credentials';
 import { Step3Network }     from '../steps/Step3Network';
-import { Step4Review }      from '../steps/Step4Review';
-import { Step5Complete }    from '../steps/Step5Complete';
+import { Step4SyncScope }   from '../steps/Step4SyncScope';
+import { Step5Review }      from '../steps/Step5Review';
+import { Step6Complete }    from '../steps/Step6Complete';
 import {
   loadWizardDraft,
   saveWizardDraft,
@@ -13,10 +15,11 @@ import {
 } from '../../types/provision';
 import type { ProvisionWizardDraft } from '../../types/provision';
 import { useProvision } from '../../hooks/useProvision';
+import { setNodeScope } from '../../../../shared/api/nodeScope';
 
 const EMPTY_DRAFT: ProvisionWizardDraft = { step: 1 };
 
-const STEPS = ['Node Type', 'Credentials', 'Network', 'Review', 'Complete'];
+const STEPS = ['Node Type', 'Credentials', 'Network', 'Sync Scope', 'Review', 'Complete'];
 
 function StepIndicator({ current }: { current: number }) {
   return (
@@ -59,8 +62,8 @@ export function ProvisionWizard() {
   const { setWizardDraft } = useNodeManagement();
   const provision = useProvision();
 
-  const [step, setStep]             = useState(1);
-  const [draft, setDraft]           = useState<ProvisionWizardDraft>(EMPTY_DRAFT);
+  const [step, setStep]              = useState(1);
+  const [draft, setDraft]            = useState<ProvisionWizardDraft>(EMPTY_DRAFT);
   const [provisionResult, setResult] =
     useState<{ nodeId: string; token: string } | null>(null);
   const [draftOffered, setDraftOffered] = useState(false);
@@ -127,10 +130,31 @@ export function ProvisionWizard() {
         groupId:     draft.groupId,
         description: draft.description,
       });
+
+      // Apply scope if admin selected anything
+      const hasScope =
+        (draft.channelIds?.length ?? 0) > 0 ||
+        (draft.triggerIds?.length ?? 0) > 0 ||
+        (draft.routerIds?.length ?? 0) > 0;
+
+      if (hasScope) {
+        try {
+          await setNodeScope(result.nodeId, {
+            syncDirection:    draft.syncDirection    ?? 'Bidirectional',
+            initialLoadPolicy: draft.initialLoadPolicy ?? 'None',
+            channelIds:        draft.channelIds        ?? [],
+            triggerIds:        draft.triggerIds        ?? [],
+            routerIds:         draft.routerIds         ?? [],
+          });
+        } catch {
+          toast.warning('Node provisioned but scope assignment failed. Edit scope from the node detail page.');
+        }
+      }
+
       setResult(result);
       clearWizardDraft();
       setWizardDraft(null);
-      setStep(5);
+      setStep(6);
     } catch {
       toast.error('Provisioning failed. Please try again.');
     }
@@ -147,7 +171,7 @@ export function ProvisionWizard() {
     <div className="max-w-2xl mx-auto py-8 px-4">
       <div className="flex justify-between items-start mb-4">
         <h1 className="text-lg font-semibold">Provision New Node</h1>
-        {step < 5 && (
+        {step < 6 && (
           <button
             onClick={cancel}
             className="text-xs text-neutral-400 hover:text-neutral-600"
@@ -167,15 +191,18 @@ export function ProvisionWizard() {
         <Step3Network draft={draft} onChange={patch} onNext={advance} onBack={goBack} />
       )}
       {step === 4 && (
-        <Step4Review
+        <Step4SyncScope draft={draft} onChange={patch} onNext={advance} onBack={goBack} />
+      )}
+      {step === 5 && (
+        <Step5Review
           draft={draft}
-          onSubmit={handleSubmit}
+          onSubmit={() => void handleSubmit()}
           onBack={goBack}
           isLoading={provision.isPending}
         />
       )}
-      {step === 5 && (
-        <Step5Complete
+      {step === 6 && (
+        <Step6Complete
           nodeId={provisionResult?.nodeId ?? ''}
           token={provisionResult?.token ?? null}
           onRestart={restart}

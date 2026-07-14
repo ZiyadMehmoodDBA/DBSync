@@ -1,4 +1,5 @@
 // src/MSOSync.Frontend/src/features/node-management/provision/steps/Step4SyncScope.tsx
+import { useId } from 'react';
 import { useChannels } from '../../../channels/hooks';
 import { useTriggers } from '../../../triggers/hooks';
 import { useRouters }  from '../../../routers/hooks';
@@ -19,19 +20,15 @@ function toggle(ids: string[], id: string): string[] {
 }
 
 export function Step4SyncScope({ draft, onChange, onNext, onBack }: Props) {
+  const scopeId = useId();
   const { data: channels = [], isLoading: loadingChannels } = useChannels();
   const { data: triggers = [], isLoading: loadingTriggers } = useTriggers();
   const { data: routers  = [], isLoading: loadingRouters  } = useRouters();
 
-  // @ts-expect-error — added in Task 5
-  const channelIds       = draft.channelIds       ?? [];
-  // @ts-expect-error — added in Task 5
-  const triggerIds       = draft.triggerIds       ?? [];
-  // @ts-expect-error — added in Task 5
-  const routerIds        = draft.routerIds        ?? [];
-  // @ts-expect-error — added in Task 5
-  const syncDirection    = draft.syncDirection    ?? 'Bidirectional';
-  // @ts-expect-error — added in Task 5
+  const channelIds        = draft.channelIds        ?? [];
+  const triggerIds        = draft.triggerIds        ?? [];
+  const routerIds         = draft.routerIds         ?? [];
+  const syncDirection     = draft.syncDirection     ?? 'Bidirectional';
   const initialLoadPolicy = draft.initialLoadPolicy ?? 'None';
 
   // Filter triggers by selected channels
@@ -152,7 +149,7 @@ export function Step4SyncScope({ draft, onChange, onNext, onBack }: Props) {
                 <label key={dir} className="flex items-center gap-2 text-sm cursor-pointer">
                   <input
                     type="radio"
-                    name="syncDirection"
+                    name={`${scopeId}-syncDirection`}
                     value={dir}
                     checked={syncDirection === dir}
                     onChange={() => onChange({ syncDirection: dir })}
@@ -175,7 +172,7 @@ export function Step4SyncScope({ draft, onChange, onNext, onBack }: Props) {
                 <label key={policy} className="flex items-center gap-2 text-sm cursor-pointer">
                   <input
                     type="radio"
-                    name="initialLoadPolicy"
+                    name={`${scopeId}-initialLoadPolicy`}
                     value={policy}
                     checked={initialLoadPolicy === policy}
                     onChange={() => onChange({ initialLoadPolicy: policy })}

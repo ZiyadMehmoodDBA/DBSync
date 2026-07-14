@@ -1,14 +1,22 @@
+import type { SyncDirection, InitialLoadPolicy } from '../../../shared/types';
+
 export type NodeType = 'source' | 'target';
 
 export interface ProvisionWizardDraft {
-  step:         number;
-  nodeType?:    NodeType;
-  description?: string;
-  dbServer?:    string;
-  dbName?:      string;
-  nodeName?:    string;
-  externalId?:  string;
-  groupId?:     string;
+  step:               number;
+  nodeType?:          NodeType;
+  description?:       string;
+  dbServer?:          string;
+  dbName?:            string;
+  nodeName?:          string;
+  externalId?:        string;
+  groupId?:           string;
+  // Sync Scope (Step 4)
+  channelIds?:        string[];
+  triggerIds?:        string[];
+  routerIds?:         string[];
+  syncDirection?:     SyncDirection;
+  initialLoadPolicy?: InitialLoadPolicy;
 }
 
 export interface ProvisionRequest {
@@ -44,7 +52,7 @@ export interface NodeManagementOverviewDto {
 }
 
 const WIZARD_STORAGE_KEY = 'msosync:wizard:provision' as const;
-const WIZARD_VERSION     = 1 as const;
+const WIZARD_VERSION     = 2 as const;
 
 interface WizardEnvelope {
   version: number;
