@@ -57,19 +57,19 @@ public sealed class NodeScopeService(AppDbContext db) : INodeScopeService
         }
 
         // Replace channel assignments
-        var oldChannels = db.NodeChannelAssignments.Where(x => x.NodeId == nodeId);
+        var oldChannels = await db.NodeChannelAssignments.Where(x => x.NodeId == nodeId).ToListAsync(ct);
         db.NodeChannelAssignments.RemoveRange(oldChannels);
         db.NodeChannelAssignments.AddRange(req.ChannelIds.Select(id =>
             new SyncNodeChannelAssignment { NodeId = nodeId, ChannelId = id }));
 
         // Replace trigger assignments
-        var oldTriggers = db.NodeTriggerAssignments.Where(x => x.NodeId == nodeId);
+        var oldTriggers = await db.NodeTriggerAssignments.Where(x => x.NodeId == nodeId).ToListAsync(ct);
         db.NodeTriggerAssignments.RemoveRange(oldTriggers);
         db.NodeTriggerAssignments.AddRange(req.TriggerIds.Select(id =>
             new SyncNodeTriggerAssignment { NodeId = nodeId, TriggerId = id }));
 
         // Replace router assignments
-        var oldRouters = db.NodeRouterAssignments.Where(x => x.NodeId == nodeId);
+        var oldRouters = await db.NodeRouterAssignments.Where(x => x.NodeId == nodeId).ToListAsync(ct);
         db.NodeRouterAssignments.RemoveRange(oldRouters);
         db.NodeRouterAssignments.AddRange(req.RouterIds.Select(id =>
             new SyncNodeRouterAssignment { NodeId = nodeId, RouterId = id }));
