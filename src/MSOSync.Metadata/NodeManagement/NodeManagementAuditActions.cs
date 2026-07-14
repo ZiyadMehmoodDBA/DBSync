@@ -24,4 +24,7 @@ public static class NodeManagementAuditActions
     public const string NodeRecoveryApproved       = "NODE_RECOVERY_APPROVED";
     public const string NodeRecoveryRejected       = "NODE_RECOVERY_REJECTED";
     public const string NodeRecoveryActivated      = "NODE_RECOVERY_ACTIVATED";
+
+    // Epic 12C — Sync Scope
+    public const string NodeScopeUpdated = "NODE_SCOPE_UPDATED";
 }

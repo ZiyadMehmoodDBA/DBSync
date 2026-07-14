@@ -63,7 +63,16 @@ export function Step4SyncScope({ draft, onChange, onNext, onBack }: Props) {
                     <input
                       type="checkbox"
                       checked={channelIds.includes(ch.channelId)}
-                      onChange={() => onChange({ channelIds: toggle(channelIds, ch.channelId) })}
+                      onChange={() => {
+                        const nextChannelIds = toggle(channelIds, ch.channelId);
+                        const validTriggerIds = triggers
+                          .filter(t => nextChannelIds.includes(t.channelId))
+                          .map(t => t.triggerId);
+                        onChange({
+                          channelIds: nextChannelIds,
+                          triggerIds: triggerIds.filter(id => validTriggerIds.includes(id)),
+                        });
+                      }}
                     />
                     <span>{ch.name ?? ch.channelId}</span>
                     {!ch.enabled && <span className="text-xs text-neutral-400">(disabled)</span>}
