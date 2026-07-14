@@ -23,11 +23,11 @@ public sealed class TestcontainersMigrationSmokeTest(TestcontainersLifecycleFixt
         var nodeCount = await db.Nodes.CountAsync();
         nodeCount.Should().Be(0, "fresh database has no nodes");
 
-        // Verify all 35 msosync tables were created
+        // Verify all 37 msosync tables were created
         var tableCount = await db.Database
             .SqlQuery<int>($"SELECT COUNT(1) AS Value FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = 'msosync'")
             .SingleAsync();
-        tableCount.Should().Be(35, "all migrations should create 35 tables in msosync schema");
+        tableCount.Should().Be(37, "all migrations should create 37 tables in msosync schema");
     }
 }
 
