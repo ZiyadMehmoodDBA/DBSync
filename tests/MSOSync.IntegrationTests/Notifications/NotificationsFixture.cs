@@ -161,7 +161,7 @@ public sealed class NotificationsFixture : WebApplicationFactory<Program>, IAsyn
     private async Task<HttpClient> MakeClientAsync(string username, string password)
     {
         var loginClient = CreateClient();
-        var resp = await loginClient.PostAsJsonAsync("api/v1/auth/login",
+        var resp = await loginClient.PostAsJsonAsync("/api/v1/auth/login",
             new { username, password });
         resp.EnsureSuccessStatusCode();
         var body  = await resp.Content.ReadFromJsonAsync<JsonElement>();

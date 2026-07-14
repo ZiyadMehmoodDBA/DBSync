@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using MSOSync.Common.Exceptions;
 using MSOSync.Metadata.Pagination;
 using MSOSync.Persistence;
 
@@ -8,7 +9,7 @@ public sealed class NotificationQueryService(AppDbContext db, CursorSigner signe
     : INotificationQueryService
 {
     public async Task<NotificationPageDto> GetPagedAsync(
-        long userId, string? cursor, int pageSize, bool unreadOnly, CancellationToken ct)
+        long userId, string? cursor, int pageSize, bool unreadOnly, string? severityFilter, CancellationToken ct)
     {
         var q = db.UserNotifications
             .AsNoTracking()
@@ -16,6 +17,9 @@ public sealed class NotificationQueryService(AppDbContext db, CursorSigner signe
 
         if (unreadOnly)
             q = q.Where(un => !un.IsRead);
+
+        if (!string.IsNullOrEmpty(severityFilter))
+            q = q.Where(un => un.Notification.Severity == severityFilter);
 
         if (cursor is not null)
         {
@@ -77,23 +81,25 @@ public sealed class NotificationQueryService(AppDbContext db, CursorSigner signe
 
     public async Task MarkAllReadAsync(long userId, CancellationToken ct)
     {
-        var now  = DateTime.UtcNow;
-        var rows = await db.UserNotifications
+        var now = DateTime.UtcNow;
+        await db.UserNotifications
             .Where(un => un.UserId == userId && !un.IsRead)
-            .ToListAsync(ct);
-
-        foreach (var row in rows)
-        {
-            row.IsRead = true;
-            row.ReadAt = now;
-        }
-        await db.SaveChangesAsync(ct);
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(un => un.IsRead, true)
+                .SetProperty(un => un.ReadAt, now), ct);
     }
 
-    public Task<long> ResolveUserIdAsync(string username, CancellationToken ct)
-        => db.Users
+    public async Task<long> ResolveUserIdAsync(string username, CancellationToken ct)
+    {
+        var userId = await db.Users
             .AsNoTracking()
             .Where(u => u.Username == username)
-            .Select(u => u.UserId)
-            .FirstAsync(ct);
+            .Select(u => (long?)u.UserId)
+            .FirstOrDefaultAsync(ct);
+
+        if (userId is null)
+            throw new NotFoundException($"User '{username}' not found");
+
+        return userId.Value;
+    }
 }

@@ -3,9 +3,9 @@ export function getTargetRoute(
   entityId:   string | null | undefined,
 ): string | null {
   switch (entityType) {
-    case 'Node':      return entityId ? `/operations/nodes` : '/operations/nodes';
-    case 'Worker':    return '/operations/health';
-    case 'Operation': return entityId ? `/operations/jobs` : '/operations/jobs';
+    case 'Node':      return entityId ? `/operations/nodes/${entityId}` : '/operations/nodes';
+    case 'Worker':    return entityId ? `/operations/workers/${entityId}` : '/operations/workers';
+    case 'Operation': return entityId ? `/operations/${entityId}` : '/operations';
     default:          return null;
   }
 }

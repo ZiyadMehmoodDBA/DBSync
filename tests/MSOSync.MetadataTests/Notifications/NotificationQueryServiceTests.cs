@@ -52,7 +52,7 @@ public sealed class NotificationQueryServiceTests : IDisposable
     public async Task GetPagedAsync_ReturnsDescendingOrder()
     {
         var (user, _) = await SeedAsync(3);
-        var result = await _sut.GetPagedAsync(user.UserId, null, 10, false, default);
+        var result = await _sut.GetPagedAsync(user.UserId, null, 10, false, null, default);
         result.Items.Should().HaveCount(3);
         result.Items.Select(x => x.NotificationId)
             .Should().BeInDescendingOrder();
@@ -63,11 +63,11 @@ public sealed class NotificationQueryServiceTests : IDisposable
     {
         var (user, _) = await SeedAsync(3);
 
-        var page1 = await _sut.GetPagedAsync(user.UserId, null, 2, false, default);
+        var page1 = await _sut.GetPagedAsync(user.UserId, null, 2, false, null, default);
         page1.Items.Should().HaveCount(2);
         page1.NextCursor.Should().NotBeNull();
 
-        var page2 = await _sut.GetPagedAsync(user.UserId, page1.NextCursor, 2, false, default);
+        var page2 = await _sut.GetPagedAsync(user.UserId, page1.NextCursor, 2, false, null, default);
         page2.Items.Should().HaveCount(1);
         page2.NextCursor.Should().BeNull();
     }
@@ -81,7 +81,7 @@ public sealed class NotificationQueryServiceTests : IDisposable
         first!.IsRead = true;
         await _db.SaveChangesAsync();
 
-        var result = await _sut.GetPagedAsync(user.UserId, null, 10, true, default);
+        var result = await _sut.GetPagedAsync(user.UserId, null, 10, true, null, default);
         result.Items.Should().HaveCount(2);
         result.Items.Should().NotContain(x => x.NotificationId == notifications[0].NotificationId);
     }

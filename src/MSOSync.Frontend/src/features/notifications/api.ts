@@ -7,10 +7,11 @@ export async function getNotifications(
   cursor: string | null,
   pageSize: number,
   unreadOnly: boolean,
-  options?: { signal?: AbortSignal },
+  options?: { signal?: AbortSignal; severity?: string },
 ): Promise<NotificationPageDto> {
   const params: Record<string, unknown> = { pageSize, unreadOnly };
   if (cursor) params.cursor = cursor;
+  if (options?.severity) params.severity = options.severity;
   const { data } = await client.get<NotificationPageDto>(BASE, { params, signal: options?.signal });
   return data;
 }

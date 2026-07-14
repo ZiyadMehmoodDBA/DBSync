@@ -11,9 +11,8 @@ public sealed class NotificationPublisher(
     ILogger<NotificationPublisher> logger)
     : INotificationHandler<NotificationCreatedDomainEvent>
 {
-    public async Task Handle(NotificationCreatedDomainEvent evt, CancellationToken ct)
-    {
-        foreach (var userId in evt.UserIds)
+    public Task Handle(NotificationCreatedDomainEvent evt, CancellationToken ct)
+        => Task.WhenAll(evt.UserIds.Select(async userId =>
         {
             var dto = evt.PushDto with
             {
@@ -28,10 +27,8 @@ public sealed class NotificationPublisher(
             }
             catch (Exception ex)
             {
-                logger.LogError(ex,
-                    "Failed to push notification {NotificationId} to user {UserId}",
-                    evt.NotificationId, userId);
+                logger.LogWarning(ex,
+                    "Failed to push NotificationEvent to user {UserId}", userId);
             }
-        }
-    }
+        }));
 }

@@ -65,6 +65,16 @@ public sealed class NotificationControllerTests(NotificationsFixture fx)
 
         var resp = await client.PostAsync($"/api/v1/notifications/{id}/read", null);
         resp.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        // Verify the item is now read by checking it does not appear in unread-only list
+        var unreadResp = await client.GetAsync("/api/v1/notifications?unreadOnly=true");
+        unreadResp.StatusCode.Should().Be(HttpStatusCode.OK);
+        var unreadBody = await unreadResp.Content.ReadFromJsonAsync<JsonElement>();
+        var unreadItems = unreadBody.GetProperty("items");
+        for (var i = 0; i < unreadItems.GetArrayLength(); i++)
+        {
+            unreadItems[i].GetProperty("notificationId").GetInt64().Should().NotBe(id);
+        }
     }
 
     [Fact]

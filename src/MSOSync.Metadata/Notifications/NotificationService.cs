@@ -55,6 +55,8 @@ public sealed class NotificationService(AppDbContext db, IPublisher publisher) :
             CreatedAt        = now,
             LastOccurredAt   = now,
         };
+
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
         db.Notifications.Add(notification);
         await db.SaveChangesAsync(ct);
 
@@ -64,6 +66,7 @@ public sealed class NotificationService(AppDbContext db, IPublisher publisher) :
             NotificationId = notification.NotificationId,
         }));
         await db.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
 
         // Compute per-user unread count in one query
         var unreadCounts = await db.UserNotifications

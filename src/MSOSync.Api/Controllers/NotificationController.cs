@@ -19,10 +19,11 @@ public sealed class NotificationController(
         [FromQuery] string? cursor       = null,
         [FromQuery] int     pageSize     = 20,
         [FromQuery] bool    unreadOnly   = false,
+        [FromQuery] string? severity     = null,
         CancellationToken   ct           = default)
     {
         var userId = await ResolveUserIdAsync(ct);
-        var result = await queryService.GetPagedAsync(userId, cursor, Math.Clamp(pageSize, 1, 100), unreadOnly, ct);
+        var result = await queryService.GetPagedAsync(userId, cursor, Math.Clamp(pageSize, 1, 100), unreadOnly, severity, ct);
         return Ok(result);
     }
 
@@ -46,12 +47,17 @@ public sealed class NotificationController(
 
     [HttpPatch("{id:long}")]
     [ProducesResponseType(200)]
+    [ProducesResponseType(400)]
     public async Task<IActionResult> PatchNotification(
-        long id, [FromBody] PatchNotificationRequest request, CancellationToken ct)
+        long id, [FromBody] PatchNotificationRequest? request, CancellationToken ct)
     {
+        if (request is null)
+            return BadRequest(new { error = "Request body is required." });
+        if (!request.IsRead)
+            return BadRequest(new { error = "Marking a notification as unread is not supported." });
+
         var userId = await ResolveUserIdAsync(ct);
-        if (request.IsRead)
-            await queryService.MarkReadAsync(userId, id, ct);
+        await queryService.MarkReadAsync(userId, id, ct);
         return Ok();
     }
 

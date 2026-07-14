@@ -21,12 +21,13 @@ export function useNotifications(
   const [items,  setItems]    = useState<NotificationDto[]>([]);
   const [hasMore, setHasMore] = useState(false);
 
-  const unreadOnly  = filter === 'unread';
+  const unreadOnly = filter === 'unread';
+  const severity   = filter === 'critical' ? 'Critical' : filter === 'security' ? 'Security' : undefined;
 
   const { isLoading, isFetching } = useQuery({
     queryKey: queryKeys.notifications(filter),
     queryFn:  async ({ signal }) => {
-      const page = await getNotifications(null, pageSize, unreadOnly, { signal });
+      const page = await getNotifications(null, pageSize, unreadOnly, { signal, severity });
       setItems(page.items);
       setCursor(page.nextCursor);
       setHasMore(page.nextCursor !== null);
@@ -37,11 +38,11 @@ export function useNotifications(
 
   const loadMore = useCallback(async () => {
     if (!cursor) return;
-    const page = await getNotifications(cursor, pageSize, unreadOnly);
+    const page = await getNotifications(cursor, pageSize, unreadOnly, { severity });
     setItems(prev => [...prev, ...page.items]);
     setCursor(page.nextCursor);
     setHasMore(page.nextCursor !== null);
-  }, [cursor, pageSize, unreadOnly]);
+  }, [cursor, pageSize, unreadOnly, severity]);
 
   return { items, loadMore, hasMore, isLoading: isLoading || isFetching };
 }
