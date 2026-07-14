@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { HubConnectionBuilder, HubConnectionState } from '@microsoft/signalr';
 import type { QueryClient } from '@tanstack/react-query';
-import type { ConnectionState, OperationsEvent, PermissionEvent, ExportJobEvent } from './types';
+import type { ConnectionState, OperationsEvent, PermissionEvent, ExportJobEvent, NotificationPushPayload } from './types';
 import { RECONNECT_DELAYS } from './types';
 
 interface UseSignalROptions {
@@ -12,6 +12,7 @@ interface UseSignalROptions {
   onPermissionEvent?: (event: PermissionEvent) => void;
   onExportJobEvent?: (event: ExportJobEvent) => void;
   onOverviewRefreshed?: () => void;
+  onNotificationEvent?: (payload: NotificationPushPayload) => void;
 }
 
 export function useSignalR({
@@ -22,6 +23,7 @@ export function useSignalR({
   onPermissionEvent,
   onExportJobEvent,
   onOverviewRefreshed,
+  onNotificationEvent,
 }: UseSignalROptions) {
   const [connectionState, setConnectionState] = useState<ConnectionState>('disconnected');
   const [lastConnectedAt, setLastConnectedAt] = useState<Date | undefined>();
@@ -78,6 +80,10 @@ export function useSignalR({
       onOverviewRefreshed?.();
     });
 
+    conn.on('NotificationEvent', (payload: NotificationPushPayload) => {
+      onNotificationEvent?.(payload);
+    });
+
     try {
       await conn.start();
       setConnectionState('connected');
@@ -86,7 +92,7 @@ export function useSignalR({
       setConnectionState('disconnected');
       connectionRef.current = null;
     }
-  }, [queryClient, onEvent, onPermissionEvent, onExportJobEvent, onOverviewRefreshed]);
+  }, [queryClient, onEvent, onPermissionEvent, onExportJobEvent, onOverviewRefreshed, onNotificationEvent]);
 
   const stopConnection = useCallback(async () => {
     if (!connectionRef.current) return;

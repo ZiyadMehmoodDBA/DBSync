@@ -1,12 +1,14 @@
 import { useCallback, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { useAuth } from '../../features/auth/useAuth';
 import { SignalRContext } from './context';
 import { useSignalR } from './useSignalR';
 import { routeToCache, routePermissionEvent, routeExportJobEvent } from './eventRouter';
 import { routeToToast } from './notifications';
-import type { OperationsEvent, PermissionEvent, ExportJobEvent } from './types';
+import type { OperationsEvent, PermissionEvent, ExportJobEvent, NotificationPushPayload } from './types';
 import { systemKeys } from '../api/system';
+import { queryKeys } from '../queryKeys';
 
 interface Props {
   children: ReactNode;
@@ -44,6 +46,15 @@ export function SignalRProvider({ children }: Props) {
     void queryClient.invalidateQueries({ queryKey: systemKeys.overview });
   }, [queryClient]);
 
+  const handleNotificationEvent = useCallback(
+    (payload: NotificationPushPayload) => {
+      queryClient.setQueryData(queryKeys.notificationsUnread(), payload.unreadCount);
+      void queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      toast.info(payload.title, { description: payload.body.slice(0, 80) });
+    },
+    [queryClient],
+  );
+
   const { connectionState, lastConnectedAt, lastDisconnectedAt } = useSignalR({
     getAccessToken,
     isAuthenticated: accessToken !== null,
@@ -52,6 +63,7 @@ export function SignalRProvider({ children }: Props) {
     onPermissionEvent: handlePermissionEvent,
     onExportJobEvent: handleExportJobEvent,
     onOverviewRefreshed: handleOverviewRefreshed,
+    onNotificationEvent: handleNotificationEvent,
   });
 
   return (

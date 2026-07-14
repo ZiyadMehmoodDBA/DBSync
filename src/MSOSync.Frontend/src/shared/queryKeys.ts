@@ -83,4 +83,7 @@ export const queryKeys = {
     filter ? ['drift-nodes', filter] as const : ['drift-nodes'] as const,
   configurationSummary: () => ['configuration-summary'] as const,
   rolloutStatus: (rolloutId: string) => ['rollout-status', rolloutId] as const,
+
+  notifications:       (filter?: string) => ['notifications', filter ?? 'all'] as const,
+  notificationsUnread: () => ['notifications', 'unread-count'] as const,
 };

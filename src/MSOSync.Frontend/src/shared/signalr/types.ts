@@ -48,3 +48,15 @@ export interface ExportJobEvent {
   progressPercent: number;
   rowCount:        number | null;
 }
+
+export interface NotificationPushPayload {
+  notificationId:   number;
+  eventType:        string;
+  severity:         string;
+  title:            string;
+  body:             string;
+  sourceEntityType: string | null;
+  sourceEntityId:   string | null;
+  createdAt:        string;
+  unreadCount:      number;
+}
