@@ -10,7 +10,8 @@ export function formatQueueDepth(count: number): string {
   return count.toLocaleString();
 }
 
-export function formatPercent(value: number): string {
+export function formatPercent(value: number | null | undefined): string {
+  if (value == null) return 'N/A';
   return `${value.toFixed(1)}%`;
 }
 
