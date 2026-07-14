@@ -17,12 +17,12 @@ public sealed class PersistenceTests(DatabaseFixture fixture) : IClassFixture<Da
     }
 
     [Fact]
-    public async Task SchemaCreated_All36TablesExist()
+    public async Task SchemaCreated_All42TablesExist()
     {
         var count = await fixture.Db.Database
             .SqlQuery<int>($"SELECT COUNT(1) AS Value FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = 'msosync'")
             .SingleAsync();
-        count.Should().Be(36);
+        count.Should().Be(42);
     }
 
     [Fact]

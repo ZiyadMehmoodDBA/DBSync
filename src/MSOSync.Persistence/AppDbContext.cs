@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using MSOSync.Persistence.Entities;
 
 namespace MSOSync.Persistence;
@@ -48,6 +49,14 @@ public class AppDbContext : DbContext
     public DbSet<SyncNodeChannelAssignment> NodeChannelAssignments => Set<SyncNodeChannelAssignment>();
     public DbSet<SyncNodeTriggerAssignment> NodeTriggerAssignments => Set<SyncNodeTriggerAssignment>();
     public DbSet<SyncNodeRouterAssignment>  NodeRouterAssignments  => Set<SyncNodeRouterAssignment>();
+    public DbSet<SyncNotification>     Notifications     => Set<SyncNotification>();
+    public DbSet<SyncUserNotification> UserNotifications => Set<SyncUserNotification>();
+
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        optionsBuilder.ConfigureWarnings(w =>
+            w.Ignore(RelationalEventId.PendingModelChangesWarning));
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
