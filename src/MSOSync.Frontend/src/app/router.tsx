@@ -37,6 +37,7 @@ import { SettingsPage } from '../features/administration/settings/SettingsPage';
 import { RetentionPage } from '../features/administration/retention/RetentionPage';
 import { LicensePage } from '../features/administration/license/LicensePage';
 import { DiagnosticsPage } from '../features/administration/diagnostics/DiagnosticsPage';
+import { NotificationsPage } from '../features/notifications/NotificationsPage';
 
 function RoleBasedRedirect() {
   const { user } = useAuth();
@@ -161,6 +162,7 @@ export const router = createBrowserRouter([
               { path: 'locks',            element: <LocksPage /> },
               { path: 'downloads',        element: <PermissionGuard permissionKey={PermissionKeys.ExportData}><DownloadsPage /></PermissionGuard> },
               { path: 'profile',          element: <ProfilePage /> },
+              { path: 'notifications',    element: <NotificationsPage /> },
               { path: 'configuration/templates',   element: <PermissionGuard permissionKey={PermissionKeys.ManageConfigurations}><TemplatesPage /></PermissionGuard> },
               { path: 'configuration/assignments', element: <PermissionGuard permissionKey={PermissionKeys.ManageConfigurations}><AssignmentsPage /></PermissionGuard> },
               { path: 'configuration/drift',       element: <PermissionGuard permissionKey={PermissionKeys.ManageConfigurations}><DriftPage /></PermissionGuard> },

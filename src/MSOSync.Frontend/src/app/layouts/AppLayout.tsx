@@ -36,6 +36,7 @@ import { PermissionKeys } from '../../shared/types/permissions';
 import type { PermissionKey } from '../../shared/types/permissions';
 import { PreferenceKeys } from '../../shared/types/preferences';
 import type { Theme } from '../../shared/types/preferences';
+import { NotificationBell } from '../../features/notifications/NotificationBell';
 
 type NavItem = { label: string; path: string; icon: React.ElementType; requiredPermission?: PermissionKey };
 
@@ -240,6 +241,8 @@ export function AppLayout() {
           </span>
           <div className="flex items-center gap-2">
             <SignalRIndicator />
+            {/* Notification bell */}
+            <NotificationBell />
             <Button variant="ghost" size="icon" onClick={handleThemeToggle} aria-label="Toggle theme">
               {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </Button>
