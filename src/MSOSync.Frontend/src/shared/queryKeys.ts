@@ -75,6 +75,7 @@ export const queryKeys = {
 
   nodeConfiguration: (nodeId: string) => ['node-configuration', nodeId] as const,
   nodeConfigurationHistory: (nodeId: string) => ['node-configuration-history', nodeId] as const,
+  nodeScope: (nodeId: string) => ['node-scope', nodeId] as const,
 
   driftSummary: (filter?: Record<string, unknown>) =>
     filter ? ['drift-summary', filter] as const : ['drift-summary'] as const,
