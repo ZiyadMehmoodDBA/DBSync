@@ -63,7 +63,7 @@ public sealed class NodeLifecycleServiceTests
     }
 
     [Fact]
-    public async Task RegisterAsync_ExistingRegisteredNode_SetsReRegistration()
+    public async Task RegisterAsync_ExistingRegisteredNode_SetsRecovery()
     {
         var svc = MakeService(out var db);
 
@@ -78,7 +78,7 @@ public sealed class NodeLifecycleServiceTests
             "ext-2", "Node2", "target", null));
 
         var req = db.RegistrationRequests.Find(id)!;
-        req.RegistrationType.Should().Be(RegistrationType.ReRegistration);
+        req.RegistrationType.Should().Be(RegistrationType.Recovery);
     }
 
     [Fact]
