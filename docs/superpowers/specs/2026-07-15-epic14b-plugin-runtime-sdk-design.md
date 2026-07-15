@@ -66,10 +66,11 @@ MSOSync.Persistence        (references MSOSync.Plugin for IPluginStore — no li
 
 ## `plugin.json` Schema Changes
 
-Three new fields (additions only — backward-compatible):
+Four new fields (additions only — backward-compatible):
 
 ```json
 {
+  "manifestVersion": 1,
   "id":           "msosync.sqlserver.collector",
   "name":         "SQL Server Collector",
   "version":      "1.0.0",
@@ -90,16 +91,23 @@ Three new fields (additions only — backward-compatible):
 
 | Field | Required | Default | Notes |
 |---|---|---|---|
-| `sdkVersion` | yes (14B+) | — | Major.minor, e.g. `"1.0"` |
-| `apiVersion` | yes (14B+) | — | Integer string, e.g. `"1"` |
-| `startupOrder` | no | `1000` | Ascending = initialize first |
+| `manifestVersion` | no | `1` | Manifest schema version; loader selects parser by this value |
+| `sdkVersion` | yes (14B+) | — | Major.minor string, e.g. `"1.0"` — parsed to `Version` internally |
+| `apiVersion` | yes (14B+) | — | Integer string, e.g. `"1"` — parsed to `int` internally |
+| `startupOrder` | no | `1000` | Ascending = initialize first; ties broken by `PluginId` ascending |
 
-`PluginManifestValidator` validates all three. `ISdkCompatibilityValidator` (host-internal) checks `sdkVersion` and `apiVersion` against host-supported ranges.
+`PluginManifestValidator` validates all four. `ISdkCompatibilityValidator` (host-internal) checks `sdkVersion` and `apiVersion` against host-supported ranges.
+
+**Version parsing rule:** Manifest fields `sdkVersion` and `apiVersion` are JSON strings for forward compatibility. The validator converts them to `System.Version` and `int` immediately after parsing. All internal comparisons use typed values — never raw string comparison.
 
 **SDK compatibility policy:**
-- Host SDK 1.x accepts plugin `sdkVersion` 1.x, rejects 2.x.
-- `apiVersion` checked independently.
-- Mismatch → `Failed(stage: SdkCompatibility)`.
+- `ISdkCompatibilityValidator.Validate(manifest)` returns `CompatibilityResult`:
+  ```csharp
+  public enum CompatibilityResult { Compatible, Warning, Incompatible }
+  ```
+  `Compatible` — plugin loads normally. `Warning` — plugin loads, warning logged (e.g., minor mismatch). `Incompatible` — plugin → `Failed(stage: SdkCompatibility)`.
+- Host SDK 1.x: plugin `sdkVersion` 1.x → `Compatible`; 2.x → `Incompatible`.
+- `apiVersion` checked independently; future minor increments may → `Warning`.
 
 ---
 
@@ -315,10 +323,12 @@ internal sealed record PluginRuntime
     public DateTime? DisposedAt        { get; set; }
     public DateTime  LastStateChangeUtc{ get; set; }
 
-    // lifecycle durations
+    // lifecycle durations (all exposed on PluginDto)
     public TimeSpan? InitializeDuration { get; set; }
     public TimeSpan? StartDuration      { get; set; }
     public TimeSpan? StopDuration       { get; set; }
+    public TimeSpan? DisposeDuration    { get; set; }
+    public TimeSpan? TotalDuration      { get; set; }  // LoadDuration + InitializeDuration + StartDuration
 }
 ```
 
@@ -485,12 +495,73 @@ public sealed class PluginHostOptions
     public int?   InitializeTimeoutSeconds{ get; set; }            // null → DefaultTimeout
     public int?   StartTimeoutSeconds     { get; set; }
     public int?   StopTimeoutSeconds      { get; set; }
+    public int?   DisposeTimeoutSeconds   { get; set; }            // null → DefaultTimeout
     public string SupportedSdkMajorVersion{ get; set; } = "1";
     public string SupportedApiVersion     { get; set; } = "1";
+    public int    MaxPluginCount          { get; set; } = 100;     // discovery stops after this
+    public long   MaxManifestSizeBytes    { get; set; } = 65_536;  // 64 KB
+    public long   MaxPluginConfigSizeBytes{ get; set; } = 1_048_576; // 1 MB
 }
 ```
 
 Per-phase timeout resolves as: `{Phase}TimeoutSeconds ?? DefaultTimeoutSeconds`.
+
+---
+
+## Plugin Folder Validation
+
+Performed during discovery (stage 1 of the loading pipeline):
+
+| Condition | Result |
+|---|---|
+| Symbolic link that resolves outside `PluginsPath` | Skip directory, log warning |
+| Plugin path not normalized to canonical form | Normalize with `Path.GetFullPath` before processing |
+| `plugin.json` missing | Skip directory (existing behavior) |
+| `manifest.entryAssembly` DLL missing | `Failed(stage: AssemblyLoad)` |
+| `resources/` folder missing | Allowed — non-fatal |
+| Unknown subdirectory (not `lib/`, `resources/`, `logs/`) | Log warning, continue loading |
+| Plugin count exceeds `MaxPluginCount` | Skip remaining, log warning with count |
+| `plugin.json` exceeds `MaxManifestSizeBytes` | `Failed(stage: ManifestParse)` |
+| `plugin.config.json` exceeds `MaxPluginConfigSizeBytes` | Non-fatal warning, treat as missing |
+
+---
+
+## Cancellation Semantics
+
+Both host shutdown and per-phase timeout produce `OperationCanceledException`. The host distinguishes them by which token fired:
+
+```
+host cancellation token fired
+    → StopAsync/DisposeAsync already in progress (normal shutdown path)
+    → state remains Stopping / Disposing
+
+per-phase timeout token fired
+    → phase exceeded its timeout, host did not initiate shutdown
+    → exception caught → state = Failed, LastException set
+    → log PluginHost1009 (timeout) — never log as "host shutdown"
+```
+
+**Rule:** The `linkedCts` in `PluginLifecycleManager` wraps `CancellationTokenSource.CreateLinkedTokenSource(hostCt)` with `CancelAfter(timeout)`. After catching `OperationCanceledException`, check `hostCt.IsCancellationRequested` to distinguish timeout from shutdown: if only the linked source fired → timeout → `Failed`; if `hostCt` also fired → normal shutdown path.
+
+---
+
+## Logging Scopes
+
+Every log line emitted inside a plugin lifecycle phase carries a structured scope with these standard keys:
+
+```csharp
+using (_logger.BeginScope(new Dictionary<string, object>
+{
+    ["PluginId"]      = runtime.Descriptor.PluginId,
+    ["PluginVersion"] = runtime.Descriptor.Version,
+    ["Phase"]         = phaseName  // "Initialize" | "Start" | "Stop" | "Dispose"
+}))
+{
+    await plugin.InitializeAsync(context, ct);
+}
+```
+
+Structured logging sinks (Seq, Application Insights) automatically index these keys. Plugin-authored log calls via `IPluginLogger` use the same scope — `PluginLoggerAdapter.BeginScope` forwards to the underlying `ILogger`.
 
 ---
 
@@ -520,11 +591,13 @@ Per-phase timeout resolves as: `{Phase}TimeoutSeconds ?? DefaultTimeoutSeconds`.
 | `Running` | Healthy |
 | `Initialized` | Healthy |
 | `Loaded` | Healthy |
-| `Stopped` | Healthy (intentional stop) |
+| `Stopped` | Healthy (host-initiated stop completed normally) |
 | `Disabled` | Healthy (ignored) |
 | `Failed` | Degraded (lists pluginId + error) |
 
-Only unexpected `Failed` state triggers `Degraded`. Intentional `Stopped` or `Disabled` is not a health concern.
+**`Stopped` is always intentional in this state machine.** `Stopped` is only reachable when `StopAsync` completes without exception. If `StopAsync` throws or times out, the plugin transitions to `Failed`, not `Stopped`. Therefore no ambiguity: `Stopped` = host called stop, plugin cooperated cleanly = Healthy.
+
+`Failed` is the only state that reflects an unexpected condition and triggers `Degraded`.
 
 ---
 
@@ -545,7 +618,7 @@ Only unexpected `Failed` state triggers `Degraded`. Intentional `Stopped` or `Di
 }
 ```
 
-`PluginDto` gains: `initializeDurationMs`, `startDurationMs`, `initializedAt`, `startedAt`.
+`PluginDto` gains: `initializeDurationMs`, `startDurationMs`, `totalDurationMs`, `initializedAt`, `startedAt`.
 
 ---
 
@@ -643,12 +716,27 @@ Add `plugin.json` fields: `sdkVersion: "1.0"`, `apiVersion: "1"`, `startupOrder:
 
 ---
 
+## Operational Hardening (covered in loading pipeline)
+
+- **Duplicate `startupOrder`**: allowed; tie-broken by `PluginId` ascending (deterministic ordering).
+- **Duplicate `capabilities`/`permissions` entries in manifest**: rejected → `Failed(stage: ManifestValidation)` (already validated; confirmed required).
+- **Symbolic links**: any plugin path that resolves outside `PluginsPath` → skip + warning.
+- **Path normalization**: all plugin directory paths normalized with `Path.GetFullPath` before use.
+- **Max plugin count** (`MaxPluginCount=100`): discovery stops once limit reached; remaining dirs skipped with warning.
+- **Max manifest size** (`MaxManifestSizeBytes=65536`): read manifest file size first; exceeded → `Failed(ManifestParse)`.
+- **Max config size** (`MaxPluginConfigSizeBytes=1048576`): `plugin.config.json` exceeds limit → non-fatal warning; only appsettings values used.
+
+## Design Deferred to Future Epics
+
+- **Strong `PluginId` type** (`readonly record struct PluginId(string Value)`) — prevents host code from accidentally mixing bare strings. Not required for 14B; worth introducing before public SDK release.
+- Constructor injection for plugin types (14C).
+- Hot reload / dynamic plugin activation without restart.
+- Plugin-to-plugin communication.
+- Extension point invocation — collectors, operations, routing, transport (14C).
+- First-party plugins (14D).
+- DB-stored plugin configuration (14C or 14D).
+- Plugin marketplace / upload UI.
+
 ## What 14B Does NOT Include
 
-- Constructor injection for plugin types (14C)
-- Hot reload / dynamic plugin activation without restart (future)
-- Plugin-to-plugin communication (future)
-- Extension point invocation — collectors, operations, routing, transport (14C)
-- First-party plugins (14D)
-- DB-stored plugin configuration (14C or 14D)
-- Plugin marketplace / upload UI
+*(See "Design Deferred to Future Epics" above for the full list.)*
