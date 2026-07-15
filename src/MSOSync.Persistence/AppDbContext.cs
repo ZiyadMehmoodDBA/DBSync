@@ -51,6 +51,7 @@ public class AppDbContext : DbContext
     public DbSet<SyncNodeRouterAssignment>  NodeRouterAssignments  => Set<SyncNodeRouterAssignment>();
     public DbSet<SyncNotification>     Notifications     => Set<SyncNotification>();
     public DbSet<SyncUserNotification> UserNotifications => Set<SyncUserNotification>();
+    public DbSet<SyncPlugin>           Plugins           => Set<SyncPlugin>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
