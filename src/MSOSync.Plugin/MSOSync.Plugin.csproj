@@ -8,5 +8,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MSOSync.Common\MSOSync.Common.csproj" />
+    <ProjectReference Include="..\MSOSync.Sdk\MSOSync.Sdk.csproj" />
   </ItemGroup>
 </Project>

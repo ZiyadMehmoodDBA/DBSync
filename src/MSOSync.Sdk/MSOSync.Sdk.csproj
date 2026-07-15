@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- No PackageReference, no ProjectReference: zero dependencies.           -->
+  <!-- Directory.Build.props supplies: TargetFramework, LangVersion, Nullable, -->
+  <!-- ImplicitUsings, TreatWarningsAsErrors.                                   -->
+</Project>
