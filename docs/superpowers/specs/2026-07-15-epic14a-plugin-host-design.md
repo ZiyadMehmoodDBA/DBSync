@@ -157,9 +157,10 @@ Nine sequential stages. Failure at any stage produces `PluginLoadResult.Failed(s
    Failure: out of range → Failed(stage: HostCompatibility).
 
 6. DEPENDENCY RESOLUTION (PluginDependencyResolver)
+   Plugins are processed in alphabetical order by directory name (one pass only).
    For each declared dependency plugin ID: verify it is already registered as Loaded in IPluginRegistry.
    Failure: dependency not loaded → Failed(stage: DependencyResolution).
-   Note: load order is undefined in 14A; plugins with dependencies may need multiple passes or manual ordering. Document this limitation.
+   Note: plugins with dependencies must be in directories that sort alphabetically after their dependencies. Document this 14A limitation; dependency graphs are a 14B concern.
 
 7. LOAD (PluginLoadContext)
    Create new PluginLoadContext(pluginDirectory, libDirectory).
@@ -197,28 +198,47 @@ Nine sequential stages. Failure at any stage produces `PluginLoadResult.Failed(s
 
 Deserializes from `plugin.json`. Properties match the JSON fields exactly.
 
-### `PluginDescriptor` (runtime)
+### `PluginRuntime` (internal runtime object)
+
+Held by `IPluginRegistry`. Never exposed via API. Contains runtime internals:
+
+```csharp
+internal sealed record PluginRuntime
+{
+    public string PluginId              { get; init; }
+    public PluginManifest Manifest      { get; init; }  // cached from parse, zero disk IO after startup
+    public PluginStatus Status          { get; set; }
+    public string? ErrorMessage         { get; set; }
+    public string? FailureStage         { get; set; }
+    public DateTime LoadedAt            { get; init; }
+    public TimeSpan LoadDuration        { get; init; }
+    public string PluginDirectory       { get; init; }
+    public string HostCompatibility     { get; init; }  // "Compatible" | "Incompatible"
+    public Assembly? Assembly           { get; init; }
+    public AssemblyLoadContext? LoadContext { get; init; }
+}
+```
+
+### `PluginDescriptor` (public DTO, returned from registry to API)
+
+Lightweight — no Assembly or LoadContext references:
 
 ```csharp
 public sealed record PluginDescriptor
 {
-    public string PluginId         { get; init; }
-    public string Name             { get; init; }
-    public string Version          { get; init; }
-    public PluginStatus Status     { get; init; }
-    public string? ErrorMessage    { get; init; }
-    public string? FailureStage    { get; init; }
-    public DateTime LoadedAt       { get; init; }
-    public TimeSpan LoadDuration   { get; init; }
-    public string PluginDirectory  { get; init; }
-    public PluginManifest Manifest { get; init; }
-    public string HostCompatibility { get; init; }  // "Compatible" | "Incompatible"
-    public Assembly? Assembly      { get; init; }
-    public AssemblyLoadContext? LoadContext { get; init; }
-    // Populated from manifest, exposed via API:
+    public string PluginId          { get; init; }
+    public string Name              { get; init; }
+    public string Version           { get; init; }
+    public PluginStatus Status      { get; init; }
+    public string? ErrorMessage     { get; init; }
+    public string? FailureStage     { get; init; }
+    public DateTime LoadedAt        { get; init; }
+    public long LoadDurationMs      { get; init; }
+    public string HostCompatibility { get; init; }
     public IReadOnlyList<string> Capabilities  { get; init; }
     public IReadOnlyList<string> Permissions   { get; init; }
     public IReadOnlyList<string> Dependencies  { get; init; }
+    public PluginManifest Manifest  { get; init; }  // for GET /{id}/manifest endpoint
 }
 ```
 
