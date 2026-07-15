@@ -83,6 +83,28 @@ public sealed class PluginManifestValidatorTests : IDisposable
         result.Should().Contain("path");
     }
 
+    [Theory]
+    [InlineData("../evil")]
+    [InlineData("a/b")]
+    [InlineData("a\\b")]
+    public void Validate_PathTraversalInId_ReturnsError(string badId)
+    {
+        var m = Valid() with { Id = badId };
+        var result = PluginManifestValidator.Validate(m, _dir, new HashSet<string>());
+        result.Should().Contain("id").And.Contain("path");
+    }
+
+    [Theory]
+    [InlineData("../evil")]
+    [InlineData("a/b")]
+    [InlineData("a\\b")]
+    public void Validate_PathTraversalInEntryType_ReturnsError(string badType)
+    {
+        var m = Valid() with { EntryType = badType };
+        var result = PluginManifestValidator.Validate(m, _dir, new HashSet<string>());
+        result.Should().Contain("entryType").And.Contain("path");
+    }
+
     [Fact]
     public void Validate_DuplicateId_ReturnsError()
     {
@@ -114,6 +136,14 @@ public sealed class PluginManifestValidatorTests : IDisposable
         var m = Valid() with { Dependencies = ["plugin.a", "plugin.a"] };
         var result = PluginManifestValidator.Validate(m, _dir, new HashSet<string>());
         result.Should().Contain("dependencies");
+    }
+
+    [Fact]
+    public void Validate_DuplicateCapabilities_ReturnsError()
+    {
+        var m = Valid() with { Capabilities = ["READ", "READ"] };
+        var result = PluginManifestValidator.Validate(m, _dir, new HashSet<string>());
+        result.Should().Contain("capabilities");
     }
 
     [Fact]

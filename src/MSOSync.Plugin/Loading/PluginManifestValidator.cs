@@ -18,12 +18,18 @@ public static class PluginManifestValidator
         if (manifest == null) return "Manifest is null after deserialization.";
 
         if (string.IsNullOrWhiteSpace(manifest.Id))           return "Field 'id' is required.";
+        if (manifest.Id.IndexOfAny(PathSeparators) >= 0 || manifest.Id.Contains(".."))
+            return "Field 'id' must not contain path separators or '..'";
+
         if (string.IsNullOrWhiteSpace(manifest.Name))         return "Field 'name' is required.";
         if (string.IsNullOrWhiteSpace(manifest.Version))      return "Field 'version' is required.";
         if (string.IsNullOrWhiteSpace(manifest.MinHostVersion)) return "Field 'minHostVersion' is required.";
         if (string.IsNullOrWhiteSpace(manifest.MaxHostVersion)) return "Field 'maxHostVersion' is required.";
         if (string.IsNullOrWhiteSpace(manifest.EntryAssembly)) return "Field 'entryAssembly' is required.";
         if (string.IsNullOrWhiteSpace(manifest.EntryType))    return "Field 'entryType' is required.";
+        if (manifest.EntryType.IndexOfAny(PathSeparators) >= 0 || manifest.EntryType.Contains(".."))
+            return "Field 'entryType' must not contain path separators or '..'";
+
         if (string.IsNullOrWhiteSpace(manifest.Author))       return "Field 'author' is required.";
         if (string.IsNullOrWhiteSpace(manifest.Description))  return "Field 'description' is required.";
 
@@ -52,6 +58,10 @@ public static class PluginManifestValidator
         // No duplicate dependencies
         if (manifest.Dependencies.Count != manifest.Dependencies.Distinct(StringComparer.OrdinalIgnoreCase).Count())
             return "Field 'dependencies' contains duplicate values.";
+
+        // No duplicate capabilities
+        if (manifest.Capabilities.Count != manifest.Capabilities.Distinct(StringComparer.OrdinalIgnoreCase).Count())
+            return "Field 'capabilities' contains duplicate values";
 
         return null;
     }
