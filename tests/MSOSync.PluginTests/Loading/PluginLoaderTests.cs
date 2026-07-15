@@ -1,4 +1,5 @@
 using FluentAssertions;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -39,11 +40,22 @@ public sealed class PluginLoaderTests : IDisposable
             var defaultMock = new Mock<IPluginStore>();
             defaultMock.Setup(s => s.GetAllAsync(It.IsAny<CancellationToken>()))
                 .ReturnsAsync(Array.Empty<PluginRecord>());
+            defaultMock.Setup(s => s.UpsertAsync(It.IsAny<PluginRecord>(), It.IsAny<CancellationToken>()))
+                .Returns(Task.CompletedTask);
             store = defaultMock.Object;
         }
+
+        var scopeFactory = new Mock<IServiceScopeFactory>();
+        var scope        = new Mock<IServiceScope>();
+        var provider     = new Mock<IServiceProvider>();
+
+        provider.Setup(p => p.GetService(typeof(IPluginStore))).Returns(store);
+        scope.Setup(s => s.ServiceProvider).Returns(provider.Object);
+        scopeFactory.Setup(f => f.CreateScope()).Returns(scope.Object);
+
         var loader = new PluginLoader(
             new PluginRegistry(),
-            store,
+            scopeFactory.Object,
             Options.Create(new PluginHostOptions { PluginsPath = _pluginsRoot, HostVersion = "14.0.0" }),
             NullLogger<PluginLoader>.Instance);
         _loaders.Add(loader);

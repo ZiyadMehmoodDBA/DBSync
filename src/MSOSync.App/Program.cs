@@ -108,7 +108,8 @@ try
     builder.Services.AddSingleton<ISystemHealthContributor, ApiHealthContributor>();
     builder.Services.AddSingleton<ISystemHealthContributor, SignalRHealthContributor>();
     builder.Services.AddHealthChecks()
-        .AddCheck<WorkerHealthCheck>("workers");
+        .AddCheck<WorkerHealthCheck>("workers")
+        .AddCheck<MSOSync.Plugin.Diagnostics.PluginHealthCheck>("plugins");
 
     builder.Services.AddHostedService<AdminBootstrapper>();
 
@@ -117,6 +118,25 @@ try
     builder.Services.AddScoped<IExportJobService, ExportJobService>();
     builder.Services.AddHostedService<ExportJobWorker>();
     builder.Services.AddHostedService<ExportCleanupWorker>();
+
+    // --- Epic 14A: Plugin Host ---
+    builder.Services.Configure<MSOSync.Plugin.Models.PluginHostOptions>(opts =>
+    {
+        opts.PluginsPath = builder.Configuration["PluginHost:PluginsPath"]
+            ?? Path.Combine(AppContext.BaseDirectory, "plugins");
+        opts.HostVersion = typeof(Program).Assembly.GetName().Version?.ToString(3) ?? "1.0.0";
+    });
+    builder.Services.AddSingleton<MSOSync.Plugin.Abstractions.IPluginRegistry,
+        MSOSync.Plugin.Registry.PluginRegistry>();
+    builder.Services.AddScoped<MSOSync.Plugin.Abstractions.IPluginStore,
+        MSOSync.Persistence.Stores.PluginStore>();
+    builder.Services.AddSingleton<MSOSync.Plugin.Abstractions.IPluginLoader,
+        MSOSync.Plugin.Loading.PluginLoader>();
+    builder.Services.AddSingleton<MSOSync.Plugin.Hosting.PluginHost>();
+    builder.Services.AddSingleton<MSOSync.Plugin.Abstractions.IPluginHost>(sp =>
+        sp.GetRequiredService<MSOSync.Plugin.Hosting.PluginHost>());
+    builder.Services.AddHostedService(sp =>
+        sp.GetRequiredService<MSOSync.Plugin.Hosting.PluginHost>());
 
     var app = builder.Build();
 

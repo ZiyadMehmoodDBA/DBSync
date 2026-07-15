@@ -1,6 +1,7 @@
 using System.Runtime.Loader;
 using System.Security.Cryptography;
 using System.Text.Json;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MSOSync.Plugin.Abstractions;
@@ -9,10 +10,10 @@ using MSOSync.Plugin.Models;
 namespace MSOSync.Plugin.Loading;
 
 public sealed class PluginLoader(
-    IPluginRegistry             registry,
-    IPluginStore                store,
-    IOptions<PluginHostOptions> options,
-    ILogger<PluginLoader>       logger) : IPluginLoader
+    IPluginRegistry              registry,
+    IServiceScopeFactory         scopeFactory,
+    IOptions<PluginHostOptions>  options,
+    ILogger<PluginLoader>        logger) : IPluginLoader
 {
     private static readonly JsonSerializerOptions JsonOpts =
         new() { PropertyNameCaseInsensitive = true };
@@ -35,6 +36,10 @@ public sealed class PluginLoader(
             .Order(StringComparer.OrdinalIgnoreCase)
             .ToList();
 
+        // Acquire a single scope for the entire startup scan
+        await using var scope = scopeFactory.CreateAsyncScope();
+        var store = scope.ServiceProvider.GetRequiredService<IPluginStore>();
+
         // Pre-load enabled state from store (FILTER stage)
         var storeRecords = (await store.GetAllAsync(ct))
             .ToDictionary(r => r.PluginId, StringComparer.OrdinalIgnoreCase);
@@ -45,7 +50,7 @@ public sealed class PluginLoader(
         {
             logger.Log(LogLevel.Debug, PluginLogEvents.PluginDirectoryDiscovered,
                 "Discovered plugin directory: {Dir}", dir);
-            var result = await LoadPluginAsync(dir, storeRecords, seenIds, ct);
+            var result = await LoadPluginAsync(dir, storeRecords, seenIds, store, ct);
             results.Add(result);
         }
 
@@ -56,6 +61,7 @@ public sealed class PluginLoader(
         string dir,
         Dictionary<string, PluginRecord> storeRecords,
         HashSet<string> seenIds,
+        IPluginStore store,
         CancellationToken ct)
     {
         var now      = DateTime.UtcNow;
@@ -82,7 +88,7 @@ public sealed class PluginLoader(
         {
             var id = manifest?.Id ?? "?";
             RegisterFailed(id, dir, "ManifestValidation", validationError, TimeSpan.Zero, now, manifest);
-            await PersistAsync(id, manifest?.Name ?? id, manifest?.Version ?? "?",
+            await PersistAsync(store, id, manifest?.Name ?? id, manifest?.Version ?? "?",
                 PluginStatus.Failed, validationError, null, ct);
             return new PluginLoadResult(id, PluginLoadOutcome.Failed, "ManifestValidation", validationError);
         }
@@ -95,7 +101,7 @@ public sealed class PluginLoader(
             RegisterDescriptor(BuildDescriptor(manifest, dir, PluginStatus.Disabled, null, null, TimeSpan.Zero, now));
             logger.Log(LogLevel.Information, PluginLogEvents.PluginDisabled,
                 "Plugin {Id} is disabled — skipped", manifest.Id);
-            await PersistAsync(manifest.Id, manifest.Name, manifest.Version,
+            await PersistAsync(store, manifest.Id, manifest.Name, manifest.Version,
                 PluginStatus.Disabled, null, ComputeHash(await File.ReadAllTextAsync(jsonPath, ct)), ct);
             return new PluginLoadResult(manifest.Id, PluginLoadOutcome.Disabled, null, null);
         }
@@ -109,7 +115,7 @@ public sealed class PluginLoader(
         {
             var err = $"Host {hostVer} outside plugin range [{manifest.MinHostVersion},{manifest.MaxHostVersion}]";
             RegisterFailed(manifest.Id, dir, "HostCompatibility", err, TimeSpan.Zero, now, manifest, "Incompatible");
-            await PersistAsync(manifest.Id, manifest.Name, manifest.Version, PluginStatus.Failed, err, null, ct);
+            await PersistAsync(store, manifest.Id, manifest.Name, manifest.Version, PluginStatus.Failed, err, null, ct);
             return new PluginLoadResult(manifest.Id, PluginLoadOutcome.Failed, "HostCompatibility", err);
         }
 
@@ -118,7 +124,7 @@ public sealed class PluginLoader(
         if (depError != null)
         {
             RegisterFailed(manifest.Id, dir, "DependencyResolution", depError, TimeSpan.Zero, now, manifest);
-            await PersistAsync(manifest.Id, manifest.Name, manifest.Version, PluginStatus.Failed, depError, null, ct);
+            await PersistAsync(store, manifest.Id, manifest.Name, manifest.Version, PluginStatus.Failed, depError, null, ct);
             return new PluginLoadResult(manifest.Id, PluginLoadOutcome.Failed, "DependencyResolution", depError);
         }
 
@@ -139,7 +145,7 @@ public sealed class PluginLoader(
             sw.Stop();
             ctx?.Unload();
             RegisterFailed(manifest.Id, dir, "AssemblyLoad", ex.Message, sw.Elapsed, now, manifest);
-            await PersistAsync(manifest.Id, manifest.Name, manifest.Version, PluginStatus.Failed, ex.Message, null, ct);
+            await PersistAsync(store, manifest.Id, manifest.Name, manifest.Version, PluginStatus.Failed, ex.Message, null, ct);
             return new PluginLoadResult(manifest.Id, PluginLoadOutcome.Failed, "AssemblyLoad", ex.Message);
         }
 
@@ -152,7 +158,7 @@ public sealed class PluginLoader(
             _loadContexts.Remove(ctx!);
             ctx!.Unload();
             RegisterFailed(manifest.Id, dir, "EntryTypeVerification", err, sw.Elapsed, now, manifest);
-            await PersistAsync(manifest.Id, manifest.Name, manifest.Version, PluginStatus.Failed, err, null, ct);
+            await PersistAsync(store, manifest.Id, manifest.Name, manifest.Version, PluginStatus.Failed, err, null, ct);
             return new PluginLoadResult(manifest.Id, PluginLoadOutcome.Failed, "EntryTypeVerification", err);
         }
 
@@ -165,7 +171,7 @@ public sealed class PluginLoader(
         logger.Log(LogLevel.Information, PluginLogEvents.PluginLoaded,
             "Plugin {Id} v{Version} loaded in {Ms}ms", manifest.Id, manifest.Version, sw.ElapsedMilliseconds);
 
-        await PersistAsync(manifest.Id, manifest.Name, manifest.Version, PluginStatus.Loaded, null, hash, ct);
+        await PersistAsync(store, manifest.Id, manifest.Name, manifest.Version, PluginStatus.Loaded, null, hash, ct);
 
         return new PluginLoadResult(manifest.Id, PluginLoadOutcome.Success, null, null);
     }
@@ -216,6 +222,7 @@ public sealed class PluginLoader(
         };
 
     private async Task PersistAsync(
+        IPluginStore store,
         string pluginId, string name, string version,
         PluginStatus status, string? error, string? hash, CancellationToken ct)
     {
