@@ -36,9 +36,9 @@ internal sealed class PluginConfigurationFile
 
         try
         {
-            var json    = File.ReadAllText(configPath);
-            var doc     = JsonDocument.Parse(json);
-            var dict    = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+            var json = File.ReadAllText(configPath);
+            using var doc = JsonDocument.Parse(json);
+            var dict = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
             FlattenElement(string.Empty, doc.RootElement, dict);
             return new PluginConfigurationFile(dict);
         }

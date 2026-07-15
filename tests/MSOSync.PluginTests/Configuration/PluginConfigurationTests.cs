@@ -3,7 +3,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using MSOSync.Plugin.Configuration;
 using Xunit;
-using Microsoft.Extensions.Configuration.Memory;
 
 namespace MSOSync.PluginTests.Configuration;
 
