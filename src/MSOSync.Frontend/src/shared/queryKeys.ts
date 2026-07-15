@@ -86,4 +86,10 @@ export const queryKeys = {
 
   notifications:       (filter?: string) => ['notifications', filter ?? 'all'] as const,
   notificationsUnread: () => ['notifications', 'unread-count'] as const,
+
+  plugins: {
+    all:     () => ['plugins'] as const,
+    detail:  (id: string) => ['plugins', id] as const,
+    summary: () => ['plugins', 'summary'] as const,
+  },
 };

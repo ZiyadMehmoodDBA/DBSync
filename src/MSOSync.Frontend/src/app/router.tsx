@@ -38,6 +38,7 @@ import { RetentionPage } from '../features/administration/retention/RetentionPag
 import { LicensePage } from '../features/administration/license/LicensePage';
 import { DiagnosticsPage } from '../features/administration/diagnostics/DiagnosticsPage';
 import { NotificationsPage } from '../features/notifications/NotificationsPage';
+import { PluginsPage } from '../features/plugins/PluginsPage';
 
 function RoleBasedRedirect() {
   const { user } = useAuth();
@@ -142,6 +143,14 @@ export const router = createBrowserRouter([
                 element: (
                   <PermissionGuard permissionKey={PermissionKeys.ManageConfigurations}>
                     <DiagnosticsPage />
+                  </PermissionGuard>
+                ),
+              },
+              {
+                path: 'administration/plugins',
+                element: (
+                  <PermissionGuard permissionKey={PermissionKeys.ManagePlugins}>
+                    <PluginsPage />
                   </PermissionGuard>
                 ),
               },

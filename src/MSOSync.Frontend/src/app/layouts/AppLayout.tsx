@@ -23,6 +23,7 @@ import {
   Archive,
   Stethoscope,
   PieChart,
+  Package,
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Separator } from '../../components/ui/separator';
@@ -78,6 +79,7 @@ const NAV_GROUPS: { heading: string | null; items: NavItem[] }[] = [
       { label: 'Retention',     path: '/administration/retention',     icon: Archive,         requiredPermission: PermissionKeys.ManageConfigurations },
       { label: 'License',       path: '/administration/license',       icon: FileText },
       { label: 'Diagnostics',   path: '/administration/diagnostics',   icon: Stethoscope,     requiredPermission: PermissionKeys.ManageConfigurations },
+      { label: 'Plugins',       path: '/administration/plugins',       icon: Package,         requiredPermission: PermissionKeys.ManagePlugins },
     ],
   },
   {
@@ -124,6 +126,7 @@ function NavGroup({ heading, items }: { heading: string | null; items: NavItem[]
   const canManageUsers         = useHasPermission(PermissionKeys.ManageUsers);
   const canExportData          = useHasPermission(PermissionKeys.ExportData);
   const canManageConfigurations = useHasPermission(PermissionKeys.ManageConfigurations);
+  const canManagePlugins        = useHasPermission(PermissionKeys.ManagePlugins);
 
   const permMap: Record<PermissionKey, boolean> = {
     [PermissionKeys.ViewMetrics]:          canViewMetrics,
@@ -132,6 +135,7 @@ function NavGroup({ heading, items }: { heading: string | null; items: NavItem[]
     [PermissionKeys.ManageUsers]:          canManageUsers,
     [PermissionKeys.ExportData]:           canExportData,
     [PermissionKeys.ManageConfigurations]: canManageConfigurations,
+    [PermissionKeys.ManagePlugins]:        canManagePlugins,
     [PermissionKeys.ViewEvents]:           true,
     [PermissionKeys.RetryBatches]:         true,
     [PermissionKeys.ApproveNodes]:         true,

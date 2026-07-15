@@ -14,6 +14,7 @@ export const PermissionKeys = {
   ProvisionNodes:      'PROVISION_NODES',
   ManageNodeLifecycle:   'MANAGE_NODE_LIFECYCLE',
   ManageConfigurations:  'MANAGE_CONFIGURATIONS',
+  ManagePlugins:         'MANAGE_PLUGINS',
 } as const;
 
 export type PermissionKey = (typeof PermissionKeys)[keyof typeof PermissionKeys];
