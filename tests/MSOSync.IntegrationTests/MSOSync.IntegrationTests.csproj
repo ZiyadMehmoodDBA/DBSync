@@ -28,5 +28,9 @@
     <ProjectReference Include="..\..\src\MSOSync.Transport\MSOSync.Transport.csproj" />
     <ProjectReference Include="..\..\src\MSOSync.Topology\MSOSync.Topology.csproj" />
     <ProjectReference Include="..\..\src\MSOSync.Scheduler\MSOSync.Scheduler.csproj" />
+    <ProjectReference Include="..\..\src\MSOSync.Plugin\MSOSync.Plugin.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="TestAssets\**\*" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>
