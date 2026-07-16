@@ -1,6 +1,8 @@
+using MSOSync.Common.Tenancy;
+
 namespace MSOSync.Persistence.Entities;
 
-public sealed class SyncNode
+public sealed class SyncNode : ITenantScoped
 {
     public string NodeId { get; set; } = null!;
     public string GroupId { get; set; } = null!;
@@ -58,4 +60,7 @@ public sealed class SyncNode
     public ConfigurationState? ConfigurationState { get; set; } // computed by hub on heartbeat
     public DateTime? ConfigurationStatusReportedAt { get; set; }// when node last reported
     public DateTime? LastAppliedAt { get; set; }
+
+    // Added for multi-tenancy (column migration in Task 7)
+    public Guid TenantId { get; set; }
 }

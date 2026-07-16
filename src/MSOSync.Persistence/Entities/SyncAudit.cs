@@ -1,5 +1,8 @@
+using MSOSync.Common.Tenancy;
+
 namespace MSOSync.Persistence.Entities;
 
+[TenantScoped]
 public sealed class SyncAudit
 {
     public long AuditId { get; set; }

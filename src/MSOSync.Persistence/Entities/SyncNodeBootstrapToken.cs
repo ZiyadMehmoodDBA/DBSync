@@ -1,5 +1,8 @@
+using MSOSync.Common.Tenancy;
+
 namespace MSOSync.Persistence.Entities;
 
+[TenantScoped]
 public sealed class SyncNodeBootstrapToken
 {
     public long Id { get; set; }

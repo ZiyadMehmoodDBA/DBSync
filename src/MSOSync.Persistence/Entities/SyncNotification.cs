@@ -1,6 +1,9 @@
 // src/MSOSync.Persistence/Entities/SyncNotification.cs
+using MSOSync.Common.Tenancy;
+
 namespace MSOSync.Persistence.Entities;
 
+[TenantScoped]
 public sealed class SyncNotification
 {
     public long    NotificationId   { get; set; }

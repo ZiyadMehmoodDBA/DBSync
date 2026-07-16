@@ -1,5 +1,8 @@
+using MSOSync.Common.Tenancy;
+
 namespace MSOSync.Persistence.Entities;
 
+[TenantScoped]
 public sealed class SyncUserRefreshToken
 {
     public long TokenId { get; set; }

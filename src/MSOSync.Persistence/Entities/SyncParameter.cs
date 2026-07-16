@@ -1,6 +1,9 @@
+using MSOSync.Common.Tenancy;
+
 namespace MSOSync.Persistence.Entities;
 
-public sealed class SyncParameter
+[HybridEntity]
+public sealed class SyncParameter : IHybridEntity
 {
     public string  ParameterName   { get; set; } = null!;
     public string? ParameterValue  { get; set; }
@@ -16,4 +19,5 @@ public sealed class SyncParameter
     public string? AllowedValues  { get; set; }   // JSON array of allowed string values
     public string? DependsOn      { get; set; }   // other parameter_name this one depends on
     public string? ConflictsWith  { get; set; }   // other parameter_name this one conflicts with
+    public Guid? TenantId { get; set; }  // null = system parameter; non-null = tenant custom parameter
 }

@@ -1,5 +1,8 @@
+using MSOSync.Common.Tenancy;
+
 namespace MSOSync.Persistence.Entities;
 
+[GlobalEntity]
 public sealed class SyncPlugin
 {
     public string   PluginId      { get; set; } = null!;

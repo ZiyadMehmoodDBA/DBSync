@@ -1,5 +1,8 @@
+using MSOSync.Common.Tenancy;
+
 namespace MSOSync.Persistence.Entities;
 
+[HybridEntity]
 public sealed class SyncUser
 {
     public long UserId { get; set; }
