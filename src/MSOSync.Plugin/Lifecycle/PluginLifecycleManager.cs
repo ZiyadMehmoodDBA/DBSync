@@ -49,6 +49,10 @@ internal sealed class PluginLifecycleManager(
                 logger.Log(LogLevel.Warning, PluginLogEvents.PluginTimeout,
                     "Plugin {PluginId} InitializeAsync timed out", rt.Descriptor.PluginId);
             }
+            catch (OperationCanceledException) when (hostCt.IsCancellationRequested)
+            {
+                throw;  // normal host shutdown — do not touch plugin state
+            }
             catch (Exception ex)
             {
                 sw.Stop();
@@ -99,6 +103,10 @@ internal sealed class PluginLifecycleManager(
                 logger.Log(LogLevel.Warning, PluginLogEvents.PluginTimeout,
                     "Plugin {PluginId} StartAsync timed out", rt.Descriptor.PluginId);
             }
+            catch (OperationCanceledException) when (hostCt.IsCancellationRequested)
+            {
+                throw;  // normal host shutdown — do not touch plugin state
+            }
             catch (Exception ex)
             {
                 sw.Stop();
@@ -145,6 +153,10 @@ internal sealed class PluginLifecycleManager(
                 logger.Log(LogLevel.Warning, PluginLogEvents.PluginTimeout,
                     "Plugin {PluginId} StopAsync timed out", rt.Descriptor.PluginId);
             }
+            catch (OperationCanceledException) when (hostCt.IsCancellationRequested)
+            {
+                throw;  // normal host shutdown — do not touch plugin state
+            }
             catch (Exception ex)
             {
                 sw.Stop();
@@ -171,14 +183,11 @@ internal sealed class PluginLifecycleManager(
             var sw   = Stopwatch.StartNew();
             try
             {
-                using var cts = CancellationTokenSource.CreateLinkedTokenSource(hostCt);
-                cts.CancelAfter(TimeSpan.FromSeconds(DisposeTimeout));
-
                 await rt.Instance.DisposeAsync();
             }
             catch (Exception ex)
             {
-                logger.Log(LogLevel.Warning, PluginLogEvents.PluginDisposed,
+                logger.Log(LogLevel.Warning, PluginLogEvents.PluginFailed,
                     ex, "Plugin {PluginId} DisposeAsync threw; ignoring", rt.Descriptor.PluginId);
             }
             finally
@@ -209,6 +218,13 @@ internal sealed class PluginLifecycleManager(
 
     private static void SetFailed(PluginRuntime rt, string message, TimeSpan elapsed)
     {
+        // Assign duration based on which phase was in progress
+        switch (rt.State)
+        {
+            case PluginRuntimeState.Initializing: rt.InitializeDuration = elapsed; break;
+            case PluginRuntimeState.Starting:     rt.StartDuration      = elapsed; break;
+            case PluginRuntimeState.Stopping:     rt.StopDuration       = elapsed; break;
+        }
         rt.LastException           = new InvalidOperationException(message);
         rt.State                   = PluginRuntimeState.Failed;
         rt.LastStateChangeUtc      = DateTime.UtcNow;
