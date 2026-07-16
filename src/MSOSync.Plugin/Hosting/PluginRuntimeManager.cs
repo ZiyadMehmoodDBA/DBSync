@@ -6,7 +6,7 @@ using MSOSync.Plugin.Models;
 
 namespace MSOSync.Plugin.Hosting;
 
-public sealed class PluginRuntimeManager(
+internal sealed class PluginRuntimeManager(
     IPluginLoader               loader,
     PluginActivator             activator,
     PluginLifecycleManager      lifecycle,
@@ -15,6 +15,7 @@ public sealed class PluginRuntimeManager(
     public long LoadElapsedMs       { get; private set; }
     public long InitializeElapsedMs { get; private set; }
     public long StartElapsedMs      { get; private set; }
+    public long TotalElapsedMs => LoadElapsedMs + InitializeElapsedMs + StartElapsedMs;
 
     public async Task LoadAndActivateAsync(CancellationToken ct)
     {

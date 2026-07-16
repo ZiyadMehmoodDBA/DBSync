@@ -22,6 +22,7 @@ using MSOSync.Scheduler;
 using MSOSync.Security;
 using MSOSync.Topology;
 using MSOSync.Transport;
+using MSOSync.Plugin.Hosting;
 using MSOSync.Trigger;
 using Serilog;
 
@@ -139,11 +140,7 @@ try
         MSOSync.Plugin.Loading.PluginLoader>();
     builder.Services.AddSingleton<MSOSync.Plugin.Lifecycle.ISdkCompatibilityValidator,
         MSOSync.Plugin.Lifecycle.SdkCompatibilityValidator>();
-    builder.Services.AddSingleton<MSOSync.Plugin.Lifecycle.PluginActivator>();
-    builder.Services.AddSingleton<MSOSync.Plugin.Lifecycle.PluginLifecycleManager>();
-    builder.Services.AddSingleton<MSOSync.Plugin.Hosting.PluginRuntimeManager>();
-    builder.Services.AddSingleton<MSOSync.Plugin.Hosting.IPluginRuntimeManager>(sp =>
-        sp.GetRequiredService<MSOSync.Plugin.Hosting.PluginRuntimeManager>());
+    builder.Services.AddPluginCoreInternals();
     builder.Services.AddSingleton<MSOSync.Plugin.Hosting.PluginHost>();
     builder.Services.AddSingleton<MSOSync.Plugin.Abstractions.IPluginHost>(sp =>
         sp.GetRequiredService<MSOSync.Plugin.Hosting.PluginHost>());

@@ -7,7 +7,7 @@ using MSOSync.Plugin.Registry;
 
 namespace MSOSync.Plugin.Lifecycle;
 
-public sealed class PluginLifecycleManager(
+internal sealed class PluginLifecycleManager(
     PluginRegistry               registry,
     IOptions<PluginHostOptions>  options,
     ILogger<PluginLifecycleManager> logger)

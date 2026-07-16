@@ -5,6 +5,7 @@ public interface IPluginRuntimeManager
     long LoadElapsedMs       { get; }
     long InitializeElapsedMs { get; }
     long StartElapsedMs      { get; }
+    long TotalElapsedMs      { get; }
     Task LoadAndActivateAsync(CancellationToken ct);
     Task InitializeAsync(CancellationToken ct);
     Task StartAsync(CancellationToken ct);

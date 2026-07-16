@@ -12,7 +12,7 @@ using MSOSync.Sdk.Metadata;
 
 namespace MSOSync.Plugin.Lifecycle;
 
-public sealed class PluginActivator(
+internal sealed class PluginActivator(
     PluginRegistry              registry,
     ILoggerFactory              loggerFactory,
     IHostEnvironment            hostEnvironment,
