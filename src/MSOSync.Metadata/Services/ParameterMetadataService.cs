@@ -29,7 +29,7 @@ public sealed class ParameterMetadataService(
     public async Task<IReadOnlyList<ParameterDto>> GetParametersAsync(string? category = null, CancellationToken ct = default)
     {
         var query = db.Parameters.AsNoTracking()
-            .Where(p => category == null || p.Category == category)
+            .Where(p => p.TenantId == null && (category == null || p.Category == category))
             .OrderBy(p => p.DisplayOrder == null ? int.MaxValue : p.DisplayOrder)
             .ThenBy(p => p.ParameterName);
         var parameters = await query.ToListAsync(ct);
@@ -43,7 +43,7 @@ public sealed class ParameterMetadataService(
             return cached;
 
         var param = await db.Parameters.AsNoTracking()
-            .FirstOrDefaultAsync(p => p.ParameterName == name, ct);
+            .FirstOrDefaultAsync(p => p.ParameterName == name && p.TenantId == null, ct);
         if (param == null) return null;
 
         var dto = Map(param);

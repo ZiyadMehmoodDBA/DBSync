@@ -1,12 +1,11 @@
 using Microsoft.EntityFrameworkCore;
-using MSOSync.Common.Tenancy;
 
 namespace MSOSync.Persistence.Tenancy;
 
-// INTERNAL — only platform-admin code may use this.
-// The ONLY class permitted to call IgnoreQueryFilters().
-// Do not expose via public API; inject IPlatformRepository<T> in callers.
-internal interface IPlatformRepository<T> where T : class
+// PUBLIC interface — only platform-admin code may inject this.
+// The ONLY class permitted to call IgnoreQueryFilters() is PlatformRepository<T> (internal impl).
+// Callers outside this assembly must inject IPlatformRepository<T>, not AppDbContext.
+public interface IPlatformRepository<T> where T : class
 {
     IQueryable<T> QueryAll();
 }
