@@ -180,16 +180,15 @@ public sealed class MultiTenantFixture : IAsyncLifetime
 /// <summary>
 /// Mutable ICurrentTenantAccessor — the EF query filter closes over this.
 /// Setting TenantId changes which tenant's data is visible on the NEXT query.
+///
+/// IMPORTANT: This is thread-safe ONLY because xUnit runs tests within a collection serially by default.
+/// The MultiTenancyCollection [CollectionDefinition] ensures all tests share a single fixture and
+/// execute one-at-a-time, preventing concurrent mutations. Do NOT set [CollectionBehavior(DisableTestParallelization = false)]
+/// on this assembly or disable serial execution — that would create race conditions in WithTenantAsync.
 /// </summary>
 public sealed class MutableTenantAccessor : ICurrentTenantAccessor
 {
     public Guid? TenantId { get; set; }
-}
-
-/// <summary>Test helper: static ICurrentTenantAccessor that always returns a fixed value.</summary>
-public sealed class StaticTenantAccessor(Guid? tenantId) : ICurrentTenantAccessor
-{
-    public Guid? TenantId => tenantId;
 }
 
 /// <summary>
