@@ -16,5 +16,11 @@ public sealed class SyncUserRoleConfiguration : IEntityTypeConfiguration<SyncUse
 
         builder.Property(e => e.UserId).HasColumnName("user_id").ValueGeneratedNever();
         builder.Property(e => e.RoleId).HasColumnName("role_id").ValueGeneratedNever();
+
+        // M031 — hybrid tenancy (NULL = platform role assignment)
+        builder.Property(e => e.TenantId)
+            .HasColumnName("tenant_id")
+            .HasColumnType("uniqueidentifier")
+            .IsRequired(false);
     }
 }

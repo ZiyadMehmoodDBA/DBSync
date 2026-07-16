@@ -145,5 +145,14 @@ public sealed class SyncNodeConfiguration : IEntityTypeConfiguration<SyncNode>
             .HasColumnType("nvarchar(20)").HasMaxLength(20).HasConversion<string>();
         builder.Property(e => e.ConfigurationStatusReportedAt).HasColumnName("configuration_status_reported_at");
         builder.Property(e => e.LastAppliedAt).HasColumnName("last_applied_at");
+
+        // M031 — multi-tenancy
+        builder.Property(e => e.TenantId)
+            .HasColumnName("tenant_id")
+            .HasColumnType("uniqueidentifier")
+            .IsRequired();
+
+        builder.HasIndex(e => e.TenantId)
+            .HasDatabaseName("IX_sync_node_tenant_id");
     }
 }

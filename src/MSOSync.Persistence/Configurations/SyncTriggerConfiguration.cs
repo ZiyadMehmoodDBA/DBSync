@@ -24,5 +24,14 @@ public sealed class SyncTriggerConfiguration : IEntityTypeConfiguration<SyncTrig
         builder.Property(e => e.TriggerVersion).HasColumnName("trigger_version").HasDefaultValue(0);
         builder.Property(e => e.LastVerifiedTime).HasColumnName("last_verified_time").HasColumnType("datetime2(7)");
         builder.Property(e => e.PkColumnsJson).HasColumnName("pk_columns_json").HasColumnType("nvarchar(max)");
+
+        // M031 — multi-tenancy
+        builder.Property(e => e.TenantId)
+            .HasColumnName("tenant_id")
+            .HasColumnType("uniqueidentifier")
+            .IsRequired();
+
+        builder.HasIndex(e => e.TenantId)
+            .HasDatabaseName("IX_sync_trigger_tenant_id");
     }
 }

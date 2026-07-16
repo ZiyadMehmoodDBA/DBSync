@@ -28,5 +28,11 @@ public sealed class SyncUserPreferenceConfiguration
             .WithMany()
             .HasForeignKey(p => p.UserId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        // M031 — hybrid tenancy (NULL = global preference)
+        builder.Property(e => e.TenantId)
+            .HasColumnName("tenant_id")
+            .HasColumnType("uniqueidentifier")
+            .IsRequired(false);
     }
 }

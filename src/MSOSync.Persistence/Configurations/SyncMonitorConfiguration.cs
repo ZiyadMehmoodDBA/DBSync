@@ -11,7 +11,7 @@ public sealed class SyncMonitorConfiguration : IEntityTypeConfiguration<SyncMoni
 
     public void Configure(EntityTypeBuilder<SyncMonitor> builder)
     {
-        builder.ToTable("sync_monitor", Schema);
+        builder.ToTable("sync_monitor_snapshot", Schema);
         builder.HasKey(e => e.SnapshotId);
 
         builder.Property(e => e.SnapshotId).HasColumnName("snapshot_id").ValueGeneratedOnAdd();

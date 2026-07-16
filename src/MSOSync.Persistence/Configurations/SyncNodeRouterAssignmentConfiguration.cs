@@ -16,5 +16,14 @@ public sealed class SyncNodeRouterAssignmentConfiguration : IEntityTypeConfigura
 
         builder.Property(e => e.NodeId).HasColumnName("node_id").HasColumnType("varchar(50)").HasMaxLength(50).IsUnicode(false);
         builder.Property(e => e.RouterId).HasColumnName("router_id").HasColumnType("varchar(50)").HasMaxLength(50).IsUnicode(false);
+
+        // M031 — multi-tenancy
+        builder.Property(e => e.TenantId)
+            .HasColumnName("tenant_id")
+            .HasColumnType("uniqueidentifier")
+            .IsRequired();
+
+        builder.HasIndex(e => e.TenantId)
+            .HasDatabaseName("IX_sync_node_router_tenant_id");
     }
 }

@@ -20,5 +20,14 @@ public sealed class SyncChannelConfiguration : IEntityTypeConfiguration<SyncChan
         builder.Property(e => e.MaxBatchToSend).HasColumnName("max_batch_to_send").HasDefaultValue(10);
         builder.Property(e => e.MaxDataSize).HasColumnName("max_data_size").HasDefaultValue(1048576L);
         builder.Property(e => e.Enabled).HasColumnName("enabled").HasDefaultValue(true);
+
+        // M031 — multi-tenancy
+        builder.Property(e => e.TenantId)
+            .HasColumnName("tenant_id")
+            .HasColumnType("uniqueidentifier")
+            .IsRequired();
+
+        builder.HasIndex(e => e.TenantId)
+            .HasDatabaseName("IX_sync_channel_tenant_id");
     }
 }

@@ -19,5 +19,14 @@ public sealed class SyncTriggerHistConfiguration : IEntityTypeConfiguration<Sync
         builder.Property(e => e.DdlText).HasColumnName("ddl_text").HasColumnType("nvarchar(max)");
         builder.Property(e => e.TriggerVersion).HasColumnName("trigger_version");
         builder.Property(e => e.CreateTime).HasColumnName("create_time").HasColumnType("datetime2(7)");
+
+        // M031 — multi-tenancy
+        builder.Property(e => e.TenantId)
+            .HasColumnName("tenant_id")
+            .HasColumnType("uniqueidentifier")
+            .IsRequired();
+
+        builder.HasIndex(e => e.TenantId)
+            .HasDatabaseName("IX_sync_trigger_hist_tenant_id");
     }
 }

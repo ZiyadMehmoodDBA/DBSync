@@ -20,5 +20,11 @@ public sealed class SyncParameterHistConfiguration : IEntityTypeConfiguration<Sy
         builder.Property(e => e.NewValue).HasColumnName("new_value").HasColumnType("nvarchar(max)");
         builder.Property(e => e.ChangedBy).HasColumnName("changed_by").HasColumnType("varchar(100)").HasMaxLength(100).IsUnicode(false);
         builder.Property(e => e.ChangeTime).HasColumnName("change_time").HasColumnType("datetime2(7)");
+
+        // M031 — hybrid tenancy (NULL = platform setting history)
+        builder.Property(e => e.TenantId)
+            .HasColumnName("tenant_id")
+            .HasColumnType("uniqueidentifier")
+            .IsRequired(false);
     }
 }

@@ -33,7 +33,9 @@ public sealed class SyncParameterConfiguration : IEntityTypeConfiguration<SyncPa
         // TenantId: null = platform default; non-null = tenant override.
         // Column added by M031 migration (Task 7).
         builder.Property(e => e.TenantId)
-            .HasColumnName("tenant_id");
+            .HasColumnName("tenant_id")
+            .HasColumnType("uniqueidentifier")
+            .IsRequired(false);
 
         // Unique index: one record per (name, tenant) pair.
         builder.HasIndex(e => new { e.ParameterName, e.TenantId })

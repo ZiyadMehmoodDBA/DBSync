@@ -31,5 +31,14 @@ public sealed class SyncNodeScopeConfiguration : IEntityTypeConfiguration<SyncNo
             .IsRequired();
         builder.Property(e => e.CreatedTime).HasColumnName("created_time").HasColumnType("datetime2(7)");
         builder.Property(e => e.UpdatedTime).HasColumnName("updated_time").HasColumnType("datetime2(7)");
+
+        // M031 — multi-tenancy
+        builder.Property(e => e.TenantId)
+            .HasColumnName("tenant_id")
+            .HasColumnType("uniqueidentifier")
+            .IsRequired();
+
+        builder.HasIndex(e => e.TenantId)
+            .HasDatabaseName("IX_sync_node_scope_tenant_id");
     }
 }

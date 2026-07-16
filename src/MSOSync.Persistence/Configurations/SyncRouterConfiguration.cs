@@ -19,5 +19,14 @@ public sealed class SyncRouterConfiguration : IEntityTypeConfiguration<SyncRoute
         builder.Property(e => e.TargetNodeGroup).HasColumnName("target_node_group").HasColumnType("varchar(50)").HasMaxLength(50).IsUnicode(false).IsRequired();
         builder.Property(e => e.RouterType).HasColumnName("router_type").HasColumnType("varchar(50)").HasMaxLength(50).IsUnicode(false).HasDefaultValue("default");
         builder.Property(e => e.Enabled).HasColumnName("enabled").HasDefaultValue(true);
+
+        // M031 — multi-tenancy
+        builder.Property(e => e.TenantId)
+            .HasColumnName("tenant_id")
+            .HasColumnType("uniqueidentifier")
+            .IsRequired();
+
+        builder.HasIndex(e => e.TenantId)
+            .HasDatabaseName("IX_sync_router_tenant_id");
     }
 }

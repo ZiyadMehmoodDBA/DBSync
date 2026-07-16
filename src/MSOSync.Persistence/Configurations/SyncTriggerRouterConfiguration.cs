@@ -17,5 +17,14 @@ public sealed class SyncTriggerRouterConfiguration : IEntityTypeConfiguration<Sy
         builder.Property(e => e.TriggerId).HasColumnName("trigger_id").HasColumnType("varchar(50)").HasMaxLength(50).IsUnicode(false);
         builder.Property(e => e.RouterId).HasColumnName("router_id").HasColumnType("varchar(50)").HasMaxLength(50).IsUnicode(false);
         builder.Property(e => e.Enabled).HasColumnName("enabled").HasDefaultValue(true);
+
+        // M031 — multi-tenancy
+        builder.Property(e => e.TenantId)
+            .HasColumnName("tenant_id")
+            .HasColumnType("uniqueidentifier")
+            .IsRequired();
+
+        builder.HasIndex(e => e.TenantId)
+            .HasDatabaseName("IX_sync_trigger_router_tenant_id");
     }
 }
