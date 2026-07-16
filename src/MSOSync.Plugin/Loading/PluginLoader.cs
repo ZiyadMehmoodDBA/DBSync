@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MSOSync.Plugin.Abstractions;
 using MSOSync.Plugin.Models;
+using MSOSync.Plugin.Registry;
 
 namespace MSOSync.Plugin.Loading;
 
@@ -134,10 +135,10 @@ public sealed class PluginLoader(
         System.Reflection.Assembly? assembly;
         try
         {
-            var libDir = Path.Combine(dir, "lib");
-            ctx      = new PluginLoadContext(dir, Directory.Exists(libDir) ? libDir : null);
-            var dll  = Path.Combine(dir, manifest.EntryAssembly);
-            assembly = ctx.LoadFromAssemblyPath(dll);
+            var libDir  = Path.Combine(dir, "lib");
+            var dllPath = Path.Combine(dir, manifest.EntryAssembly);
+            ctx      = new PluginLoadContext(dllPath, Directory.Exists(libDir) ? libDir : null);
+            assembly = ctx.LoadFromAssemblyPath(dllPath);
             _loadContexts.Add(ctx);
         }
         catch (Exception ex)
@@ -167,6 +168,17 @@ public sealed class PluginLoader(
         var hash       = ComputeHash(json2);
         var descriptor = BuildDescriptor(manifest, dir, PluginStatus.Loaded, null, null, sw.Elapsed, now);
         RegisterDescriptor(descriptor);
+
+        // Store assembly and load context in the runtime for the activator
+        if (registry is PluginRegistry concreteRegistry)
+        {
+            var runtime = concreteRegistry.GetRuntime(manifest.Id);
+            if (runtime != null)
+            {
+                runtime.Assembly  = assembly;
+                runtime.LoadContext = ctx;
+            }
+        }
 
         logger.Log(LogLevel.Information, PluginLogEvents.PluginLoaded,
             "Plugin {Id} v{Version} loaded in {Ms}ms", manifest.Id, manifest.Version, sw.ElapsedMilliseconds);

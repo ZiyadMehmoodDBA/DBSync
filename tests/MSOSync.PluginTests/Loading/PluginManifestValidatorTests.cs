@@ -22,6 +22,7 @@ public sealed class PluginManifestValidatorTests : IDisposable
     private static PluginManifest Valid(string dll = "Test.dll") => new()
     {
         Id = "test.plugin", Name = "Test", Version = "1.0.0",
+        SdkVersion = "1.0", ApiVersion = "1",
         MinHostVersion = "1.0.0", MaxHostVersion = "99.0.0",
         EntryAssembly = dll, EntryType = "Test.Plugin",
         Author = "Test", Description = "A test plugin",

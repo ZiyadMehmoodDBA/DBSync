@@ -63,6 +63,22 @@ public static class PluginManifestValidator
         if (manifest.Capabilities.Count != manifest.Capabilities.Distinct(StringComparer.OrdinalIgnoreCase).Count())
             return "Field 'capabilities' contains duplicate values";
 
+        // sdkVersion and apiVersion are required starting with manifestVersion 1
+        if (string.IsNullOrWhiteSpace(manifest.SdkVersion))
+            return "Field 'sdkVersion' is required.";
+
+        if (!Version.TryParse(manifest.SdkVersion, out _))
+            return $"Field 'sdkVersion' value '{manifest.SdkVersion}' is not a valid version (e.g. '1.0').";
+
+        if (string.IsNullOrWhiteSpace(manifest.ApiVersion))
+            return "Field 'apiVersion' is required.";
+
+        if (!int.TryParse(manifest.ApiVersion, out _))
+            return $"Field 'apiVersion' value '{manifest.ApiVersion}' is not a valid integer string.";
+
+        if (manifest.StartupOrder < 0)
+            return $"Field 'startupOrder' must be non-negative; got {manifest.StartupOrder}.";
+
         return null;
     }
 }

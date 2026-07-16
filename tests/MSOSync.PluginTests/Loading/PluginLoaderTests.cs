@@ -65,7 +65,8 @@ public sealed class PluginLoaderTests : IDisposable
     private string CreatePluginDir(string dirName, string pluginId,
         bool createDll = true, string? version = "1.0.0",
         string? minHost = "1.0.0", string? maxHost = "99.9.999",
-        string? entryType = "Test.Plugin", bool writeBadJson = false)
+        string? entryType = "Test.Plugin", bool writeBadJson = false,
+        string? sdkVersion = "1.0", string? apiVersion = "1")
     {
         var dir = Path.Combine(_pluginsRoot, dirName);
         Directory.CreateDirectory(dir);
@@ -81,6 +82,8 @@ public sealed class PluginLoaderTests : IDisposable
               "id": "{{pluginId}}",
               "name": "{{pluginId}}",
               "version": "{{version}}",
+              "sdkVersion": "{{sdkVersion}}",
+              "apiVersion": "{{apiVersion}}",
               "minHostVersion": "{{minHost}}",
               "maxHostVersion": "{{maxHost}}",
               "entryAssembly": "Test.dll",

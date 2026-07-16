@@ -8,17 +8,16 @@ public sealed class PluginLoadContext : AssemblyLoadContext
     private readonly AssemblyDependencyResolver _resolver;
     private readonly string? _libDirectory;
 
-    public PluginLoadContext(string pluginDirectory, string? libDirectory = null)
+    public PluginLoadContext(string componentDllPath, string? libDirectory = null)
         : base(isCollectible: true)
     {
-        // Primary resolver targets the plugin's main directory
-        _resolver   = new AssemblyDependencyResolver(pluginDirectory);
+        _resolver     = new AssemblyDependencyResolver(componentDllPath);
         _libDirectory = libDirectory;
     }
 
     protected override Assembly? Load(AssemblyName assemblyName)
     {
-        // 1. Try plugin main directory
+        // 1. Try resolver (uses deps.json from the component DLL path)
         var path = _resolver.ResolveAssemblyToPath(assemblyName);
         if (path != null)
             return LoadFromAssemblyPath(path);

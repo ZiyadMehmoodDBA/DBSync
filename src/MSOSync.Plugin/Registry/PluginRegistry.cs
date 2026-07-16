@@ -35,4 +35,10 @@ public sealed class PluginRegistry : IPluginRegistry
     }
 
     public void MarkInitialized() => _initialized = true;
+
+    internal PluginRuntime? GetRuntime(string pluginId)
+        => _runtimes.TryGetValue(pluginId, out var rt) ? rt : null;
+
+    internal IReadOnlyList<PluginRuntime> GetAllRuntimes()
+        => _runtimes.Values.ToList();
 }
