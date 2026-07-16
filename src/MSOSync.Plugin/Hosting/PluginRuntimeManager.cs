@@ -21,12 +21,13 @@ internal sealed class PluginRuntimeManager(
     {
         var sw      = Stopwatch.StartNew();
         var results = await loader.LoadAllAsync(options.Value.PluginsPath, ct);
-        LoadElapsedMs = sw.ElapsedMilliseconds;
 
         foreach (var r in results.Where(r => r.Outcome == PluginLoadOutcome.Success))
         {
             await activator.ActivateAsync(r.PluginId, ct);
         }
+
+        LoadElapsedMs = sw.ElapsedMilliseconds;
     }
 
     public async Task InitializeAsync(CancellationToken ct)
