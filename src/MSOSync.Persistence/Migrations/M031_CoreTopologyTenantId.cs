@@ -31,8 +31,8 @@ public partial class M031_CoreTopologyTenantId : Migration
         ("sync_trigger_router","IX_sync_trigger_router_tenant_id"),
     ];
 
-    // The 5 hybrid tables getting nullable tenant_id
-    private static readonly string[] HybridTables =
+    // 3 simple hybrid tables — sync_parameter and sync_parameter_hist are handled separately (require surrogate PK swap first)
+    private static readonly string[] SimpleHybridTables =
     [
         "sync_role",
         "sync_user_role",
@@ -78,7 +78,7 @@ public partial class M031_CoreTopologyTenantId : Migration
 
         // ── 3. Add nullable tenant_id to simple hybrid tables ──────────────────────────────
 
-        foreach (var table in HybridTables)
+        foreach (var table in SimpleHybridTables)
         {
             migrationBuilder.AddColumn<Guid>(
                 name:         "tenant_id",
@@ -193,7 +193,7 @@ public partial class M031_CoreTopologyTenantId : Migration
         migrationBuilder.DropColumn(name: "id", schema: Schema, table: "sync_parameter");
 
         // 3. Remove nullable tenant_id from simple hybrid tables
-        foreach (var table in HybridTables)
+        foreach (var table in SimpleHybridTables)
             migrationBuilder.DropColumn(name: "tenant_id", schema: Schema, table: table);
 
         // 2. Drop FK
