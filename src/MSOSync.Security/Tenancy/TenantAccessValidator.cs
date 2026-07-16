@@ -15,6 +15,7 @@ public sealed class TenantAccessValidator(ITenantStore store) : ITenantAccessVal
 
         var tenant = await store.FindTenantAsync(tenantId, ct);
         if (tenant is null)
+            // 403 (not 404) intentionally — don't leak tenant existence to unauthorized callers
             throw new TenantAccessException(403, "Tenant not found");
 
         if (tenant.Status != TenantStatus.Active)
