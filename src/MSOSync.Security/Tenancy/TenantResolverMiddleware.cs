@@ -20,6 +20,8 @@ public sealed class TenantResolverMiddleware(RequestDelegate next)
             var tenantContext = await resolver.ResolveAsync(ctx, ctx.RequestAborted);
             // Register resolved context as scoped so controllers + services + DbContext can inject it
             ctx.RequestServices.GetRequiredService<TenantContextHolder>().Context = tenantContext;
+            // Node-token requests resolve to PlatformTenantContext until Task 7 wires TenantId
+            // on sync_node rows — see TODO(15A-7) in TenantResolver.
             ctx.Items["IsPlatformContext"] = tenantContext.IsPlatformContext;
         }
         catch (TenantAccessException ex)
