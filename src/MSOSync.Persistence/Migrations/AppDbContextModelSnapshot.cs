@@ -2126,6 +2126,112 @@ namespace MSOSync.Persistence.Migrations
                     b.ToTable("sync_user_role", "msosync");
                 });
 
+            modelBuilder.Entity("MSOSync.Persistence.Entities.Tenant", b =>
+                {
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("slug");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int")
+                        .HasColumnName("status");
+
+                    b.Property<int>("Edition")
+                        .HasColumnType("int")
+                        .HasColumnName("edition");
+
+                    b.Property<Guid?>("LicenseId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("license_id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("updated_at_utc");
+
+                    b.Property<DateTimeOffset?>("SuspendedAtUtc")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("suspended_at_utc");
+
+                    b.Property<DateTimeOffset?>("DeletedAtUtc")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("deleted_at_utc");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsRequired()
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion")
+                        .HasColumnName("row_version");
+
+                    b.HasKey("TenantId");
+
+                    b.HasIndex("Slug")
+                        .IsUnique()
+                        .HasDatabaseName("UQ_tenant_slug");
+
+                    b.ToTable("tenant", "msosync");
+                });
+
+            modelBuilder.Entity("MSOSync.Persistence.Entities.TenantMembership", b =>
+                {
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<long>("UserId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("user_id");
+
+                    b.Property<long>("RoleId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("role_id");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int")
+                        .HasColumnName("status");
+
+                    b.Property<DateTimeOffset>("JoinedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("joined_at");
+
+                    b.Property<DateTimeOffset>("LastAccessedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("last_accessed_at");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsRequired()
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion")
+                        .HasColumnName("row_version");
+
+                    b.HasKey("TenantId", "UserId");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("IX_tenant_membership_tenant_id");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("IX_tenant_membership_user_id");
+
+                    b.ToTable("tenant_membership", "msosync");
+                });
+
             modelBuilder.Entity("MSOSync.Persistence.Entities.SyncBatchError", b =>
                 {
                     b.HasOne("MSOSync.Persistence.Entities.SyncOutgoingBatch", null)
@@ -2236,6 +2342,34 @@ namespace MSOSync.Persistence.Migrations
             modelBuilder.Entity("MSOSync.Persistence.Entities.SyncPermission", b =>
                 {
                     b.Navigation("RolePermissions");
+                });
+
+            modelBuilder.Entity("MSOSync.Persistence.Entities.TenantMembership", b =>
+                {
+                    b.HasOne("MSOSync.Persistence.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_tenant_membership_tenant_id");
+
+                    b.HasOne("MSOSync.Persistence.Entities.SyncUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_tenant_membership_user_id");
+
+                    b.HasOne("MSOSync.Persistence.Entities.SyncRole", "Role")
+                        .WithMany()
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_tenant_membership_role_id");
+
+                    b.Navigation("Tenant");
+                    b.Navigation("User");
+                    b.Navigation("Role");
                 });
 #pragma warning restore 612, 618
         }
