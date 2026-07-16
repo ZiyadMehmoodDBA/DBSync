@@ -8,6 +8,13 @@ public sealed class TenantResolverMiddleware(RequestDelegate next)
 {
     public async Task InvokeAsync(HttpContext ctx, ITenantResolver resolver)
     {
+        // Skip tenant resolution for unauthenticated requests (e.g., login endpoint)
+        if (ctx.User.Identity?.IsAuthenticated != true)
+        {
+            await next(ctx);
+            return;
+        }
+
         try
         {
             var tenantContext = await resolver.ResolveAsync(ctx, ctx.RequestAborted);
