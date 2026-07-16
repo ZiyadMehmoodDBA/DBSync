@@ -12,7 +12,7 @@ public class Tenant
     public string          Name           { get; set; } = "";
     public string          Slug           { get; set; } = "";   // lowercase, [a-z0-9-], immutable after create
     public TenantStatus    Status         { get; set; }
-    public MSOSync.Common.Tenancy.EditionType Edition { get; set; }
+    public EditionType Edition { get; set; }
     public Guid?           LicenseId      { get; set; }         // wired in 15B
     public DateTimeOffset  CreatedAtUtc   { get; set; }
     public DateTimeOffset  UpdatedAtUtc   { get; set; }

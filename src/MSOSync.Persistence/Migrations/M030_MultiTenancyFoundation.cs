@@ -91,8 +91,9 @@ public partial class M030_MultiTenancyFoundation : Migration
             END
             """);
 
-        // 4. Seed TenantMembership for all existing users → SystemTenant
+        // 4. Seed TenantMembership for all existing users with any role assignment → SystemTenant
         //    status=0 (Active), joined_at = now
+        //    (Idempotent: skips users already assigned to SystemTenant)
         migrationBuilder.Sql($"""
             INSERT INTO [{Schema}].[tenant_membership] ([tenant_id], [user_id], [role_id], [status], [joined_at], [last_accessed_at])
             SELECT '{SystemTenantId}', u.[user_id], r.[role_id], 0, SYSDATETIMEOFFSET(), SYSDATETIMEOFFSET()
