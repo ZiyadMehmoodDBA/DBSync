@@ -1,6 +1,5 @@
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 using Moq;
 using MSOSync.Plugin.Abstractions;
 using MSOSync.Plugin.Hosting;
@@ -13,32 +12,44 @@ namespace MSOSync.PluginTests.Hosting;
 public sealed class PluginHostTests
 {
     private static PluginHost MakeHost(
-        IPluginLoader? loader = null,
+        IPluginRuntimeManager? runtimeManager = null,
         IPluginRegistry? registry = null,
-        string pluginsPath = "non-existent-path")
+        IPluginLoader? loader = null)
     {
+        if (runtimeManager == null)
+        {
+            var rmMock = new Mock<IPluginRuntimeManager>();
+            rmMock.Setup(rm => rm.LoadAndActivateAsync(It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+            rmMock.Setup(rm => rm.InitializeAsync(It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+            rmMock.Setup(rm => rm.StartAsync(It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+            rmMock.Setup(rm => rm.StopAsync(It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+            rmMock.Setup(rm => rm.DisposeAsync(It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+            rmMock.Setup(rm => rm.LoadElapsedMs).Returns(0);
+            rmMock.Setup(rm => rm.InitializeElapsedMs).Returns(0);
+            rmMock.Setup(rm => rm.StartElapsedMs).Returns(0);
+            runtimeManager = rmMock.Object;
+        }
+
+        registry ??= Mock.Of<IPluginRegistry>(r =>
+            r.GetAll() == (IReadOnlyList<PluginDescriptor>)new List<PluginDescriptor>());
+
         if (loader == null)
         {
             var loaderMock = new Mock<IPluginLoader>();
             loaderMock.Setup(l => l.LoadContexts)
                       .Returns(Array.Empty<AssemblyLoadContext>());
-            loaderMock.Setup(l => l.LoadAllAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-                      .ReturnsAsync(Array.Empty<PluginLoadResult>());
             loader = loaderMock.Object;
         }
 
-        registry ??= Mock.Of<IPluginRegistry>();
-
         return new PluginHost(
-            loader, registry,
-            Options.Create(new PluginHostOptions { PluginsPath = pluginsPath, HostVersion = "14.0.0" }),
+            runtimeManager, registry, loader,
             NullLogger<PluginHost>.Instance);
     }
 
     [Fact]
     public async Task StartAsync_MissingPluginsDir_DoesNotThrow()
     {
-        var host = MakeHost(pluginsPath: Path.Combine(Path.GetTempPath(), "no-such-plugins-dir-ever"));
+        var host = MakeHost();
         var act  = () => host.StartAsync(default);
         await act.Should().NotThrowAsync();
     }
@@ -64,9 +75,35 @@ public sealed class PluginHostTests
     public async Task StartAsync_CallsMarkInitialized()
     {
         var registry = new Mock<IPluginRegistry>();
-        var host     = MakeHost(registry: registry.Object);
+        registry.Setup(r => r.GetAll())
+                .Returns(new List<PluginDescriptor>());
+        var host = MakeHost(registry: registry.Object);
         await host.StartAsync(default);
         registry.Verify(r => r.MarkInitialized(), Times.Once);
+    }
+
+    [Fact]
+    public async Task StartAsync_CallsRuntimeManagerInOrder()
+    {
+        var callOrder = new List<string>();
+        var rmMock    = new Mock<IPluginRuntimeManager>();
+        rmMock.Setup(rm => rm.LoadAndActivateAsync(It.IsAny<CancellationToken>()))
+              .Callback(() => callOrder.Add("Load"))
+              .Returns(Task.CompletedTask);
+        rmMock.Setup(rm => rm.InitializeAsync(It.IsAny<CancellationToken>()))
+              .Callback(() => callOrder.Add("Initialize"))
+              .Returns(Task.CompletedTask);
+        rmMock.Setup(rm => rm.StartAsync(It.IsAny<CancellationToken>()))
+              .Callback(() => callOrder.Add("Start"))
+              .Returns(Task.CompletedTask);
+        rmMock.Setup(rm => rm.LoadElapsedMs).Returns(0);
+        rmMock.Setup(rm => rm.InitializeElapsedMs).Returns(0);
+        rmMock.Setup(rm => rm.StartElapsedMs).Returns(0);
+
+        var host = MakeHost(runtimeManager: rmMock.Object);
+        await host.StartAsync(default);
+
+        callOrder.Should().Equal("Load", "Initialize", "Start");
     }
 
     // AssemblyLoadContext.Unload() is not virtual and cannot be intercepted by Moq.
@@ -86,8 +123,6 @@ public sealed class PluginHostTests
         var loader = new Mock<IPluginLoader>();
         loader.Setup(l => l.LoadContexts)
               .Returns(new List<AssemblyLoadContext> { ctx });
-        loader.Setup(l => l.LoadAllAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-              .ReturnsAsync(Array.Empty<PluginLoadResult>());
 
         var host = MakeHost(loader: loader.Object);
         await host.StartAsync(default);

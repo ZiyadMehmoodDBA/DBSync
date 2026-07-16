@@ -11,7 +11,7 @@ using MSOSync.Plugin.Registry;
 namespace MSOSync.Plugin.Loading;
 
 public sealed class PluginLoader(
-    IPluginRegistry              registry,
+    PluginRegistry               registry,
     IServiceScopeFactory         scopeFactory,
     IOptions<PluginHostOptions>  options,
     ILogger<PluginLoader>        logger) : IPluginLoader
@@ -170,12 +170,11 @@ public sealed class PluginLoader(
         RegisterDescriptor(descriptor);
 
         // Store assembly and load context in the runtime for the activator
-        if (registry is PluginRegistry concreteRegistry)
         {
-            var runtime = concreteRegistry.GetRuntime(manifest.Id);
+            var runtime = registry.GetRuntime(manifest.Id);
             if (runtime != null)
             {
-                runtime.Assembly  = assembly;
+                runtime.Assembly    = assembly;
                 runtime.LoadContext = ctx;
             }
         }

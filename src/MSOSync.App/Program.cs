@@ -119,19 +119,31 @@ try
     builder.Services.AddHostedService<ExportJobWorker>();
     builder.Services.AddHostedService<ExportCleanupWorker>();
 
-    // --- Epic 14A: Plugin Host ---
+    // --- Epic 14B: Plugin Host (updated) ---
     builder.Services.Configure<MSOSync.Plugin.Models.PluginHostOptions>(opts =>
     {
         opts.PluginsPath = builder.Configuration["PluginHost:PluginsPath"]
             ?? Path.Combine(AppContext.BaseDirectory, "plugins");
         opts.HostVersion = typeof(Program).Assembly.GetName().Version?.ToString(3) ?? "1.0.0";
     });
-    builder.Services.AddSingleton<MSOSync.Plugin.Abstractions.IPluginRegistry,
-        MSOSync.Plugin.Registry.PluginRegistry>();
+
+    // Register PluginRegistry as concrete first so PluginActivator and PluginRuntimeManager
+    // can inject it directly (for internal runtime access beyond the public IPluginRegistry)
+    builder.Services.AddSingleton<MSOSync.Plugin.Registry.PluginRegistry>();
+    builder.Services.AddSingleton<MSOSync.Plugin.Abstractions.IPluginRegistry>(sp =>
+        sp.GetRequiredService<MSOSync.Plugin.Registry.PluginRegistry>());
+
     builder.Services.AddScoped<MSOSync.Plugin.Abstractions.IPluginStore,
         MSOSync.Persistence.Stores.PluginStore>();
     builder.Services.AddSingleton<MSOSync.Plugin.Abstractions.IPluginLoader,
         MSOSync.Plugin.Loading.PluginLoader>();
+    builder.Services.AddSingleton<MSOSync.Plugin.Lifecycle.ISdkCompatibilityValidator,
+        MSOSync.Plugin.Lifecycle.SdkCompatibilityValidator>();
+    builder.Services.AddSingleton<MSOSync.Plugin.Lifecycle.PluginActivator>();
+    builder.Services.AddSingleton<MSOSync.Plugin.Lifecycle.PluginLifecycleManager>();
+    builder.Services.AddSingleton<MSOSync.Plugin.Hosting.PluginRuntimeManager>();
+    builder.Services.AddSingleton<MSOSync.Plugin.Hosting.IPluginRuntimeManager>(sp =>
+        sp.GetRequiredService<MSOSync.Plugin.Hosting.PluginRuntimeManager>());
     builder.Services.AddSingleton<MSOSync.Plugin.Hosting.PluginHost>();
     builder.Services.AddSingleton<MSOSync.Plugin.Abstractions.IPluginHost>(sp =>
         sp.GetRequiredService<MSOSync.Plugin.Hosting.PluginHost>());

@@ -23,6 +23,7 @@ using MSOSync.Persistence.Stores;
 using MSOSync.Plugin.Abstractions;
 using MSOSync.Plugin.Diagnostics;
 using MSOSync.Plugin.Hosting;
+using MSOSync.Plugin.Lifecycle;
 using MSOSync.Plugin.Loading;
 using MSOSync.Plugin.Models;
 using MSOSync.Plugin.Registry;
@@ -91,15 +92,23 @@ public sealed class PluginsFixture : WebApplicationFactory<Program>, IAsyncLifet
         testBuilder.Services.AddFluentValidationAutoValidation();
         testBuilder.Services.AddValidatorsFromAssemblyContaining<AuthController>();
 
-        // Plugin host wiring
+        // Plugin host wiring (14B)
         testBuilder.Services.Configure<PluginHostOptions>(opts =>
         {
             opts.PluginsPath = TestPluginsPath;
             opts.HostVersion = "14.0.0";
         });
-        testBuilder.Services.AddSingleton<IPluginRegistry, PluginRegistry>();
+        testBuilder.Services.AddSingleton<PluginRegistry>();
+        testBuilder.Services.AddSingleton<IPluginRegistry>(sp =>
+            sp.GetRequiredService<PluginRegistry>());
         testBuilder.Services.AddScoped<IPluginStore, PluginStore>();
         testBuilder.Services.AddSingleton<IPluginLoader, PluginLoader>();
+        testBuilder.Services.AddSingleton<ISdkCompatibilityValidator, SdkCompatibilityValidator>();
+        testBuilder.Services.AddSingleton<PluginActivator>();
+        testBuilder.Services.AddSingleton<PluginLifecycleManager>();
+        testBuilder.Services.AddSingleton<PluginRuntimeManager>();
+        testBuilder.Services.AddSingleton<IPluginRuntimeManager>(sp =>
+            sp.GetRequiredService<PluginRuntimeManager>());
         testBuilder.Services.AddSingleton<PluginHost>();
         testBuilder.Services.AddSingleton<IPluginHost>(sp =>
             sp.GetRequiredService<PluginHost>());

@@ -7,7 +7,7 @@ using MSOSync.Plugin.Registry;
 
 namespace MSOSync.Plugin.Lifecycle;
 
-internal sealed class PluginLifecycleManager(
+public sealed class PluginLifecycleManager(
     PluginRegistry               registry,
     IOptions<PluginHostOptions>  options,
     ILogger<PluginLifecycleManager> logger)
@@ -37,6 +37,10 @@ internal sealed class PluginLifecycleManager(
                 rt.InitializedAt      = DateTime.UtcNow;
                 rt.LastStateChangeUtc = rt.InitializedAt.Value;
                 rt.State              = PluginRuntimeState.Initialized;
+
+                rt.Descriptor.InitializeDurationMs = (long)rt.InitializeDuration!.Value.TotalMilliseconds;
+                rt.Descriptor.InitializedAt        = rt.InitializedAt;
+                rt.Descriptor.Status               = PluginStatus.Initialized;
 
                 logger.Log(LogLevel.Information, PluginLogEvents.PluginInitialized,
                     "Plugin {PluginId} initialized in {Ms}ms", rt.Descriptor.PluginId, sw.ElapsedMilliseconds);
@@ -93,6 +97,11 @@ internal sealed class PluginLifecycleManager(
                 var loadMs = TimeSpan.FromMilliseconds(rt.Descriptor.LoadDurationMs);
                 rt.TotalDuration = loadMs + (rt.InitializeDuration ?? TimeSpan.Zero) + sw.Elapsed;
 
+                rt.Descriptor.StartDurationMs  = (long)rt.StartDuration!.Value.TotalMilliseconds;
+                rt.Descriptor.TotalDurationMs  = (long)(rt.TotalDuration?.TotalMilliseconds ?? 0);
+                rt.Descriptor.StartedAt        = rt.StartedAt;
+                rt.Descriptor.Status           = PluginStatus.Running;
+
                 logger.Log(LogLevel.Information, PluginLogEvents.PluginStarted,
                     "Plugin {PluginId} started in {Ms}ms", rt.Descriptor.PluginId, sw.ElapsedMilliseconds);
             }
@@ -142,6 +151,7 @@ internal sealed class PluginLifecycleManager(
                 rt.StoppedAt          = DateTime.UtcNow;
                 rt.LastStateChangeUtc = rt.StoppedAt.Value;
                 rt.State              = PluginRuntimeState.Stopped;
+                rt.Descriptor.Status  = PluginStatus.Stopped;
 
                 logger.Log(LogLevel.Information, PluginLogEvents.PluginStopped,
                     "Plugin {PluginId} stopped in {Ms}ms", rt.Descriptor.PluginId, sw.ElapsedMilliseconds);
@@ -165,6 +175,7 @@ internal sealed class PluginLifecycleManager(
                 rt.StoppedAt          = DateTime.UtcNow;
                 rt.LastStateChangeUtc = rt.StoppedAt.Value;
                 rt.State              = PluginRuntimeState.Stopped;
+                rt.Descriptor.Status  = PluginStatus.Stopped;
                 logger.Log(LogLevel.Warning, PluginLogEvents.PluginFailed,
                     ex, "Plugin {PluginId} StopAsync threw; treating as stopped", rt.Descriptor.PluginId);
             }

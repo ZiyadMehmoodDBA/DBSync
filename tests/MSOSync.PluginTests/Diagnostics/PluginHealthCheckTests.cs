@@ -45,11 +45,11 @@ public sealed class PluginHealthCheckTests
     }
 
     [Fact]
-    public async Task CheckHealth_AllLoaded_ReturnsHealthy()
+    public async Task CheckHealth_AllRunning_ReturnsHealthy()
     {
         var reg   = RegistryWith(true,
-            MakePlugin("a", PluginStatus.Loaded),
-            MakePlugin("b", PluginStatus.Loaded));
+            MakePlugin("a", PluginStatus.Running),
+            MakePlugin("b", PluginStatus.Running));
         var check  = new PluginHealthCheck(reg);
         var result = await check.CheckHealthAsync(FakeContext());
         result.Status.Should().Be(HealthStatus.Healthy);
@@ -59,7 +59,7 @@ public sealed class PluginHealthCheckTests
     public async Task CheckHealth_OneFailedPlugin_ReturnsDegraded()
     {
         var reg   = RegistryWith(true,
-            MakePlugin("a", PluginStatus.Loaded),
+            MakePlugin("a", PluginStatus.Running),
             MakePlugin("b", PluginStatus.Failed));
         var check  = new PluginHealthCheck(reg);
         var result = await check.CheckHealthAsync(FakeContext());
@@ -71,8 +71,19 @@ public sealed class PluginHealthCheckTests
     public async Task CheckHealth_DisabledExcludedFromDegraded()
     {
         var reg   = RegistryWith(true,
-            MakePlugin("loaded", PluginStatus.Loaded),
+            MakePlugin("running", PluginStatus.Running),
             MakePlugin("disabled", PluginStatus.Disabled));
+        var check  = new PluginHealthCheck(reg);
+        var result = await check.CheckHealthAsync(FakeContext());
+        result.Status.Should().Be(HealthStatus.Healthy);
+    }
+
+    [Fact]
+    public async Task CheckHealth_StoppedPlugin_IsHealthy()
+    {
+        // Stopped is always host-initiated — not a failure
+        var reg   = RegistryWith(true,
+            MakePlugin("a", PluginStatus.Stopped));
         var check  = new PluginHealthCheck(reg);
         var result = await check.CheckHealthAsync(FakeContext());
         result.Status.Should().Be(HealthStatus.Healthy);

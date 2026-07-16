@@ -3,7 +3,7 @@ using MSOSync.Plugin.Models;
 
 namespace MSOSync.Plugin.Lifecycle;
 
-internal sealed class SdkCompatibilityValidator(IOptions<PluginHostOptions> options) : ISdkCompatibilityValidator
+public sealed class SdkCompatibilityValidator(IOptions<PluginHostOptions> options) : ISdkCompatibilityValidator
 {
     public CompatibilityResult Validate(PluginManifest manifest, out string? message)
     {

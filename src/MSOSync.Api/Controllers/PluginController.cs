@@ -38,7 +38,7 @@ public sealed class PluginController(
         return Ok(new PluginSummaryDto
         {
             Total             = all.Count,
-            Loaded            = all.Count(p => p.Status == PluginStatus.Loaded),
+            Loaded            = all.Count(p => p.Status == PluginStatus.Running),
             Failed            = all.Count(p => p.Status == PluginStatus.Failed),
             Disabled          = all.Count(p => p.Status == PluginStatus.Disabled),
             StartupDurationMs = pluginHost.StartupDurationMs,
@@ -111,33 +111,43 @@ public sealed class PluginController(
 
     private static PluginDto ToDto(PluginDescriptor p) => new()
     {
-        PluginId          = p.PluginId,
-        Name              = p.Name,
-        Version           = p.Version,
-        Status            = p.Status.ToString(),
-        LoadDurationMs    = p.LoadDurationMs,
-        LoadedAt          = p.LoadedAt,
-        LastError         = p.ErrorMessage,
-        FailureStage      = p.FailureStage,
-        HostCompatibility = p.HostCompatibility,
-        Capabilities      = p.Capabilities,
-        Permissions       = p.Permissions,
-        Dependencies      = p.Dependencies,
+        PluginId             = p.PluginId,
+        Name                 = p.Name,
+        Version              = p.Version,
+        Status               = p.Status.ToString(),
+        LoadDurationMs       = p.LoadDurationMs,
+        InitializeDurationMs = p.InitializeDurationMs,
+        StartDurationMs      = p.StartDurationMs,
+        TotalDurationMs      = p.TotalDurationMs,
+        LoadedAt             = p.LoadedAt,
+        InitializedAt        = p.InitializedAt,
+        StartedAt            = p.StartedAt,
+        LastError            = p.ErrorMessage,
+        FailureStage         = p.FailureStage,
+        HostCompatibility    = p.HostCompatibility,
+        Capabilities         = p.Capabilities,
+        Permissions          = p.Permissions,
+        Dependencies         = p.Dependencies,
     };
 }
 
 // DTO records — defined here to keep the controller self-contained
 public sealed class PluginDto
 {
-    public string   PluginId          { get; init; } = null!;
-    public string   Name              { get; init; } = null!;
-    public string   Version           { get; init; } = null!;
-    public string   Status            { get; init; } = null!;
-    public long     LoadDurationMs    { get; init; }
-    public DateTime LoadedAt          { get; init; }
-    public string?  LastError         { get; init; }
-    public string?  FailureStage      { get; init; }
-    public string   HostCompatibility { get; init; } = null!;
+    public string    PluginId             { get; init; } = null!;
+    public string    Name                 { get; init; } = null!;
+    public string    Version              { get; init; } = null!;
+    public string    Status               { get; init; } = null!;
+    public long      LoadDurationMs       { get; init; }
+    public long?     InitializeDurationMs { get; init; }
+    public long?     StartDurationMs      { get; init; }
+    public long?     TotalDurationMs      { get; init; }
+    public DateTime  LoadedAt             { get; init; }
+    public DateTime? InitializedAt        { get; init; }
+    public DateTime? StartedAt            { get; init; }
+    public string?   LastError            { get; init; }
+    public string?   FailureStage         { get; init; }
+    public string    HostCompatibility    { get; init; } = null!;
     public IReadOnlyList<string> Capabilities  { get; init; } = [];
     public IReadOnlyList<string> Permissions   { get; init; } = [];
     public IReadOnlyList<string> Dependencies  { get; init; } = [];

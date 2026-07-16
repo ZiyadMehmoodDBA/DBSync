@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using MSOSync.Plugin.Abstractions;
 using MSOSync.Plugin.Loading;
 using MSOSync.Plugin.Models;
@@ -9,9 +8,9 @@ using MSOSync.Plugin.Models;
 namespace MSOSync.Plugin.Hosting;
 
 public sealed class PluginHost(
-    IPluginLoader               loader,
+    IPluginRuntimeManager       runtimeManager,
     IPluginRegistry             registry,
-    IOptions<PluginHostOptions> pluginOptions,
+    IPluginLoader               loader,
     ILogger<PluginHost>         logger) : IHostedService, IPluginHost
 {
     public bool      IsStarted         { get; private set; }
@@ -20,54 +19,59 @@ public sealed class PluginHost(
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        var sw          = Stopwatch.StartNew();
-        var pluginsPath = pluginOptions.Value.PluginsPath;
-
-        IReadOnlyList<PluginLoadResult> results;
+        var total = Stopwatch.StartNew();
         try
         {
-            results = await loader.LoadAllAsync(pluginsPath, cancellationToken);
+            await runtimeManager.LoadAndActivateAsync(cancellationToken);
+            await runtimeManager.InitializeAsync(cancellationToken);
+            await runtimeManager.StartAsync(cancellationToken);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Unexpected error during plugin host startup");
-            results = [];
         }
 
         registry.MarkInitialized();
-        sw.Stop();
+        total.Stop();
 
         StartedAt         = DateTime.UtcNow;
-        StartupDurationMs = sw.ElapsedMilliseconds;
+        StartupDurationMs = total.ElapsedMilliseconds;
         IsStarted         = true;
 
-        var total    = results.Count;
-        var loaded   = results.Count(r => r.Outcome == PluginLoadOutcome.Success);
-        var disabled = results.Count(r => r.Outcome == PluginLoadOutcome.Disabled);
-        var failed   = results.Count(r => r.Outcome == PluginLoadOutcome.Failed);
+        var all         = registry.GetAll();
+        var discovered  = all.Count;
+        var running     = all.Count(p => p.Status == PluginStatus.Running);
+        var initialized = all.Count(p => p.Status == PluginStatus.Initialized);
+        var failed      = all.Count(p => p.Status == PluginStatus.Failed);
+        var disabled    = all.Count(p => p.Status == PluginStatus.Disabled);
 
         logger.Log(LogLevel.Information, PluginLogEvents.PluginStartupSummary,
-            "Plugin host started in {Ms}ms. Discovered={Total} Loaded={Loaded} Disabled={Disabled} Failed={Failed}",
-            sw.ElapsedMilliseconds, total, loaded, disabled, failed);
-
-        foreach (var f in results.Where(r => r.Outcome == PluginLoadOutcome.Failed))
-        {
-            logger.Log(LogLevel.Warning, PluginLogEvents.PluginFailed,
-                "Plugin {Id} failed at stage {Stage}: {Error}",
-                f.PluginId, f.FailureStage, f.ErrorMessage);
-        }
+            "Plugin host started. Discovered={D} Running={R} Initialized={I} Failed={F} Disabled={Dis} " +
+            "LoadElapsed={LE}ms InitializeElapsed={IE}ms StartElapsed={SE}ms TotalElapsed={TE}ms",
+            discovered, running, initialized, failed, disabled,
+            runtimeManager.LoadElapsedMs, runtimeManager.InitializeElapsedMs,
+            runtimeManager.StartElapsedMs, total.ElapsedMilliseconds);
     }
 
-    public Task StopAsync(CancellationToken cancellationToken)
+    public async Task StopAsync(CancellationToken cancellationToken)
     {
+        try
+        {
+            await runtimeManager.StopAsync(cancellationToken);
+            await runtimeManager.DisposeAsync(cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Error during plugin host shutdown");
+        }
+
         foreach (var ctx in loader.LoadContexts)
         {
             try { ctx.Unload(); }
             catch (Exception ex)
             {
-                logger.LogWarning(ex, "Error unloading plugin context");
+                logger.LogWarning(ex, "Error unloading plugin AssemblyLoadContext");
             }
         }
-        return Task.CompletedTask;
     }
 }

@@ -31,6 +31,6 @@ public sealed class PluginHealthCheck(IPluginRegistry registry) : IHealthCheck
         }
 
         return Task.FromResult(
-            HealthCheckResult.Healthy($"{enabledPlugins.Count} plugin(s) loaded"));
+            HealthCheckResult.Healthy($"{enabledPlugins.Count} plugin(s) active"));
     }
 }

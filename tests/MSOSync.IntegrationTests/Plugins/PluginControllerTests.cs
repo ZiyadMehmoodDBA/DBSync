@@ -122,15 +122,15 @@ public sealed class PluginControllerTests(PluginsFixture fx)
     // ── Registry state ────────────────────────────────────────────────────────
 
     [Fact]
-    public async Task PluginHost_ValidPlugin_RegistersAsLoaded()
+    public async Task PluginHost_ValidPlugin_RegistersAsRunning()
     {
-        // The registry is populated at startup. The test plugin should be Loaded.
+        // The registry is populated at startup. The test plugin goes through full lifecycle — Running.
         var client = await fx.AdminClientAsync();
         var resp   = await client.GetAsync("/api/v1/plugins/msosync.test");
         resp.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var body = await resp.Content.ReadFromJsonAsync<JsonElement>();
-        body.GetProperty("status").GetString().Should().Be("Loaded");
+        body.GetProperty("status").GetString().Should().Be("Running");
     }
 
     [Fact]
