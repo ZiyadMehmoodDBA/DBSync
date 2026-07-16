@@ -66,8 +66,44 @@ public sealed class AuthenticationService(
         await userService.ResetFailedAttemptsAsync(user, ct);
         await userService.UpdateLastLoginAsync(user, ct);
 
-        var roles        = await userService.GetRolesAsync(user.UserId, ct);
-        var accessToken  = jwtService.CreateAccessToken(user.UserId, user.Username, roles);
+        var roles = await userService.GetRolesAsync(user.UserId, ct);
+
+        // Resolve tenant membership for multi-tenant token issuance
+        var memberships = await db.TenantMemberships
+            .AsNoTracking()
+            .Where(m => m.UserId == user.UserId && m.Status == MemberStatus.Active)
+            .Select(m => new { m.TenantId, TenantSlug = m.Tenant!.Slug })
+            .ToListAsync(ct);
+
+        Guid? resolvedTenantId = null;
+        string? resolvedTenantSlug = null;
+        IReadOnlyList<TenantPickerItem>? tenantPicker = null;
+
+        if (memberships.Count == 1)
+        {
+            resolvedTenantId   = memberships[0].TenantId;
+            resolvedTenantSlug = memberships[0].TenantSlug;
+        }
+        else if (memberships.Count > 1)
+        {
+            tenantPicker = memberships.Select(m => new TenantPickerItem(m.TenantId, m.TenantSlug)).ToList();
+            // Issue no token yet — client must call switch-tenant after selection
+            var (rawRefreshToken2, refreshEntity2) = CreateRefreshToken(user.UserId, familyId: null);
+            db.UserRefreshTokens.Add(refreshEntity2);
+            await db.SaveChangesAsync(ct);
+            await mediator.Publish(new LoginSuccessEvent(username, correlationId), ct);
+            return new LoginResult(
+                Success: true,
+                AccessToken: null,
+                RefreshToken: rawRefreshToken2,
+                ExpiresAt: refreshEntity2.ExpiresAt,
+                Error: null,
+                RequiresTenantSelection: true,
+                Tenants: tenantPicker);
+        }
+        // else memberships.Count == 0 → platform token (no tenantId)
+
+        var accessToken  = jwtService.CreateAccessToken(user.UserId, user.Username, roles, tenantId: resolvedTenantId);
         var (rawRefreshToken, refreshEntity) = CreateRefreshToken(user.UserId, familyId: null);
 
         db.UserRefreshTokens.Add(refreshEntity);
@@ -75,7 +111,14 @@ public sealed class AuthenticationService(
 
         await mediator.Publish(new LoginSuccessEvent(username, correlationId), ct);
 
-        return new LoginResult(true, accessToken, rawRefreshToken, refreshEntity.ExpiresAt, null);
+        return new LoginResult(
+            Success: true,
+            AccessToken: accessToken,
+            RefreshToken: rawRefreshToken,
+            ExpiresAt: refreshEntity.ExpiresAt,
+            Error: null,
+            TenantId: resolvedTenantId,
+            TenantSlug: resolvedTenantSlug);
     }
 
     public async Task<RefreshResult> RefreshAsync(

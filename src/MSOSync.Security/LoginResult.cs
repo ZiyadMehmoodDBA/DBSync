@@ -5,4 +5,10 @@ public sealed record LoginResult(
     string? AccessToken,
     string? RefreshToken,
     DateTime? ExpiresAt,
-    string? Error);
+    string? Error,
+    Guid? TenantId = null,
+    string? TenantSlug = null,
+    bool RequiresTenantSelection = false,
+    IReadOnlyList<TenantPickerItem>? Tenants = null);
+
+public sealed record TenantPickerItem(Guid TenantId, string TenantSlug);

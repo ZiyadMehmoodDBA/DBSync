@@ -1,6 +1,7 @@
 using System.Text.Json.Serialization;
 using FluentValidation;
 using FluentValidation.AspNetCore;
+using Microsoft.EntityFrameworkCore;
 using MSOSync.Api.Authorization;
 using MSOSync.Api.Controllers.Auth;
 using MSOSync.Api.Exceptions;
@@ -9,6 +10,7 @@ using MSOSync.App.Export;
 using MSOSync.App.Health;
 using MSOSync.App.Workers;
 using MSOSync.Common.Health;
+using MSOSync.Common.Tenancy;
 using MSOSync.Common.Workers;
 using MSOSync.Batch;
 using MSOSync.Common;
@@ -20,6 +22,7 @@ using MSOSync.Persistence;
 using MSOSync.Routing;
 using MSOSync.Scheduler;
 using MSOSync.Security;
+using MSOSync.Security.Tenancy;
 using MSOSync.Topology;
 using MSOSync.Transport;
 using MSOSync.Plugin.Hosting;
@@ -145,6 +148,14 @@ try
     builder.Services.AddHostedService(sp =>
         sp.GetRequiredService<MSOSync.Plugin.Hosting.PluginHost>());
 
+    // Tenancy
+    builder.Services.AddScoped<TenantContextHolder>();
+    builder.Services.AddScoped<ITenantResolver,        TenantResolver>();
+    builder.Services.AddScoped<ITenantAccessValidator, TenantAccessValidator>();
+    builder.Services.AddScoped<ITenantStore,           DbContextTenantStore>();
+    builder.Services.AddScoped<INodeTenantLookup,      DbContextNodeTenantLookup>();
+    builder.Services.AddSingleton<ICurrentTenantAccessor, HttpContextCurrentTenantAccessor>();
+
     var app = builder.Build();
 
     app.UseExceptionHandler();        // must be first to catch exceptions
@@ -160,6 +171,7 @@ try
 
     app.UseRateLimiter();
     app.UseAuthentication();
+    app.UseMiddleware<TenantResolverMiddleware>();
     app.UseNodeTokenAuth();
     app.UseAuthorization();
 
@@ -186,6 +198,21 @@ try
 
     // SPA fallback — must be last: serves index.html for all non-API routes
     app.MapFallbackToFile("index.html");
+
+    // CE guard: verify SystemTenant exists — fatal if missing
+    using (var scope = app.Services.CreateScope())
+    {
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var systemTenantExists = await db.Tenants
+            .AnyAsync(t => t.TenantId == WellKnownTenantIds.SystemTenant);
+
+        if (!systemTenantExists)
+        {
+            var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+            logger.LogCritical("SystemTenant not found in database. Run migrations before starting the application.");
+            throw new InvalidOperationException("SystemTenant missing — database migration required");
+        }
+    }
 
     Log.Information("MSOSync starting on {Env}", app.Environment.EnvironmentName);
     await app.RunAsync();

@@ -32,7 +32,7 @@ public sealed class JwtService
         _accessTokenLifetime = TimeSpan.FromMinutes(expiryMinutes);
     }
 
-    public string CreateAccessToken(long userId, string username, IEnumerable<string> roles)
+    public string CreateAccessToken(long userId, string username, IEnumerable<string> roles, Guid? tenantId = null)
     {
         var now    = DateTime.UtcNow;
         var claims = new List<Claim>
@@ -45,6 +45,10 @@ public sealed class JwtService
                 DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(),
                 ClaimValueTypes.Integer64)
         };
+
+        if (tenantId.HasValue)
+            claims.Add(new Claim("tenantId", tenantId.Value.ToString()));
+
         claims.AddRange(roles.Select(r => new Claim(ClaimTypes.Role, r)));
 
         var token = new JwtSecurityToken(
