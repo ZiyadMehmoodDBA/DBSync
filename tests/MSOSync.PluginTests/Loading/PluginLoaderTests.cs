@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
 using MSOSync.Plugin.Abstractions;
+using MSOSync.Plugin.Lifecycle;
 using MSOSync.Plugin.Loading;
 using MSOSync.Plugin.Models;
 using MSOSync.Plugin.Registry;
@@ -53,10 +54,16 @@ public sealed class PluginLoaderTests : IDisposable
         scope.Setup(s => s.ServiceProvider).Returns(provider.Object);
         scopeFactory.Setup(f => f.CreateScope()).Returns(scope.Object);
 
+        var compatValidatorMock = new Mock<ISdkCompatibilityValidator>();
+        compatValidatorMock
+            .Setup(v => v.Validate(It.IsAny<PluginManifest>(), out It.Ref<string?>.IsAny))
+            .Returns(CompatibilityResult.Compatible);
+
         var loader = new PluginLoader(
             new PluginRegistry(),
             scopeFactory.Object,
             Options.Create(new PluginHostOptions { PluginsPath = _pluginsRoot, HostVersion = "14.0.0" }),
+            compatValidatorMock.Object,
             NullLogger<PluginLoader>.Instance);
         _loaders.Add(loader);
         return loader;

@@ -1,18 +1,29 @@
-export type PluginStatus = 'Discovered' | 'Validated' | 'Loaded' | 'Disabled' | 'Failed';
+export type PluginStatus =
+  | 'Loaded'
+  | 'Initialized'
+  | 'Running'
+  | 'Stopped'
+  | 'Disabled'
+  | 'Failed';
 
 export interface PluginDto {
-  pluginId:          string;
-  name:              string;
-  version:           string;
-  status:            PluginStatus;
-  loadDurationMs:    number;
-  loadedAt:          string;
-  lastError:         string | null;
-  failureStage:      string | null;
-  hostCompatibility: string;
-  capabilities:      string[];
-  permissions:       string[];
-  dependencies:      string[];
+  pluginId:              string;
+  name:                  string;
+  version:               string;
+  status:                PluginStatus;
+  loadDurationMs:        number;
+  initializeDurationMs?: number;
+  startDurationMs?:      number;
+  totalDurationMs?:      number;
+  loadedAt:              string;
+  initializedAt?:        string;
+  startedAt?:            string;
+  lastError:             string | null;
+  failureStage:          string | null;
+  hostCompatibility:     string;
+  capabilities:          string[];
+  permissions:           string[];
+  dependencies:          string[];
 }
 
 export interface PluginSummaryDto {

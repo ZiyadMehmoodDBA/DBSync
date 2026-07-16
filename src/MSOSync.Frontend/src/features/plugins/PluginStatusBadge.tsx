@@ -2,19 +2,23 @@ import { StatusBadge } from '../../shared/components/data-display/StatusBadge';
 import type { StatusVariant } from '../../shared/utils/status';
 import type { PluginStatus } from './types';
 
-function pluginStatusVariant(status: PluginStatus): StatusVariant {
-  switch (status) {
-    case 'Loaded':     return 'success';
-    case 'Failed':     return 'danger';
-    case 'Disabled':   return 'neutral';
-    case 'Validated':  return 'warning';
-    case 'Discovered': return 'warning';
-    default:           return 'neutral';
-  }
+interface StatusConfig {
+  variant: StatusVariant;
+  icon:    string;
 }
+
+const STATUS_CONFIG: Record<PluginStatus, StatusConfig> = {
+  Running:     { variant: 'success', icon: '✓' },
+  Initialized: { variant: 'warning', icon: '⏳' },
+  Loaded:      { variant: 'warning', icon: '⏳' },
+  Stopped:     { variant: 'neutral', icon: '■' },
+  Failed:      { variant: 'danger',  icon: '✕' },
+  Disabled:    { variant: 'neutral', icon: '○' },
+};
 
 interface Props { status: PluginStatus }
 
 export function PluginStatusBadge({ status }: Props) {
-  return <StatusBadge status={status} variant={pluginStatusVariant(status)} />;
+  const { variant, icon } = STATUS_CONFIG[status] ?? { variant: 'neutral', icon: '' };
+  return <StatusBadge status={`${icon} ${status}`} variant={variant} />;
 }

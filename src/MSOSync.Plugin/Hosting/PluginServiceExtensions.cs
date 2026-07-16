@@ -7,6 +7,7 @@ public static class PluginServiceExtensions
 {
     public static IServiceCollection AddPluginCoreInternals(this IServiceCollection services)
     {
+        services.AddSingleton<ISdkCompatibilityValidator, SdkCompatibilityValidator>();
         services.AddSingleton<PluginActivator>();
         services.AddSingleton<PluginLifecycleManager>();
         services.AddSingleton<PluginRuntimeManager>();

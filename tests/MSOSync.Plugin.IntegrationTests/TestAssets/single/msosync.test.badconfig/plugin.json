@@ -1,0 +1,18 @@
+{
+  "id": "msosync.test.badconfig",
+  "name": "MSOSync Bad Config Plugin",
+  "version": "1.0.0",
+  "manifestVersion": 1,
+  "sdkVersion": "1.0",
+  "apiVersion": "1",
+  "startupOrder": 1000,
+  "minHostVersion": "1.0.0",
+  "maxHostVersion": "99.9.999",
+  "entryAssembly": "MSOSync.TestPlugin.dll",
+  "entryType": "MSOSync.TestPlugin.TestPlugin",
+  "author": "MSOSync",
+  "description": "Plugin with malformed config file.",
+  "permissions": [],
+  "dependencies": [],
+  "capabilities": []
+}

@@ -5,11 +5,11 @@ namespace MSOSync.TestPlugin;
 
 public sealed class TestPlugin : PluginBase
 {
-    // Static flags — reset between tests via Reset()
-    public static bool InitializeCalled { get; private set; }
-    public static bool StartCalled      { get; private set; }
-    public static bool StopCalled       { get; private set; }
-    public static bool DisposeCalled    { get; private set; }
+    public static bool    InitializeCalled { get; private set; }
+    public static bool    StartCalled      { get; private set; }
+    public static bool    StopCalled       { get; private set; }
+    public static bool    DisposeCalled    { get; private set; }
+    public static string? CapturedTimeout  { get; private set; }
 
     public static void Reset()
     {
@@ -17,11 +17,13 @@ public sealed class TestPlugin : PluginBase
         StartCalled      = false;
         StopCalled       = false;
         DisposeCalled    = false;
+        CapturedTimeout  = null;
     }
 
     public override Task InitializeAsync(IPluginContext ctx, CancellationToken ct)
     {
         InitializeCalled = true;
+        CapturedTimeout  = ctx.Configuration.GetValue<string>("timeout");
         return base.InitializeAsync(ctx, ct);
     }
 

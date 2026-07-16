@@ -110,6 +110,8 @@ internal sealed class PluginActivator(
     {
         runtime.Descriptor.Status       = PluginStatus.Failed;
         runtime.Descriptor.ErrorMessage = ex.Message;
+        runtime.State                   = PluginRuntimeState.Failed;
+        runtime.LastException           = ex;
     }
 
     private static PluginMetadata BuildMetadata(PluginManifest manifest)

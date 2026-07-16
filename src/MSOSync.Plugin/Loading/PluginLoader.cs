@@ -5,8 +5,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MSOSync.Plugin.Abstractions;
+using MSOSync.Plugin.Lifecycle;
 using MSOSync.Plugin.Models;
 using MSOSync.Plugin.Registry;
+using MSOSync.Plugin.Runtime;
 
 namespace MSOSync.Plugin.Loading;
 
@@ -14,6 +16,7 @@ public sealed class PluginLoader(
     PluginRegistry               registry,
     IServiceScopeFactory         scopeFactory,
     IOptions<PluginHostOptions>  options,
+    ISdkCompatibilityValidator   compatibilityValidator,
     ILogger<PluginLoader>        logger) : IPluginLoader
 {
     private static readonly JsonSerializerOptions JsonOpts =
@@ -96,7 +99,20 @@ public sealed class PluginLoader(
 
         seenIds.Add(manifest!.Id);
 
-        // Stage 4: FILTER
+        // Stage 4: SDK COMPATIBILITY
+        var compatResult = compatibilityValidator.Validate(manifest!, out var compatMsg);
+        if (compatResult == CompatibilityResult.Incompatible)
+        {
+            var err = compatMsg ?? $"SDK version {manifest!.SdkVersion} is incompatible";
+            RegisterFailed(manifest!.Id, dir, "SdkCompatibility", err, TimeSpan.Zero, now, manifest, "Incompatible");
+            await PersistAsync(store, manifest.Id, manifest.Name, manifest.Version, PluginStatus.Failed, err, null, ct);
+            return new PluginLoadResult(manifest.Id, PluginLoadOutcome.Failed, "SdkCompatibility", err);
+        }
+        // CompatibilityResult.Warning: log but continue
+        if (compatResult == CompatibilityResult.Warning && compatMsg is not null)
+            logger.LogWarning("Plugin {Id} SDK compatibility warning: {Msg}", manifest!.Id, compatMsg);
+
+        // Stage 5: FILTER (disabled-state check)
         if (storeRecords.TryGetValue(manifest.Id, out var rec) && !rec.Enabled)
         {
             RegisterDescriptor(BuildDescriptor(manifest, dir, PluginStatus.Disabled, null, null, TimeSpan.Zero, now));
@@ -107,7 +123,7 @@ public sealed class PluginLoader(
             return new PluginLoadResult(manifest.Id, PluginLoadOutcome.Disabled, null, null);
         }
 
-        // Stage 5: HOST COMPATIBILITY
+        // Stage 6: HOST COMPATIBILITY
         var hostVer = options.Value.HostVersion;
         if (!Version.TryParse(hostVer, out var hv) ||
             !Version.TryParse(manifest.MinHostVersion, out var minV) ||
@@ -120,7 +136,7 @@ public sealed class PluginLoader(
             return new PluginLoadResult(manifest.Id, PluginLoadOutcome.Failed, "HostCompatibility", err);
         }
 
-        // Stage 6: DEPENDENCY RESOLUTION
+        // Stage 7: DEPENDENCY RESOLUTION
         var depError = PluginDependencyResolver.Resolve(manifest, registry);
         if (depError != null)
         {
@@ -129,7 +145,7 @@ public sealed class PluginLoader(
             return new PluginLoadResult(manifest.Id, PluginLoadOutcome.Failed, "DependencyResolution", depError);
         }
 
-        // Stage 7: LOAD
+        // Stage 8: LOAD
         var sw = System.Diagnostics.Stopwatch.StartNew();
         AssemblyLoadContext? ctx = null;
         System.Reflection.Assembly? assembly;
@@ -150,7 +166,7 @@ public sealed class PluginLoader(
             return new PluginLoadResult(manifest.Id, PluginLoadOutcome.Failed, "AssemblyLoad", ex.Message);
         }
 
-        // Stage 8: VERIFY ENTRY TYPE
+        // Stage 9: VERIFY ENTRY TYPE
         var entryType = assembly.GetType(manifest.EntryType);
         sw.Stop();
         if (entryType == null)
@@ -163,7 +179,7 @@ public sealed class PluginLoader(
             return new PluginLoadResult(manifest.Id, PluginLoadOutcome.Failed, "EntryTypeVerification", err);
         }
 
-        // Stage 9: METADATA REGISTRATION
+        // Stage 10: METADATA REGISTRATION
         var json2      = await File.ReadAllTextAsync(jsonPath, ct);
         var hash       = ComputeHash(json2);
         var descriptor = BuildDescriptor(manifest, dir, PluginStatus.Loaded, null, null, sw.Elapsed, now);
@@ -200,7 +216,20 @@ public sealed class PluginLoader(
                 LoadedAt = now, HostCompatibility = hostCompat,
             };
 
-        RegisterDescriptor(descriptor);
+        // Do not overwrite a runtime that is already registered for this id (e.g. duplicate plugin id case)
+        var existingRuntime = registry.GetRuntime(id);
+        if (existingRuntime is null)
+        {
+            RegisterDescriptor(descriptor);
+
+            // Set internal runtime state to Failed so GetRuntime(id).State == Failed
+            var runtime = registry.GetRuntime(id);
+            if (runtime is not null)
+            {
+                runtime.State         = PluginRuntimeState.Failed;
+                runtime.LastException = new Exception(error);
+            }
+        }
 
         logger.Log(LogLevel.Warning, PluginLogEvents.PluginFailed,
             "Plugin {Id} failed at stage {Stage}: {Error}", id, stage, error);
