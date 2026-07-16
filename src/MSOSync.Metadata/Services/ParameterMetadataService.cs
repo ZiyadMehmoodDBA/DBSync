@@ -53,7 +53,8 @@ public sealed class ParameterMetadataService(
 
     public async Task UpdateParameterAsync(string name, string value, CancellationToken ct = default)
     {
-        var param = await db.Parameters.FindAsync([name], ct)
+        var param = await db.Parameters
+            .FirstOrDefaultAsync(p => p.ParameterName == name && p.TenantId == null, ct)
             ?? throw new NotFoundException($"Parameter '{name}' not found", "PARAMETER_NOT_FOUND");
 
         var descriptor = ParameterDescriptor.Catalog.GetValueOrDefault(name, ParameterDescriptor.Unknown(name));

@@ -1,12 +1,22 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
+using MSOSync.Common.Tenancy;
 using MSOSync.Persistence.Entities;
+using MSOSync.Persistence.Tenancy;
 
 namespace MSOSync.Persistence;
 
 public class AppDbContext : DbContext
 {
-    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
+    private readonly ICurrentTenantAccessor? _tenantAccessor;
+
+    public AppDbContext(
+        DbContextOptions<AppDbContext> options,
+        ICurrentTenantAccessor?        tenantAccessor = null)
+        : base(options)
+    {
+        _tenantAccessor = tenantAccessor;
+    }
 
     public DbSet<SyncNode> Nodes => Set<SyncNode>();
     public DbSet<SyncNodeLifecycleHistory> NodeLifecycleHistories => Set<SyncNodeLifecycleHistory>();
@@ -58,6 +68,9 @@ public class AppDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
+
+        if (_tenantAccessor is not null)
+            modelBuilder.ApplyTenantFilters(_tenantAccessor);
     }
 
     /// <summary>

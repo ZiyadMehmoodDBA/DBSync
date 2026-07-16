@@ -12,7 +12,13 @@ public sealed class SyncParameterConfiguration : IEntityTypeConfiguration<SyncPa
     public void Configure(EntityTypeBuilder<SyncParameter> builder)
     {
         builder.ToTable("sync_parameter", Schema);
-        builder.HasKey(e => e.ParameterName);
+        // Surrogate PK with identity — enables (ParameterName, TenantId) unique index
+        // so tenant overrides can coexist alongside platform defaults (TenantId=null).
+        // M031 migration (Task 7) adds TenantId column + unique index to the real DB.
+        builder.HasKey(e => e.Id);
+        builder.Property(e => e.Id)
+            .HasColumnName("id")
+            .UseIdentityColumn();
 
         builder.Property(e => e.ParameterName)
             .HasColumnName("parameter_name")
@@ -23,6 +29,16 @@ public sealed class SyncParameterConfiguration : IEntityTypeConfiguration<SyncPa
         builder.Property(e => e.ParameterValue)
             .HasColumnName("parameter_value")
             .HasColumnType("nvarchar(max)");
+
+        // TenantId: null = platform default; non-null = tenant override.
+        // Column added by M031 migration (Task 7).
+        builder.Property(e => e.TenantId)
+            .HasColumnName("tenant_id");
+
+        // Unique index: one record per (name, tenant) pair.
+        builder.HasIndex(e => new { e.ParameterName, e.TenantId })
+            .IsUnique()
+            .HasDatabaseName("UX_sync_parameter_name_tenant");
 
         // ── M025: metadata columns ─────────────────────────────────────────────
 

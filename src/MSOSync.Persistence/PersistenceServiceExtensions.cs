@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using MSOSync.Persistence.Lock;
 using MSOSync.Persistence.Queries;
+using MSOSync.Persistence.Tenancy;
 
 namespace MSOSync.Persistence;
 
@@ -31,6 +32,10 @@ public static class PersistenceServiceExtensions
         services.AddScoped<GetUserByUsernameQuery>();
 
         services.AddScoped<IDatabaseLockProvider, DatabaseLockProvider>();
+
+        // Tenancy repositories (internal types — registered here to stay within the assembly)
+        services.AddScoped<IHybridLookupService, HybridLookupService>();
+        services.AddScoped(typeof(IPlatformRepository<>), typeof(PlatformRepository<>));
 
         services.AddHealthChecks()
             .AddCheck<PersistenceHealthCheck>("database");

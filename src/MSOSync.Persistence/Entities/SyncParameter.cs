@@ -5,6 +5,10 @@ namespace MSOSync.Persistence.Entities;
 [HybridEntity]
 public sealed class SyncParameter : IHybridEntity
 {
+    // Surrogate PK — allows composite unique index (ParameterName, TenantId)
+    // so tenant overrides can coexist alongside platform defaults (TenantId=null).
+    // M031 migration adds TenantId column and recreates the unique index.
+    public long    Id              { get; set; }
     public string  ParameterName   { get; set; } = null!;
     public string? ParameterValue  { get; set; }
 
