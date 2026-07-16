@@ -103,7 +103,6 @@ public sealed class PluginsFixture : WebApplicationFactory<Program>, IAsyncLifet
             sp.GetRequiredService<PluginRegistry>());
         testBuilder.Services.AddScoped<IPluginStore, PluginStore>();
         testBuilder.Services.AddSingleton<IPluginLoader, PluginLoader>();
-        testBuilder.Services.AddSingleton<ISdkCompatibilityValidator, SdkCompatibilityValidator>();
         testBuilder.Services.AddPluginCoreInternals();
         testBuilder.Services.AddSingleton<PluginHost>();
         testBuilder.Services.AddSingleton<IPluginHost>(sp =>

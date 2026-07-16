@@ -12,10 +12,10 @@ internal sealed class PluginRuntimeManager(
     PluginLifecycleManager      lifecycle,
     IOptions<PluginHostOptions> options) : IPluginRuntimeManager
 {
-    public long LoadElapsedMs       { get; private set; }
-    public long InitializeElapsedMs { get; private set; }
-    public long StartElapsedMs      { get; private set; }
-    public long TotalElapsedMs => LoadElapsedMs + InitializeElapsedMs + StartElapsedMs;
+    public long LoadAndActivateElapsedMs { get; private set; }
+    public long InitializeElapsedMs      { get; private set; }
+    public long StartElapsedMs           { get; private set; }
+    public long TotalElapsedMs => LoadAndActivateElapsedMs + InitializeElapsedMs + StartElapsedMs;
 
     public async Task LoadAndActivateAsync(CancellationToken ct)
     {
@@ -27,7 +27,7 @@ internal sealed class PluginRuntimeManager(
             await activator.ActivateAsync(r.PluginId, ct);
         }
 
-        LoadElapsedMs = sw.ElapsedMilliseconds;
+        LoadAndActivateElapsedMs = sw.ElapsedMilliseconds;
     }
 
     public async Task InitializeAsync(CancellationToken ct)

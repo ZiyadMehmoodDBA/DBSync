@@ -138,8 +138,6 @@ try
         MSOSync.Persistence.Stores.PluginStore>();
     builder.Services.AddSingleton<MSOSync.Plugin.Abstractions.IPluginLoader,
         MSOSync.Plugin.Loading.PluginLoader>();
-    builder.Services.AddSingleton<MSOSync.Plugin.Lifecycle.ISdkCompatibilityValidator,
-        MSOSync.Plugin.Lifecycle.SdkCompatibilityValidator>();
     builder.Services.AddPluginCoreInternals();
     builder.Services.AddSingleton<MSOSync.Plugin.Hosting.PluginHost>();
     builder.Services.AddSingleton<MSOSync.Plugin.Abstractions.IPluginHost>(sp =>

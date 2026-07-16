@@ -176,7 +176,7 @@ internal sealed class PluginLifecycleManager(
                 rt.LastStateChangeUtc = rt.StoppedAt.Value;
                 rt.State              = PluginRuntimeState.Stopped;
                 rt.Descriptor.Status  = PluginStatus.Stopped;
-                logger.Log(LogLevel.Warning, PluginLogEvents.PluginFailed,
+                logger.Log(LogLevel.Warning, PluginLogEvents.PluginStopped,
                     ex, "Plugin {PluginId} StopAsync threw; treating as stopped", rt.Descriptor.PluginId);
             }
         }
@@ -203,6 +203,13 @@ internal sealed class PluginLifecycleManager(
             }
             finally
             {
+                // Always release per-plugin sub-container regardless of DisposeAsync outcome
+                if (rt.PluginServices is IAsyncDisposable asyncSp)
+                    await asyncSp.DisposeAsync();
+                else if (rt.PluginServices is IDisposable syncSp)
+                    syncSp.Dispose();
+                rt.PluginServices = null;
+
                 sw.Stop();
                 rt.DisposeDuration    = sw.Elapsed;
                 rt.DisposedAt         = DateTime.UtcNow;

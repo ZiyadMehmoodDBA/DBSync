@@ -24,7 +24,7 @@ public sealed class PluginHostTests
             rmMock.Setup(rm => rm.StartAsync(It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
             rmMock.Setup(rm => rm.StopAsync(It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
             rmMock.Setup(rm => rm.DisposeAsync(It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
-            rmMock.Setup(rm => rm.LoadElapsedMs).Returns(0);
+            rmMock.Setup(rm => rm.LoadAndActivateElapsedMs).Returns(0);
             rmMock.Setup(rm => rm.InitializeElapsedMs).Returns(0);
             rmMock.Setup(rm => rm.StartElapsedMs).Returns(0);
             runtimeManager = rmMock.Object;
@@ -96,7 +96,7 @@ public sealed class PluginHostTests
         rmMock.Setup(rm => rm.StartAsync(It.IsAny<CancellationToken>()))
               .Callback(() => callOrder.Add("Start"))
               .Returns(Task.CompletedTask);
-        rmMock.Setup(rm => rm.LoadElapsedMs).Returns(0);
+        rmMock.Setup(rm => rm.LoadAndActivateElapsedMs).Returns(0);
         rmMock.Setup(rm => rm.InitializeElapsedMs).Returns(0);
         rmMock.Setup(rm => rm.StartElapsedMs).Returns(0);
 

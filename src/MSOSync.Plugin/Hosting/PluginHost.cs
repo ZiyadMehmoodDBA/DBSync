@@ -47,9 +47,9 @@ public sealed class PluginHost(
 
         logger.Log(LogLevel.Information, PluginLogEvents.PluginStartupSummary,
             "Plugin host started. Discovered={D} Running={R} Initialized={I} Failed={F} Disabled={Dis} " +
-            "LoadElapsed={LE}ms InitializeElapsed={IE}ms StartElapsed={SE}ms TotalElapsed={TE}ms",
+            "LoadAndActivateElapsed={LE}ms InitializeElapsed={IE}ms StartElapsed={SE}ms TotalElapsed={TE}ms",
             discovered, running, initialized, failed, disabled,
-            runtimeManager.LoadElapsedMs, runtimeManager.InitializeElapsedMs,
+            runtimeManager.LoadAndActivateElapsedMs, runtimeManager.InitializeElapsedMs,
             runtimeManager.StartElapsedMs, total.ElapsedMilliseconds);
     }
 
@@ -58,11 +58,19 @@ public sealed class PluginHost(
         try
         {
             await runtimeManager.StopAsync(cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Plugin stop phase encountered an error");
+        }
+
+        try
+        {
             await runtimeManager.DisposeAsync(cancellationToken);
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Error during plugin host shutdown");
+            logger.LogWarning(ex, "Plugin dispose phase encountered an error");
         }
 
         foreach (var ctx in loader.LoadContexts)

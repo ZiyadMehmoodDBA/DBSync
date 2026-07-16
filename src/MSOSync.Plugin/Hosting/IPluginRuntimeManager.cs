@@ -2,7 +2,7 @@ namespace MSOSync.Plugin.Hosting;
 
 public interface IPluginRuntimeManager
 {
-    long LoadElapsedMs       { get; }
+    long LoadAndActivateElapsedMs { get; }
     long InitializeElapsedMs { get; }
     long StartElapsedMs      { get; }
     long TotalElapsedMs      { get; }
