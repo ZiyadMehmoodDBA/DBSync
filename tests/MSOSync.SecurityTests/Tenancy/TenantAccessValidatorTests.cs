@@ -87,6 +87,20 @@ public sealed class TenantAccessValidatorTests
     }
 
     [Fact]
+    public async Task TenantDeleted_Throws409()
+    {
+        var tenantId = Guid.NewGuid();
+        var tenant   = ActiveTenant(tenantId);
+        tenant.Status = TenantStatus.Deleted;
+        var store = BuildStore(tenant, ActiveMembership(tenantId, 5L));
+        var sut   = new TenantAccessValidator(store);
+
+        var act = () => sut.ValidateAsync(tenantId, userId: 5, default);
+        await act.Should().ThrowAsync<TenantAccessException>()
+            .Where(e => e.StatusCode == 409);
+    }
+
+    [Fact]
     public async Task AllValid_ReturnsResult()
     {
         var tenantId = Guid.NewGuid();

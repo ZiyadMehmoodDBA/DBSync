@@ -11,13 +11,13 @@ public sealed class TenantAccessValidator(ITenantStore store) : ITenantAccessVal
             throw new TenantAccessException(403, "Tenant membership not found");
 
         if (membership.Status != MemberStatus.Active)
-            throw new TenantAccessException(403, "Tenant membership is suspended");
+            throw new TenantAccessException(403, $"Tenant membership status is {membership.Status}");
 
         var tenant = await store.FindTenantAsync(tenantId, ct);
         if (tenant is null)
             throw new TenantAccessException(403, "Tenant not found");
 
-        if (tenant.Status is TenantStatus.Provisioning or TenantStatus.Suspended)
+        if (tenant.Status != TenantStatus.Active)
             throw new TenantAccessException(409, $"Tenant is {tenant.Status.ToString().ToLower()}");
 
         return new TenantValidationResult(tenant.TenantId, tenant.Slug, tenant.Edition, membership.RoleId);

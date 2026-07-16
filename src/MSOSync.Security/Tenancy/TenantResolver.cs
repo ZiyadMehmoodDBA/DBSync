@@ -34,6 +34,7 @@ public sealed class TenantResolver(
             if (storedTenantId is null || storedTenantId.Value != tenantId)
                 throw new TenantAccessException(403, "Node token tenant mismatch");
 
+            // TODO(15A-7): load actual tenant slug/edition from node store during final wiring
             return new TenantContext(tenantId, tenantSlug: "", EditionType.Community, userId: null, roleId: null);
         }
 
