@@ -15,7 +15,7 @@ public sealed class BatchPurger(AppDbContext db, IClock clock, ILogger<BatchPurg
     public async Task<int> PurgeAsync(CancellationToken ct = default)
     {
         var param = await db.Parameters.AsNoTracking()
-            .FirstOrDefaultAsync(p => p.ParameterName == RetentionParam, ct);
+            .FirstOrDefaultAsync(p => p.ParameterName == RetentionParam && p.TenantId == null, ct);
         var days   = int.TryParse(param?.ParameterValue, out var d) ? d : DefaultRetentionDays;
         var cutoff = clock.UtcNow.AddDays(-days);
 

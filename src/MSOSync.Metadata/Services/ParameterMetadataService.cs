@@ -88,7 +88,7 @@ public sealed class ParameterMetadataService(
         string name, CancellationToken ct = default)
     {
         var history = await db.ParameterHists.AsNoTracking()
-            .Where(h => h.ParameterName == name)
+            .Where(h => h.ParameterName == name && h.TenantId == null)
             .OrderByDescending(h => h.ChangeTime)
             .ToListAsync(ct);
         return history.Select(MapHist).ToList().AsReadOnly();
@@ -98,6 +98,7 @@ public sealed class ParameterMetadataService(
         CancellationToken ct = default)
     {
         var history = await db.ParameterHists.AsNoTracking()
+            .Where(h => h.TenantId == null)
             .OrderByDescending(h => h.ChangeTime)
             .ToListAsync(ct);
         return history.Select(MapHist).ToList().AsReadOnly();

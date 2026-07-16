@@ -17,7 +17,9 @@ public sealed class SyncRoleConfiguration : IEntityTypeConfiguration<SyncRole>
         builder.Property(e => e.RoleId).HasColumnName("role_id").ValueGeneratedOnAdd();
         builder.Property(e => e.RoleName).HasColumnName("role_name").HasColumnType("varchar(50)").HasMaxLength(50).IsUnicode(false).IsRequired();
 
-        builder.HasIndex(e => e.RoleName).IsUnique().HasDatabaseName("UQ_sync_role_role_name");
+        builder.HasIndex(e => new { e.RoleName, e.TenantId })
+            .IsUnique()
+            .HasDatabaseName("UQ_sync_role_role_name_tenant_id");
 
         // M031 — hybrid tenancy (NULL = system/platform role)
         builder.Property(e => e.TenantId)

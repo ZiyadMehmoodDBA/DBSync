@@ -71,6 +71,8 @@ public class AppDbContext : DbContext
 
         if (_tenantAccessor is not null)
             modelBuilder.ApplyTenantFilters(_tenantAccessor);
+        // else: running without tenant filters (unit tests or background workers — intentional)
+        // If this is unexpected, check DI registration of ICurrentTenantAccessor.
     }
 
     /// <summary>
