@@ -10,12 +10,11 @@ namespace MSOSync.Plugin.IntegrationTests;
 public sealed class PluginConfigIntegrationTests
 {
     [Fact]
-    public async Task PluginConfig_AppsettingsWinsOverFile()
+    public async Task PluginConfig_AppsettingsPresent_PluginActivates()
     {
-        // plugin.config.json has timeout: "10"
-        // appsettings has Plugins:msosync.test:timeout = "99"
-        // The plugin should reach Running state — if config layer breaks activation, it won't.
-        // ALC isolation prevents direct static-field assertion; we verify through runtime state.
+        // plugin.config.json has timeout: "10"; appsettings has timeout = "99"
+        // ALC isolation prevents verifying which value wins inside the plugin;
+        // this test verifies the config layer does not break activation when both sources are present.
         var host = await PluginHostHarness.StartAsync(
             pluginsDir: PluginHostHarness.IsolatedPath("test-only"),
             extraConfig: new Dictionary<string, string?>
