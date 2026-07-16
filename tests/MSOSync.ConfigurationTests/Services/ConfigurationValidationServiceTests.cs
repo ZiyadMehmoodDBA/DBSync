@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using MSOSync.ConfigurationTests;
 using MSOSync.Metadata.Configuration;
 using MSOSync.Persistence.Entities;
+using MSOSync.Persistence.Models;
 using Xunit;
 
 namespace MSOSync.ConfigurationTests.Services;

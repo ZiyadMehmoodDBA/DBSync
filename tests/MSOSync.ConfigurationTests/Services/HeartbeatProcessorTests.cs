@@ -4,6 +4,7 @@ using MSOSync.ConfigurationTests;
 using MSOSync.Metadata.Configuration;
 using MSOSync.Metadata.Dtos;
 using MSOSync.Persistence.Entities;
+using MSOSync.Persistence.Models;
 using System.Text.Json;
 using Xunit;
 

@@ -1,4 +1,4 @@
-using MSOSync.Persistence.Entities;
+using MSOSync.Persistence.Models;
 
 namespace MSOSync.Metadata.Configuration;
 

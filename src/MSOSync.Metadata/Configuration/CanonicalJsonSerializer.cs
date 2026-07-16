@@ -1,7 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using MSOSync.Persistence.Entities;
+using MSOSync.Persistence.Models;
 
 namespace MSOSync.Metadata.Configuration;
 

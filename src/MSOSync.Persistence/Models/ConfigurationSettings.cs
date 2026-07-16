@@ -1,8 +1,5 @@
-using MSOSync.Common.Tenancy;
+namespace MSOSync.Persistence.Models;
 
-namespace MSOSync.Persistence.Entities;
-
-[GlobalEntity]
 public sealed record ConfigurationSettings
 {
     public int HeartbeatIntervalSeconds { get; init; }

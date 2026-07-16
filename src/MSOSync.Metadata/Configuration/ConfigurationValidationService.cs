@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using MSOSync.Persistence;
 using MSOSync.Persistence.Entities;
+using MSOSync.Persistence.Models;
 
 namespace MSOSync.Metadata.Configuration;
 

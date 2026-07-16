@@ -3,6 +3,7 @@ using MSOSync.ConfigurationTests;
 using MSOSync.Metadata.Audit;
 using MSOSync.Metadata.Configuration;
 using MSOSync.Persistence.Entities;
+using MSOSync.Persistence.Models;
 using Moq;
 using Xunit;
 

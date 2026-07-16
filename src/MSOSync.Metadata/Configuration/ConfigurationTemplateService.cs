@@ -4,6 +4,7 @@ using MSOSync.Common.Exceptions;
 using MSOSync.Metadata.Audit;
 using MSOSync.Persistence;
 using MSOSync.Persistence.Entities;
+using MSOSync.Persistence.Models;
 
 namespace MSOSync.Metadata.Configuration;
 

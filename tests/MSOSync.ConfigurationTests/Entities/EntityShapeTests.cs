@@ -1,5 +1,6 @@
 using FluentAssertions;
 using MSOSync.Persistence.Entities;
+using MSOSync.Persistence.Models;
 using Xunit;
 
 namespace MSOSync.ConfigurationTests.Entities;
