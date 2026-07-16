@@ -15,4 +15,5 @@ public sealed record PluginDescriptor
     public IReadOnlyList<string> Permissions   { get; init; } = [];
     public IReadOnlyList<string> Dependencies  { get; init; } = [];
     public PluginManifest? Manifest        { get; init; }
+    public int StartupOrder                { get; init; } = 1000;
 }

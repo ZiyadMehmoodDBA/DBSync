@@ -231,6 +231,7 @@ public sealed class PluginLoader(
             Permissions       = manifest.Permissions,
             Dependencies      = manifest.Dependencies,
             Manifest          = manifest,
+            StartupOrder      = manifest.StartupOrder,
         };
 
     private async Task PersistAsync(
