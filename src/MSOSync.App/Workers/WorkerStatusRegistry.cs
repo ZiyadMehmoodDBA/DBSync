@@ -1,12 +1,13 @@
 using System.Collections.Concurrent;
 using MediatR;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using MSOSync.App.SignalR;
 
 namespace MSOSync.App.Workers;
 
 public sealed class WorkerStatusRegistry(
-    IPublisher publisher,
+    IServiceScopeFactory scopeFactory,
     ILogger<WorkerStatusRegistry> logger) : IWorkerStatusRegistry
 {
     private sealed class WorkerEntry
@@ -261,11 +262,18 @@ public sealed class WorkerStatusRegistry(
         if (newState != prevState && _lastHealthState.TryUpdate(workerName, newState, prevState))
         {
             var evt = new WorkerStatusChangedEvent(workerName, prevState, newState, DateTime.UtcNow);
-            _ = publisher.Publish(evt).ContinueWith(
-                t => logger.LogError(t.Exception,
-                    "WorkerStatusRegistry failed to publish {EventType} for worker {WorkerName}",
-                    evt.GetType().Name, workerName),
-                TaskContinuationOptions.OnlyOnFaulted);
+            _ = Task.Run(async () =>
+            {
+                await using var scope = scopeFactory.CreateAsyncScope();
+                var pub = scope.ServiceProvider.GetRequiredService<IPublisher>();
+                try { await pub.Publish(evt); }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex,
+                        "WorkerStatusRegistry failed to publish {EventType} for worker {WorkerName}",
+                        evt.GetType().Name, workerName);
+                }
+            });
         }
     }
 }
