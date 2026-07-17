@@ -1,10 +1,16 @@
 -- ============================================================
--- M032: Domain TenantId Migration
+-- M032: Domain TenantId Migration — Part 1 (tables 1-11 + sync_configuration_template_version ADD COLUMN)
 -- 21 tables: NULL -> backfill -> NOT NULL -> composite index -> FK
 -- SystemTenant: 00000000-0000-0000-0000-000000000001
 -- Note: DECLARE variables do not cross GO batch boundaries in sqlcmd,
 --       so the SystemTenant GUID is inlined in each UPDATE.
+--
+-- IMPORTANT: Run apply-m032-continue.sql immediately after this script to complete the migration.
+-- SET QUOTED_IDENTIFIER ON is required for the filtered index on sync_configuration_template_version.
 -- ============================================================
+
+SET QUOTED_IDENTIFIER ON;
+GO
 
 -- ---------------------------------------------------------
 -- GROUP 1: Node Management (msosync)

@@ -1,7 +1,13 @@
 -- ============================================================
--- M032 (continuation): Domain TenantId Migration
--- Picks up after sync_configuration_template (tables 1-11 done)
--- Remaining: sync_configuration_template_version through sync_export_job
+-- M032: Domain TenantId Migration — Recovery/Continuation Script (tables 12-21)
+--
+-- IMPORTANT: This script assumes apply-m032.sql was already run and failed partway through.
+-- Specifically, it assumes sync_configuration_template_version.tenant_id column was already
+-- added (ADD COLUMN step in apply-m032.sql ran), but the table's INDEX and FK steps did not.
+-- Tables 12-21 are also handled here.
+--
+-- DO NOT run this on a fresh database — run apply-m032.sql first (which handles tables 1-11
+-- and the ADD COLUMN step for sync_configuration_template_version).
 -- ============================================================
 
 SET QUOTED_IDENTIFIER ON;
