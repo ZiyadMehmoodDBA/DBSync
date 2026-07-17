@@ -6,7 +6,6 @@ export function useNodes(pageNumber = 1, pageSize = 50) {
   return useQuery({
     queryKey: queryKeys.nodes(pageNumber, pageSize),
     queryFn: ({ signal }) => getNodes(pageNumber, pageSize, { signal }),
-    staleTime: 60_000,
-    refetchOnWindowFocus: false,
+    staleTime: 10_000,
   });
 }

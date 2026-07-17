@@ -1,5 +1,6 @@
 import { AgGridReact } from 'ag-grid-react';
 import type { ColDef } from 'ag-grid-community';
+import { themeQuartz } from 'ag-grid-community';
 import { ErrorState } from '../feedback/ErrorState';
 import { EmptyState } from '../feedback/EmptyState';
 import { Button } from '../../../components/ui/button';
@@ -39,8 +40,9 @@ export function ServerGrid<T extends object>({
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="ag-theme-quartz w-full" style={{ height }}>
+      <div className="w-full" style={{ height }}>
         <AgGridReact
+          theme={themeQuartz}
           rowData={rowData ?? []}
           columnDefs={columnDefs}
           loading={loading}

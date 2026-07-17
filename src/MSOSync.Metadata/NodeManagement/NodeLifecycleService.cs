@@ -105,11 +105,11 @@ public sealed class NodeLifecycleService(
             var existingNode = await db.Nodes.AsNoTracking()
                 .FirstOrDefaultAsync(n => n.ExternalId == dto.ExternalId, ct);
 
+            // Any re-registration of a known node (Active or otherwise) follows the Recovery
+            // path — requires admin re-approval and rotates the node token for security.
             var regType = existingNode is null
                 ? RegistrationType.New
-                : existingNode.LifecycleState == NodeLifecycleState.Active
-                    ? RegistrationType.ReRegistration
-                    : RegistrationType.Recovery;
+                : RegistrationType.Recovery;
 
             // Validate and serialize metadata
             string? metadataJson = null;
@@ -261,6 +261,11 @@ public sealed class NodeLifecycleService(
         catch (DbUpdateConcurrencyException)
         {
             throw new ConcurrencyException("Registration was modified concurrently.");
+        }
+        catch (DbUpdateException)
+        {
+            // Concurrent approval created the same node (PK violation) — treat as conflict
+            throw new ConcurrencyException("Registration was already processed by a concurrent request.");
         }
 
         var detail = bulk

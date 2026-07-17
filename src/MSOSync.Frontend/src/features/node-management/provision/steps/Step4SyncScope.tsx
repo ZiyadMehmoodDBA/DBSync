@@ -3,10 +3,10 @@ import { useId } from 'react';
 import { useChannels } from '../../../channels/hooks';
 import { useTriggers } from '../../../triggers/hooks';
 import { useRouters }  from '../../../routers/hooks';
-import { Button }      from '../../../../../components/ui/button';
+import { Button }      from '../../../../components/ui/button';
 import { Link }        from 'react-router-dom';
 import type { ProvisionWizardDraft } from '../../types/provision';
-import type { SyncDirection, InitialLoadPolicy } from '../../../../../shared/types';
+import type { SyncDirection, InitialLoadPolicy } from '../../../../shared/types';
 
 interface Props {
   draft:    ProvisionWizardDraft;
