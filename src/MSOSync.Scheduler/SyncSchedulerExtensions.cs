@@ -9,8 +9,10 @@ public static class SyncSchedulerExtensions
 {
     public static IServiceCollection AddSyncScheduler(
         this IServiceCollection services,
-        IConfiguration _)
+        IConfiguration config)
     {
+        services.Configure<HeartbeatOptions>(config.GetSection(HeartbeatOptions.Section));
+        services.Configure<SyncOptions>(config.GetSection(SyncOptions.Section));
         services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<SchedulerRecovery>());
         services.AddHostedService<SchedulerRecovery>();
         services.AddHostedService<SyncJob>();
