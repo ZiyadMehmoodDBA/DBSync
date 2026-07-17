@@ -28,5 +28,13 @@ public sealed class SyncNodeConnectivityHistoryConfiguration : IEntityTypeConfig
         builder.HasIndex(e => new { e.NodeId, e.OccurredAt })
             .IsDescending(false, true).HasDatabaseName("IX_node_connectivity_history_node_time");
         builder.HasIndex(e => e.OccurredAt).HasDatabaseName("IX_node_connectivity_history_time");
+
+        builder.Property(e => e.TenantId)
+            .HasColumnName("tenant_id")
+            .HasColumnType("uniqueidentifier")
+            .IsRequired();
+
+        builder.HasIndex(e => new { e.TenantId, e.NodeId })
+            .HasDatabaseName("IX_sync_node_connectivity_history_TenantId_NodeId");
     }
 }

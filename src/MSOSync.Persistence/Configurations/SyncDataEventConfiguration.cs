@@ -38,5 +38,13 @@ public sealed class SyncDataEventConfiguration : IEntityTypeConfiguration<SyncDa
         builder.HasIndex(e => new { e.ChannelId, e.CreateTime })
             .IsDescending(false, true)
             .HasDatabaseName("IX_sync_data_event_channel_time");
+
+        builder.Property(e => e.TenantId)
+            .HasColumnName("tenant_id")
+            .HasColumnType("uniqueidentifier")
+            .IsRequired();
+
+        builder.HasIndex(e => new { e.TenantId, e.CreateTime })
+            .HasDatabaseName("IX_sync_data_event_TenantId_CreateTime");
     }
 }

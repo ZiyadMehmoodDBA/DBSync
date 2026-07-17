@@ -16,5 +16,13 @@ public sealed class SyncDataEventBatchConfiguration : IEntityTypeConfiguration<S
 
         builder.Property(e => e.EventId).HasColumnName("event_id").ValueGeneratedNever();
         builder.Property(e => e.BatchId).HasColumnName("batch_id").ValueGeneratedNever();
+
+        builder.Property(e => e.TenantId)
+            .HasColumnName("tenant_id")
+            .HasColumnType("uniqueidentifier")
+            .IsRequired();
+
+        builder.HasIndex(e => new { e.TenantId, e.BatchId })
+            .HasDatabaseName("IX_sync_data_event_batch_TenantId_BatchId");
     }
 }

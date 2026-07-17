@@ -28,5 +28,13 @@ public sealed class SyncNodeConfigurationOverrideConfiguration
 
         builder.HasIndex(e => new { e.NodeId, e.SettingKey }).IsUnique()
             .HasDatabaseName("UX_node_override_key");
+
+        builder.Property(e => e.TenantId)
+            .HasColumnName("tenant_id")
+            .HasColumnType("uniqueidentifier")
+            .IsRequired();
+
+        builder.HasIndex(e => new { e.TenantId, e.NodeId })
+            .HasDatabaseName("IX_sync_node_configuration_override_TenantId_NodeId");
     }
 }

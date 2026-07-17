@@ -42,5 +42,13 @@ public sealed class SyncUserNotificationConfiguration : IEntityTypeConfiguration
 
         b.HasIndex(x => new { x.UserId, x.IsRead, x.NotificationId })
             .HasDatabaseName("IX_sun_user_unread");
+
+        b.Property(x => x.TenantId)
+            .HasColumnName("tenant_id")
+            .HasColumnType("uniqueidentifier")
+            .IsRequired();
+
+        b.HasIndex(x => new { x.TenantId, x.UserId })
+            .HasDatabaseName("IX_sync_user_notification_TenantId_UserId");
     }
 }

@@ -77,5 +77,13 @@ public sealed class SyncNotificationConfiguration : IEntityTypeConfiguration<Syn
         b.HasIndex(x => new { x.DedupKey, x.CreatedAt })
             .HasDatabaseName("IX_sn_dedup")
             .HasFilter("[dedup_key] IS NOT NULL");
+
+        b.Property(x => x.TenantId)
+            .HasColumnName("tenant_id")
+            .HasColumnType("uniqueidentifier")
+            .IsRequired();
+
+        b.HasIndex(x => new { x.TenantId, x.CreatedAt })
+            .HasDatabaseName("IX_sync_notification_TenantId_CreatedAt");
     }
 }

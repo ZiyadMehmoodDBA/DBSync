@@ -45,5 +45,13 @@ public sealed class SyncIncomingBatchConfiguration : IEntityTypeConfiguration<Sy
             .HasForeignKey(e => e.SourceNodeId)
             .HasConstraintName("FK_sync_incoming_batch_source_node")
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Property(e => e.TenantId)
+            .HasColumnName("tenant_id")
+            .HasColumnType("uniqueidentifier")
+            .IsRequired();
+
+        builder.HasIndex(e => new { e.TenantId, e.Status })
+            .HasDatabaseName("IX_sync_incoming_batch_TenantId_Status");
     }
 }

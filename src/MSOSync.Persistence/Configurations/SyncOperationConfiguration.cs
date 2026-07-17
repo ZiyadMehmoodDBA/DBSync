@@ -107,5 +107,13 @@ public sealed class SyncOperationConfiguration : IEntityTypeConfiguration<SyncOp
 
         b.HasIndex(x => x.CorrelationId)
             .HasDatabaseName("IX_sync_operation_correlation_id");
+
+        b.Property(x => x.TenantId)
+            .HasColumnName("tenant_id")
+            .HasColumnType("uniqueidentifier")
+            .IsRequired();
+
+        b.HasIndex(x => new { x.TenantId, x.Status })
+            .HasDatabaseName("IX_sync_operation_TenantId_Status");
     }
 }

@@ -37,5 +37,13 @@ public sealed class SyncBatchErrorConfiguration : IEntityTypeConfiguration<SyncB
             .HasForeignKey(e => e.BatchId)
             .HasConstraintName("FK_sync_batch_error_batch_id")
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Property(e => e.TenantId)
+            .HasColumnName("tenant_id")
+            .HasColumnType("uniqueidentifier")
+            .IsRequired();
+
+        builder.HasIndex(e => new { e.TenantId, e.CreateTime })
+            .HasDatabaseName("IX_sync_batch_error_TenantId_CreateTime");
     }
 }

@@ -31,5 +31,13 @@ public sealed class SyncOutgoingBatchConfiguration : IEntityTypeConfiguration<Sy
         builder.HasIndex(e => new { e.NodeId, e.Status }).HasDatabaseName("IX_sync_outgoing_batch_node_status");
         builder.HasIndex(e => e.NextRetryTime).HasDatabaseName("IX_sync_outgoing_batch_next_retry");
         builder.HasIndex(e => e.ChannelId).HasDatabaseName("IX_sync_outgoing_batch_channel");
+
+        builder.Property(e => e.TenantId)
+            .HasColumnName("tenant_id")
+            .HasColumnType("uniqueidentifier")
+            .IsRequired();
+
+        builder.HasIndex(e => new { e.TenantId, e.Status })
+            .HasDatabaseName("IX_sync_outgoing_batch_TenantId_Status");
     }
 }

@@ -36,5 +36,13 @@ public sealed class SyncConfigurationTemplateVersionConfiguration
             .IsUnique()
             .HasFilter("[is_draft] = 1")
             .HasDatabaseName("UX_template_single_draft");
+
+        builder.Property(e => e.TenantId)
+            .HasColumnName("tenant_id")
+            .HasColumnType("uniqueidentifier")
+            .IsRequired();
+
+        builder.HasIndex(e => new { e.TenantId, e.TemplateId })
+            .HasDatabaseName("IX_sync_configuration_template_version_TenantId_TemplateId");
     }
 }

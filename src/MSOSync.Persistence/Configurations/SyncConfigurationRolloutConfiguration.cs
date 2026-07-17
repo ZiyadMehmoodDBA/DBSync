@@ -29,5 +29,13 @@ public sealed class SyncConfigurationRolloutConfiguration
         builder.Property(e => e.CompletedAt).HasColumnName("completed_at");
 
         builder.HasIndex(e => e.Status).HasDatabaseName("IX_rollout_status");
+
+        builder.Property(e => e.TenantId)
+            .HasColumnName("tenant_id")
+            .HasColumnType("uniqueidentifier")
+            .IsRequired();
+
+        builder.HasIndex(e => new { e.TenantId, e.Status })
+            .HasDatabaseName("IX_sync_configuration_rollout_TenantId_Status");
     }
 }

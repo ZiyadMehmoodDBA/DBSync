@@ -26,9 +26,19 @@ public sealed class SyncConfigurationTemplateConfiguration : IEntityTypeConfigur
         builder.Property(e => e.CreatedAt).HasColumnName("created_at").IsRequired();
         builder.Property(e => e.UpdatedAt).HasColumnName("updated_at").IsRequired();
 
-        builder.HasIndex(e => e.Name).IsUnique().HasDatabaseName("UX_sync_configuration_template_name");
+        builder.HasIndex(e => new { e.TenantId, e.Name })
+            .IsUnique()
+            .HasDatabaseName("UX_sync_configuration_template_tenant_id_name");
 
         builder.HasMany(e => e.Versions).WithOne(v => v.Template)
             .HasForeignKey(v => v.TemplateId).OnDelete(DeleteBehavior.Cascade);
+
+        builder.Property(e => e.TenantId)
+            .HasColumnName("tenant_id")
+            .HasColumnType("uniqueidentifier")
+            .IsRequired();
+
+        builder.HasIndex(e => e.TenantId)
+            .HasDatabaseName("IX_sync_configuration_template_TenantId");
     }
 }

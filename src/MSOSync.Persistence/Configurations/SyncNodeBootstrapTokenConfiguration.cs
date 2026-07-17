@@ -27,5 +27,13 @@ public sealed class SyncNodeBootstrapTokenConfiguration : IEntityTypeConfigurati
         builder.HasOne<SyncNode>().WithMany().HasForeignKey(e => e.NodeId)
             .HasConstraintName("FK_node_bootstrap_token_node").OnDelete(DeleteBehavior.NoAction);
         builder.HasIndex(e => e.NodeId).HasDatabaseName("IX_node_bootstrap_token_node");
+
+        builder.Property(e => e.TenantId)
+            .HasColumnName("tenant_id")
+            .HasColumnType("uniqueidentifier")
+            .IsRequired();
+
+        builder.HasIndex(e => new { e.TenantId, e.NodeId })
+            .HasDatabaseName("IX_sync_node_bootstrap_token_TenantId_NodeId");
     }
 }

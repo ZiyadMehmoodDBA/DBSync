@@ -29,5 +29,13 @@ public sealed class SyncExportJobConfiguration : IEntityTypeConfiguration<SyncEx
 
         b.HasIndex(x => new { x.Status, x.CreatedAt }).HasDatabaseName("IX_export_job_status_created");
         b.HasIndex(x => new { x.RequestedBy, x.CreatedAt }).HasDatabaseName("IX_export_job_requested_by");
+
+        b.Property(x => x.TenantId)
+            .HasColumnName("tenant_id")
+            .HasColumnType("uniqueidentifier")
+            .IsRequired();
+
+        b.HasIndex(x => new { x.TenantId, x.Status })
+            .HasDatabaseName("IX_sync_export_job_TenantId_Status");
     }
 }

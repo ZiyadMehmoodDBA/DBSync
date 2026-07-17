@@ -52,5 +52,13 @@ public sealed class SyncRegistrationRequestConfiguration
         builder.HasIndex(e => e.Status).HasDatabaseName("IX_reg_request_status");
         builder.HasIndex(e => new { e.NodeId, e.Status })
             .HasDatabaseName("IX_reg_request_nodeid_status");
+
+        builder.Property(e => e.TenantId)
+            .HasColumnName("tenant_id")
+            .HasColumnType("uniqueidentifier")
+            .IsRequired();
+
+        builder.HasIndex(e => new { e.TenantId, e.Status })
+            .HasDatabaseName("IX_sync_registration_request_TenantId_Status");
     }
 }

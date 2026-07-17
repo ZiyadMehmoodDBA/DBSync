@@ -23,5 +23,13 @@ public sealed class SyncRuntimeStatsConfiguration : IEntityTypeConfiguration<Syn
         builder.Property(e => e.GcTimeMs).HasColumnName("gc_time_ms");
         builder.Property(e => e.UptimeMs).HasColumnName("uptime_ms");
         builder.Property(e => e.CreateTime).HasColumnName("create_time").HasColumnType("datetime2(7)");
+
+        builder.Property(e => e.TenantId)
+            .HasColumnName("tenant_id")
+            .HasColumnType("uniqueidentifier")
+            .IsRequired();
+
+        builder.HasIndex(e => new { e.TenantId, e.CreateTime })
+            .HasDatabaseName("IX_sync_runtime_stats_TenantId_CreateTime");
     }
 }

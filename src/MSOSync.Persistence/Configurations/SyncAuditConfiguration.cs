@@ -25,5 +25,13 @@ public sealed class SyncAuditConfiguration : IEntityTypeConfiguration<SyncAudit>
         builder.HasIndex(e => e.Username).HasDatabaseName("IX_sync_audit_username");
         builder.HasIndex(e => new { e.CorrelationId, e.CreateTime })
             .HasDatabaseName("IX_sync_audit_correlation_create_time");
+
+        builder.Property(e => e.TenantId)
+            .HasColumnName("tenant_id")
+            .HasColumnType("uniqueidentifier")
+            .IsRequired();
+
+        builder.HasIndex(e => new { e.TenantId, e.CreateTime })
+            .HasDatabaseName("IX_sync_audit_TenantId_CreateTime");
     }
 }
