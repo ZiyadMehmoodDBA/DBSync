@@ -1,4 +1,4 @@
-using MediatR;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -14,11 +14,8 @@ public sealed class WorkerHealthCheckTests
     private static WorkerStatusRegistry CreateRegistryWithWorkers(
         Action<WorkerStatusRegistry> configure)
     {
-        var publisherMock = new Mock<IPublisher>();
-        publisherMock
-            .Setup(p => p.Publish(It.IsAny<INotification>(), It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
-        var registry = new WorkerStatusRegistry(publisherMock.Object, NullLogger<WorkerStatusRegistry>.Instance);
+        var scopeFactory = new Mock<IServiceScopeFactory>();
+        var registry = new WorkerStatusRegistry(scopeFactory.Object, NullLogger<WorkerStatusRegistry>.Instance);
         configure(registry);
         return registry;
     }
