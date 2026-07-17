@@ -74,7 +74,7 @@ Background workers (all `BackgroundService` / `IHostedService` implementations) 
 | SyncNodeConfigurationHistory | sync_node_configuration_history | `(TenantId, NodeId)` |
 | SyncConfigurationRollout | sync_configuration_rollout | `(TenantId, Status)` |
 
-> **Note:** `SyncConfigurationTemplate` is a root aggregate in this group; a single-column `TenantId` index suffices because templates are most often fetched by name within the current tenant (the existing unique index on `Name` still applies per-tenant after migration).
+> **Note:** `SyncConfigurationTemplate` likely has a `UNIQUE(Name)` constraint. After M032, this must become `UNIQUE(TenantId, Name)` so different tenants can share template names. The implementer must drop the existing `UQ_sync_configuration_template_name` index and create a composite unique index `UQ_sync_configuration_template_tenant_id_name` as part of M032.
 
 ### Group 4: Operations & Audit (3 entities)
 
@@ -92,6 +92,8 @@ Platform audit API → IPlatformRepository<SyncAudit> (all tenants, platform-adm
 ```
 
 No runtime switching — the call site determines which repository to inject.
+
+The platform-admin audit API is accessible only to users with the `Permissions.ManageSystem` role (or equivalent platform-admin role constant — verify against `SyncPermission` seed data). Inject `IPlatformRepository<SyncAudit>` in the service constructor for platform-admin endpoints; use `TenantRepository`-style access (the EF filter) for tenant-scoped endpoints.
 
 ### Group 5: User & Runtime (4 entities)
 
@@ -315,6 +317,24 @@ Run filtered query on each entity
 | **Task 4** | Platform service migration: inject `IPlatformRepository<SyncAudit>` into 4 audit services | `AuditQueryService.cs`, `CorrelationTimelineAssembler.cs`, `AuditSummaryService.cs`, `ExportAuditService.cs` |
 | **Task 5** | Tenant service verification: smoke-test `SyncUserRefreshToken`, `SyncRuntimeStats`, `SyncNotification` filter behavior | Integration smoke tests, no entity changes expected |
 | **Task 6** | Integration tests: isolation, platform repo, background worker, migration smoke, query plan | New test class in `MSOSync.IntegrationTests/MultiTenancy/` |
+
+---
+
+## Unique Constraint Migration Rule
+
+For every table in M032: before adding `tenant_id`, scan the existing EF configuration for `IsUnique()` indexes. Any `UNIQUE` constraint on a non-PK column that does NOT already include `TenantId` must be converted to a composite unique constraint that includes `TenantId`.
+
+**Pattern:**
+```sql
+-- Drop old global unique index
+DROP INDEX [UQ_<table>_<column>] ON [msosync].[<table>];
+
+-- Create tenant-scoped unique index
+CREATE UNIQUE NONCLUSTERED INDEX [UQ_<table>_tenant_id_<column>]
+    ON [msosync].[<table>] ([tenant_id], [<column>]);
+```
+
+Confirmed candidate: `SyncConfigurationTemplate.Name`. The implementer must audit all 21 tables for additional candidates. (15A already fixed `SyncRole.RoleName` → `(RoleName, TenantId)` in commit `ad2f920`.)
 
 ---
 
