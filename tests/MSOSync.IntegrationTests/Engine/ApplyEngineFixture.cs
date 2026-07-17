@@ -3,6 +3,7 @@
 // when Docker is not present (CI-less local dev environments).
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -39,7 +40,9 @@ public sealed class ApplyEngineFixture : IAsyncLifetime
 
         var services = new ServiceCollection();
         services.AddSingleton<IConfiguration>(config);
-        services.AddDbContext<AppDbContext>(o => o.UseSqlServer(ConnectionString));
+        services.AddDbContext<AppDbContext>(o => o
+            .UseSqlServer(ConnectionString)
+            .ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning)));
         services.AddSingleton<IClock, FixtureClock>();
         services.AddLogging(b => b.AddConsole().SetMinimumLevel(LogLevel.Warning));
         services.AddApplyEngine();
