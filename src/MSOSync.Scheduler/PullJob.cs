@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -18,7 +17,7 @@ namespace MSOSync.Scheduler;
 public sealed class PullJob(
     IServiceScopeFactory     scopeFactory,
     IOptions<NodeProperties> nodeProps,
-    IConfiguration           config,
+    IOptions<SyncOptions>    syncOptions,
     ILogger<PullJob>         logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken ct)
@@ -37,8 +36,7 @@ public sealed class PullJob(
             }
         }
 
-        var intervalSeconds = config.GetValue<int>("Sync:PullIntervalSeconds", 10);
-        var interval        = TimeSpan.FromSeconds(intervalSeconds);
+        var interval = TimeSpan.FromSeconds(syncOptions.Value.PullIntervalSeconds);
         using var timer     = new PeriodicTimer(interval);
 
         while (await timer.WaitForNextTickAsync(ct))
