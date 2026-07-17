@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -23,7 +22,7 @@ public sealed class ProbeWorker(
     IServiceScopeFactory       scopeFactory,
     IOptions<NodeProperties>   nodeProps,
     IOptions<LifecycleOptions> lifecycleOptions,
-    IConfiguration             config,
+    IOptions<HeartbeatOptions> heartbeatOptions,
     ILogger<ProbeWorker>       logger,
     IWorkerStatusRegistry      registry) : BackgroundService
 {
@@ -33,7 +32,7 @@ public sealed class ProbeWorker(
 
     public override async Task StartAsync(CancellationToken cancellationToken)
     {
-        var intervalSeconds = config.GetValue<int>("Heartbeat:ProbeIntervalSeconds", 60);
+        var intervalSeconds = heartbeatOptions.Value.ProbeIntervalSeconds;
         registry.Register(nameof(ProbeWorker), TimeSpan.FromSeconds(intervalSeconds));
         await base.StartAsync(cancellationToken);
     }
@@ -41,8 +40,7 @@ public sealed class ProbeWorker(
     protected override async Task ExecuteAsync(CancellationToken ct)
     {
         var props    = nodeProps.Value;
-        var interval = TimeSpan.FromSeconds(
-            config.GetValue<int>("Heartbeat:ProbeIntervalSeconds", 60));
+        var interval = TimeSpan.FromSeconds(heartbeatOptions.Value.ProbeIntervalSeconds);
 
         await using (var scope = scopeFactory.CreateAsyncScope())
         {
