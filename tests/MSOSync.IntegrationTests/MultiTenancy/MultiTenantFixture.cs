@@ -1,9 +1,11 @@
 // tests/MSOSync.IntegrationTests/MultiTenancy/MultiTenantFixture.cs
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using MSOSync.Common.Tenancy;
 using MSOSync.Persistence;
 using MSOSync.Persistence.Entities;
+using MSOSync.Persistence.Tenancy;
 using Xunit;
 
 namespace MSOSync.IntegrationTests.MultiTenancy;
@@ -167,6 +169,43 @@ public sealed class MultiTenantFixture : IAsyncLifetime
             Accessor.TenantId = null;
             Db.ChangeTracker.Clear();
         }
+    }
+
+    /// <summary>
+    /// Execute an action with the query filter scoped to the given tenant.
+    /// Passes AppDbContext to the callback so tests can use DbSets directly.
+    /// </summary>
+    public async Task WithTenantAsync(Guid tenantId, Func<AppDbContext, Task> action)
+    {
+        Accessor.TenantId = tenantId;
+        try
+        {
+            Db.ChangeTracker.Clear();
+            await action(Db);
+        }
+        finally
+        {
+            Accessor.TenantId = null;
+            Db.ChangeTracker.Clear();
+        }
+    }
+
+    /// <summary>Creates a raw ADO.NET connection using the same connection string as AppDbContext.</summary>
+    public SqlConnection CreateConnection()
+    {
+        var connStr = Db.Database.GetConnectionString()!;
+        return new SqlConnection(connStr);
+    }
+
+    /// <summary>Returns a platform repository for cross-tenant reads (bypasses EF global query filter).</summary>
+    public IPlatformRepository<T> GetPlatformRepository<T>() where T : class
+        => new TestPlatformRepositoryAdapter<T>(Db);
+
+    /// <summary>Test-only adapter — mirrors PlatformRepository behaviour without requiring DI.</summary>
+    private sealed class TestPlatformRepositoryAdapter<T>(AppDbContext db) : IPlatformRepository<T>
+        where T : class
+    {
+        public IQueryable<T> QueryAll() => db.Set<T>().IgnoreQueryFilters().AsNoTracking();
     }
 
     public async Task DisposeAsync()
