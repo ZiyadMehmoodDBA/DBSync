@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MSOSync.Batch;
 using MSOSync.Common;
+using MSOSync.Common.Workers;
 using MSOSync.Metadata.Interfaces;
 using MSOSync.Persistence;
 using MSOSync.Persistence.Entities;
@@ -18,8 +19,15 @@ public sealed class PullJob(
     IServiceScopeFactory     scopeFactory,
     IOptions<NodeProperties> nodeProps,
     IOptions<SyncOptions>    syncOptions,
+    IWorkerStatusRegistry    registry,
     ILogger<PullJob>         logger) : BackgroundService
 {
+    public override async Task StartAsync(CancellationToken cancellationToken)
+    {
+        registry.Register(nameof(PullJob), TimeSpan.FromSeconds(syncOptions.Value.PullIntervalSeconds));
+        await base.StartAsync(cancellationToken);
+    }
+
     protected override async Task ExecuteAsync(CancellationToken ct)
     {
         var props = nodeProps.Value;
@@ -41,12 +49,15 @@ public sealed class PullJob(
 
         while (await timer.WaitForNextTickAsync(ct))
         {
+            registry.RecordTickStart(nameof(PullJob));
             try
             {
                 await RunTickAsync(props.NodeId, ct);
+                registry.RecordTickComplete(nameof(PullJob));
             }
             catch (Exception ex) when (!ct.IsCancellationRequested)
             {
+                registry.RecordTickFailed(nameof(PullJob), ex);
                 logger.LogError(ex, "PullJob tick failed");
             }
         }
