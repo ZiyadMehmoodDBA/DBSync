@@ -1,20 +1,20 @@
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using MSOSync.Engine;
 using MSOSync.Persistence.Lock;
 
 namespace MSOSync.Scheduler;
 
 public sealed class SyncJob(
-    IServiceScopeFactory scopeFactory,
-    IConfiguration config,
-    ILogger<SyncJob> logger) : BackgroundService
+    IServiceScopeFactory  scopeFactory,
+    IOptions<SyncOptions> syncOptions,
+    ILogger<SyncJob>      logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken ct)
     {
-        var interval = TimeSpan.FromSeconds(config.GetValue<int>("Sync:IntervalSeconds", 30));
+        var interval = TimeSpan.FromSeconds(syncOptions.Value.IntervalSeconds);
         using var timer = new PeriodicTimer(interval);
 
         while (await timer.WaitForNextTickAsync(ct))
