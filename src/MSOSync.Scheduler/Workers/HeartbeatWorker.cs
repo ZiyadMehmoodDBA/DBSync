@@ -1,5 +1,4 @@
 using System.Diagnostics.Metrics;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -18,28 +17,28 @@ public sealed class HeartbeatWorker : BackgroundService
 
     private readonly IServiceScopeFactory      _scopeFactory;
     private readonly IOptions<NodeProperties>  _nodeProps;
-    private readonly IConfiguration            _config;
+    private readonly IOptions<HeartbeatOptions> _heartbeatOptions;
     private readonly ILogger<HeartbeatWorker>  _logger;
     private readonly IWorkerStatusRegistry     _registry;
     private readonly DateTime                  _startTime = DateTime.UtcNow;
 
     public HeartbeatWorker(
-        IServiceScopeFactory     scopeFactory,
-        IOptions<NodeProperties> nodeProps,
-        IConfiguration           config,
-        ILogger<HeartbeatWorker> logger,
-        IWorkerStatusRegistry    registry)
+        IServiceScopeFactory      scopeFactory,
+        IOptions<NodeProperties>  nodeProps,
+        IOptions<HeartbeatOptions> heartbeatOptions,
+        ILogger<HeartbeatWorker>  logger,
+        IWorkerStatusRegistry     registry)
     {
-        _scopeFactory = scopeFactory;
-        _nodeProps    = nodeProps;
-        _config       = config;
-        _logger       = logger;
-        _registry     = registry;
+        _scopeFactory      = scopeFactory;
+        _nodeProps         = nodeProps;
+        _heartbeatOptions  = heartbeatOptions;
+        _logger            = logger;
+        _registry          = registry;
     }
 
     public override async Task StartAsync(CancellationToken cancellationToken)
     {
-        var intervalSeconds = _config.GetValue<int>("Heartbeat:IntervalSeconds", 30);
+        var intervalSeconds = _heartbeatOptions.Value.IntervalSeconds;
         if (intervalSeconds <= 0) intervalSeconds = 30;
         _registry.Register(nameof(HeartbeatWorker), TimeSpan.FromSeconds(intervalSeconds));
         await base.StartAsync(cancellationToken);
@@ -48,8 +47,7 @@ public sealed class HeartbeatWorker : BackgroundService
     protected override async Task ExecuteAsync(CancellationToken ct)
     {
         var props    = _nodeProps.Value;
-        var interval = TimeSpan.FromSeconds(
-            _config.GetValue<int>("Heartbeat:IntervalSeconds", 30));
+        var interval = TimeSpan.FromSeconds(_heartbeatOptions.Value.IntervalSeconds);
 
         using var timer = new PeriodicTimer(interval);
         while (await timer.WaitForNextTickAsync(ct))
