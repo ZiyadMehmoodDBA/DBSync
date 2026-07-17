@@ -1,6 +1,5 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -19,7 +18,7 @@ public sealed class ConnectivityEvaluator(
     IServiceScopeFactory scopeFactory,
     IOptions<NodeProperties> nodeProps,
     IOptions<LifecycleOptions> lifecycleOptions,
-    IConfiguration config,
+    IOptions<HeartbeatOptions> heartbeatOptions,
     ILogger<ConnectivityEvaluator> logger) : BackgroundService
 {
     private int _running;
@@ -60,8 +59,8 @@ public sealed class ConnectivityEvaluator(
         var policy   = scope.ServiceProvider.GetRequiredService<IConnectivityPolicy>();
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
-        var heartbeatInterval = TimeSpan.FromSeconds(config.GetValue<int>("Heartbeat:IntervalSeconds", 30));
-        var probeInterval     = TimeSpan.FromSeconds(config.GetValue<int>("Heartbeat:ProbeIntervalSeconds", 60));
+        var heartbeatInterval = TimeSpan.FromSeconds(heartbeatOptions.Value.IntervalSeconds);
+        var probeInterval     = TimeSpan.FromSeconds(heartbeatOptions.Value.ProbeIntervalSeconds);
         var now = DateTime.UtcNow;
 
         // Exclude terminal states — Decommissioned and Rejected nodes never send heartbeats
