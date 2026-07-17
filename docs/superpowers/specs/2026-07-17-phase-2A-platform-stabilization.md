@@ -442,6 +442,35 @@ The following findings were identified in the initial audit. All are starting-po
 
 ---
 
+## Audit Item Status Model
+
+Every audit finding and implementation task carries exactly one status at all times:
+
+| Status | Meaning |
+|---|---|
+| **Not Started** | Identified; no implementation begun |
+| **In Progress** | Active work underway |
+| **Complete** | Implemented, verified, and meets Definition of Complete |
+| **Deferred** | Approved for a later phase — must include target milestone and reason |
+| **Rejected** | Intentionally not changing — must include rationale |
+
+No finding may remain without a status. "Known issues" without a decision block Phase 2A exit.
+
+---
+
+## Definition of Complete
+
+A Phase 2A task is **Complete** only when ALL four conditions are met:
+
+1. **Implementation complete** — the change is in the codebase and merged to main.
+2. **Automated tests pass** — `dotnet test` exits 0; the change does not break any existing test.
+3. **No new rule violations introduced** — the implementation does not itself violate any stabilization rule from this spec.
+4. **Documentation updated** — if the change affects a public contract (API shape, configuration key, DTO name, exception type), the corresponding architecture document in `docs/architecture/` is updated.
+
+A task that passes implementation but fails any of the other three conditions is **In Progress**, not Complete.
+
+---
+
 ## Exit Criteria
 
 Phase 2A is complete only when ALL of the following are true:
