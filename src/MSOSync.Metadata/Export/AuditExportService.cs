@@ -1,11 +1,13 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using MSOSync.Metadata.Audit;
-using MSOSync.Persistence;
+using MSOSync.Persistence.Entities;
+using MSOSync.Persistence.Tenancy;
 
 namespace MSOSync.Metadata.Export;
 
-public sealed class AuditExportService(AppDbContext db) : IExportService<AuditFilter>
+public sealed class AuditExportService(
+    IPlatformRepository<SyncAudit> auditRepo) : IExportService<AuditFilter>
 {
     private const string CsvHeader = "auditId,username,actionName,objectName,correlationId,createTime";
 
@@ -49,7 +51,7 @@ public sealed class AuditExportService(AppDbContext db) : IExportService<AuditFi
 
     private IQueryable<AuditExportRow> BuildQuery(AuditFilter filter)
     {
-        var q = db.Audits.AsNoTracking().Where(a => a.CreateTime != null);
+        var q = auditRepo.QueryAll().Where(a => a.CreateTime != null);
         if (filter.Username   is not null) q = q.Where(a => a.Username   == filter.Username);
         if (filter.ActionName is not null) q = q.Where(a => a.ActionName == filter.ActionName);
         if (filter.From       is not null) q = q.Where(a => a.CreateTime >= filter.From);

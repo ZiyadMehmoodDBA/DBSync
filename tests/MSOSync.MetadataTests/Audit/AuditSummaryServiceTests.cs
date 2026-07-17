@@ -15,7 +15,7 @@ public sealed class AuditSummaryServiceTests : IDisposable
     public AuditSummaryServiceTests()
     {
         _db  = TestDbContext.Create();
-        _sut = new AuditSummaryService(_db);
+        _sut = new AuditSummaryService(new TestPlatformRepository<SyncAudit>(_db));
     }
 
     public void Dispose() => _db.Dispose();

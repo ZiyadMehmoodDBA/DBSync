@@ -2,9 +2,18 @@ using Microsoft.EntityFrameworkCore;
 using MSOSync.Metadata.Audit;
 using MSOSync.Persistence;
 using MSOSync.Persistence.Entities;
+using MSOSync.Persistence.Tenancy;
 using Xunit;
 
 namespace MSOSync.AppTests.Audit;
+
+/// <summary>In-memory IPlatformRepository&lt;T&gt; for AppTests unit tests.</summary>
+internal sealed class TestPlatformRepository<T>(AppDbContext db) : IPlatformRepository<T>
+    where T : class
+{
+    public IQueryable<T> QueryAll() => db.Set<T>().AsNoTracking();
+}
+
 
 public sealed class CorrelationTimelineAssemblerTests : IDisposable
 {
@@ -37,7 +46,7 @@ public sealed class CorrelationTimelineAssemblerTests : IDisposable
     [Fact]
     public async Task AssembleAsync_UnknownCorrelationId_ReturnsNull()
     {
-        var assembler = new CorrelationTimelineAssembler(_db);
+        var assembler = new CorrelationTimelineAssembler(_db, new TestPlatformRepository<SyncAudit>(_db));
         var result = await assembler.AssembleAsync("no-such-correlation-id", CancellationToken.None);
         Assert.Null(result);
     }
@@ -55,7 +64,7 @@ public sealed class CorrelationTimelineAssemblerTests : IDisposable
             MakeAudit(corrId, "CONFIGURATION_APPLIED", at: now.AddSeconds(-1)));
         await _db.SaveChangesAsync();
 
-        var assembler = new CorrelationTimelineAssembler(_db);
+        var assembler = new CorrelationTimelineAssembler(_db, new TestPlatformRepository<SyncAudit>(_db));
         var result = await assembler.AssembleAsync(corrId, CancellationToken.None);
 
         Assert.NotNull(result);
@@ -76,7 +85,7 @@ public sealed class CorrelationTimelineAssemblerTests : IDisposable
             MakeAudit(corrId, "NODE_ACTIVATION_FAILED", at: now));
         await _db.SaveChangesAsync();
 
-        var assembler = new CorrelationTimelineAssembler(_db);
+        var assembler = new CorrelationTimelineAssembler(_db, new TestPlatformRepository<SyncAudit>(_db));
         var result = await assembler.AssembleAsync(corrId, CancellationToken.None);
 
         Assert.NotNull(result);
@@ -96,7 +105,7 @@ public sealed class CorrelationTimelineAssemblerTests : IDisposable
             MakeAudit(corrId, "CONFIGURATION_APPLIED",  at: now.AddSeconds(-1)));
         await _db.SaveChangesAsync();
 
-        var assembler = new CorrelationTimelineAssembler(_db);
+        var assembler = new CorrelationTimelineAssembler(_db, new TestPlatformRepository<SyncAudit>(_db));
         var result = await assembler.AssembleAsync(corrId, CancellationToken.None);
 
         Assert.NotNull(result);
@@ -117,7 +126,7 @@ public sealed class CorrelationTimelineAssemblerTests : IDisposable
             MakeAudit(corrId, "CONFIGURATION_APPLIED",  at: t2));
         await _db.SaveChangesAsync();
 
-        var assembler = new CorrelationTimelineAssembler(_db);
+        var assembler = new CorrelationTimelineAssembler(_db, new TestPlatformRepository<SyncAudit>(_db));
         var result = await assembler.AssembleAsync(corrId, CancellationToken.None);
 
         Assert.NotNull(result);

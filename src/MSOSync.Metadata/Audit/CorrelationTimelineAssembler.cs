@@ -1,9 +1,13 @@
 using Microsoft.EntityFrameworkCore;
 using MSOSync.Persistence;
+using MSOSync.Persistence.Entities;
+using MSOSync.Persistence.Tenancy;
 
 namespace MSOSync.Metadata.Audit;
 
-public sealed class CorrelationTimelineAssembler(AppDbContext db)
+public sealed class CorrelationTimelineAssembler(
+    AppDbContext                   db,
+    IPlatformRepository<SyncAudit> auditRepo)
 {
     // Phase name assignment — more specific prefixes checked first
     private static readonly Dictionary<string, string> PhaseMap = new(StringComparer.OrdinalIgnoreCase)
@@ -37,8 +41,7 @@ public sealed class CorrelationTimelineAssembler(AppDbContext db)
     public async Task<CorrelationTimelineDto?> AssembleAsync(
         string correlationId, CancellationToken ct)
     {
-        var auditRows = await db.Audits
-            .AsNoTracking()
+        var auditRows = await auditRepo.QueryAll()
             .Where(a => a.CorrelationId == correlationId)
             .OrderBy(a => a.CreateTime)
             .ToListAsync(ct);
@@ -146,7 +149,7 @@ public sealed class CorrelationTimelineAssembler(AppDbContext db)
         DateTime? to,
         CancellationToken ct)
     {
-        var query = db.Audits.AsNoTracking()
+        var query = auditRepo.QueryAll()
             .Where(a => a.CorrelationId != null);
 
         if (!string.IsNullOrWhiteSpace(q))

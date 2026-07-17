@@ -15,7 +15,7 @@ public sealed class AuditExportServiceTests : IDisposable
     public AuditExportServiceTests()
     {
         _db  = TestDbContext.Create();
-        _sut = new AuditExportService(_db);
+        _sut = new AuditExportService(new TestPlatformRepository<SyncAudit>(_db));
     }
 
     public void Dispose() => _db.Dispose();

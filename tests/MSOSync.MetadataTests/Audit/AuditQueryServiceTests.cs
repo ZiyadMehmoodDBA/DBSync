@@ -17,7 +17,7 @@ public sealed class AuditQueryServiceTests : IDisposable
     public AuditQueryServiceTests()
     {
         _db  = TestDbContext.Create();
-        _sut = new AuditQueryService(_db, _signer);
+        _sut = new AuditQueryService(new TestPlatformRepository<SyncAudit>(_db), _signer);
     }
 
     public void Dispose() => _db.Dispose();

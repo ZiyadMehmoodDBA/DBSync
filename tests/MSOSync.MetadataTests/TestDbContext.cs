@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using MSOSync.Persistence;
+using MSOSync.Persistence.Tenancy;
 
 namespace MSOSync.MetadataTests;
 
@@ -50,4 +51,14 @@ internal static class TestDbContext
         db.Database.EnsureCreated();
         return db;
     }
+}
+
+/// <summary>
+/// In-memory IPlatformRepository&lt;T&gt; for unit tests.
+/// Delegates to db.Set&lt;T&gt;().AsNoTracking() — no IgnoreQueryFilters needed in SQLite in-memory tests.
+/// </summary>
+internal sealed class TestPlatformRepository<T>(AppDbContext db) : IPlatformRepository<T>
+    where T : class
+{
+    public IQueryable<T> QueryAll() => db.Set<T>().AsNoTracking();
 }

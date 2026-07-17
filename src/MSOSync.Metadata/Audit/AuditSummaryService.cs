@@ -1,14 +1,16 @@
 using Microsoft.EntityFrameworkCore;
-using MSOSync.Persistence;
+using MSOSync.Persistence.Entities;
+using MSOSync.Persistence.Tenancy;
 
 namespace MSOSync.Metadata.Audit;
 
-public sealed class AuditSummaryService(AppDbContext db) : IAuditSummaryService
+public sealed class AuditSummaryService(
+    IPlatformRepository<SyncAudit> auditRepo) : IAuditSummaryService
 {
     public async Task<AuditSummaryDto> GetSummaryAsync(
         DateTime from, DateTime to, CancellationToken ct = default)
     {
-        var baseQ = db.Audits.AsNoTracking()
+        var baseQ = auditRepo.QueryAll()
             .Where(a => a.CreateTime != null
                      && a.CreateTime >= from
                      && a.CreateTime <= to);

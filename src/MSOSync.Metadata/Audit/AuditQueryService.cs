@@ -1,16 +1,19 @@
 using Microsoft.EntityFrameworkCore;
 using MSOSync.Common.Pagination;
 using MSOSync.Metadata.Pagination;
-using MSOSync.Persistence;
+using MSOSync.Persistence.Entities;
+using MSOSync.Persistence.Tenancy;
 
 namespace MSOSync.Metadata.Audit;
 
-public sealed class AuditQueryService(AppDbContext db, CursorSigner cursorSigner) : IAuditQueryService
+public sealed class AuditQueryService(
+    IPlatformRepository<SyncAudit> auditRepo,
+    CursorSigner                   cursorSigner) : IAuditQueryService
 {
     public async Task<CursorPageResult<AuditDto>> GetAuditsAsync(
         AuditFilter filter, CancellationToken ct = default)
     {
-        var baseQ = db.Audits.AsNoTracking()
+        var baseQ = auditRepo.QueryAll()
             .Where(a => a.CreateTime != null);
 
         if (filter.Username   is not null) baseQ = baseQ.Where(a => a.Username   == filter.Username);
@@ -57,7 +60,7 @@ public sealed class AuditQueryService(AppDbContext db, CursorSigner cursorSigner
 
     public async Task<AuditDto?> GetAuditByIdAsync(long auditId, CancellationToken ct = default)
     {
-        var a = await db.Audits.AsNoTracking()
+        var a = await auditRepo.QueryAll()
             .Where(x => x.AuditId == auditId && x.CreateTime != null)
             .FirstOrDefaultAsync(ct);
 
