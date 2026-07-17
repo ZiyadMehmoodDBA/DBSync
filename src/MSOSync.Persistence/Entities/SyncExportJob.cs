@@ -3,7 +3,7 @@ using MSOSync.Common.Tenancy;
 namespace MSOSync.Persistence.Entities;
 
 [TenantScoped]
-public sealed class SyncExportJob
+public sealed class SyncExportJob : ITenantScoped
 {
     public Guid     JobId           { get; set; }
     public Guid?    ParentJobId     { get; set; }
@@ -20,6 +20,7 @@ public sealed class SyncExportJob
     public DateTimeOffset   CreatedAt    { get; set; }
     public DateTimeOffset?  StartedAt    { get; set; }
     public DateTimeOffset?  CompletedAt  { get; set; }
+    public Guid             TenantId     { get; set; }
 }
 
 public static class ExportJobStatus

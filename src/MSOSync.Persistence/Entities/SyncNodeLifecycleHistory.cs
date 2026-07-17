@@ -3,7 +3,7 @@ using MSOSync.Common.Tenancy;
 namespace MSOSync.Persistence.Entities;
 
 [TenantScoped]
-public sealed class SyncNodeLifecycleHistory
+public sealed class SyncNodeLifecycleHistory : ITenantScoped
 {
     public long HistoryId { get; set; }
     public string NodeId { get; set; } = null!;
@@ -15,4 +15,5 @@ public sealed class SyncNodeLifecycleHistory
     public Guid? CorrelationId { get; set; }
     public string? MetadataJson { get; set; }
     public DateTimeOffset OccurredAt { get; set; }
+    public Guid TenantId { get; set; }
 }

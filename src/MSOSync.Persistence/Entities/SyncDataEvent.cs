@@ -3,7 +3,7 @@ using MSOSync.Common.Tenancy;
 namespace MSOSync.Persistence.Entities;
 
 [TenantScoped]
-public sealed class SyncDataEvent
+public sealed class SyncDataEvent : ITenantScoped
 {
     public long EventId { get; set; }
     public string TriggerId { get; set; } = null!;
@@ -16,4 +16,5 @@ public sealed class SyncDataEvent
     public long? TransactionId { get; set; }
     public DateTime CreateTime { get; set; }
     public bool IsProcessed { get; set; } = false;
+    public Guid TenantId { get; set; }
 }

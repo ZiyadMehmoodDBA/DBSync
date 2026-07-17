@@ -3,7 +3,7 @@ using MSOSync.Common.Tenancy;
 namespace MSOSync.Persistence.Entities;
 
 [TenantScoped]
-public sealed class SyncBatchError
+public sealed class SyncBatchError : ITenantScoped
 {
     public long      ErrorId       { get; set; }
     public long      BatchId       { get; set; }
@@ -13,4 +13,5 @@ public sealed class SyncBatchError
     public int       RetryCount    { get; set; } = 0;
     public DateTime? LastRetryTime { get; set; }
     public DateTime  CreateTime    { get; set; }
+    public Guid      TenantId      { get; set; }
 }

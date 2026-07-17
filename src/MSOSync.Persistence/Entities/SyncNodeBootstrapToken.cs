@@ -3,7 +3,7 @@ using MSOSync.Common.Tenancy;
 namespace MSOSync.Persistence.Entities;
 
 [TenantScoped]
-public sealed class SyncNodeBootstrapToken
+public sealed class SyncNodeBootstrapToken : ITenantScoped
 {
     public long Id { get; set; }
     public string NodeId { get; set; } = null!;
@@ -13,4 +13,5 @@ public sealed class SyncNodeBootstrapToken
     public DateTimeOffset? ConsumedAt { get; set; }
     public DateTimeOffset? RevokedAt { get; set; }
     public string IssuedBy { get; set; } = null!;
+    public Guid TenantId { get; set; }
 }

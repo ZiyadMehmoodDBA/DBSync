@@ -3,7 +3,7 @@ using MSOSync.Common.Tenancy;
 namespace MSOSync.Persistence.Entities;
 
 [TenantScoped]
-public sealed class SyncConfigurationRollout
+public sealed class SyncConfigurationRollout : ITenantScoped
 {
     public Guid Id { get; set; }
     public string Status { get; set; } = "Queued";             // Queued / InProgress / Completed / Failed / Cancelled
@@ -17,4 +17,5 @@ public sealed class SyncConfigurationRollout
     public Guid InitiatedBy { get; set; }
     public DateTime StartedAt { get; set; }
     public DateTime? CompletedAt { get; set; }
+    public Guid TenantId { get; set; }
 }

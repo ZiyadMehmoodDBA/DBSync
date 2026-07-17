@@ -3,7 +3,7 @@ using MSOSync.Common.Tenancy;
 namespace MSOSync.Persistence.Entities;
 
 [TenantScoped]
-public sealed class SyncRuntimeStats
+public sealed class SyncRuntimeStats : ITenantScoped
 {
     public long StatId { get; set; }
     public long? HeapUsed { get; set; }
@@ -14,4 +14,5 @@ public sealed class SyncRuntimeStats
     public long? GcTimeMs { get; set; }
     public long? UptimeMs { get; set; }
     public DateTime? CreateTime { get; set; }
+    public Guid TenantId { get; set; }
 }

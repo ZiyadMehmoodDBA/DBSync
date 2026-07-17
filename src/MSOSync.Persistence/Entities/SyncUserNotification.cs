@@ -4,7 +4,7 @@ using MSOSync.Common.Tenancy;
 namespace MSOSync.Persistence.Entities;
 
 [TenantScoped]
-public sealed class SyncUserNotification
+public sealed class SyncUserNotification : ITenantScoped
 {
     public long     UserId         { get; set; }
     public long     NotificationId { get; set; }
@@ -15,4 +15,5 @@ public sealed class SyncUserNotification
 
     public SyncUser         User         { get; set; } = null!;
     public SyncNotification Notification { get; set; } = null!;
+    public Guid             TenantId     { get; set; }
 }

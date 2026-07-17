@@ -3,7 +3,7 @@ using MSOSync.Common.Tenancy;
 namespace MSOSync.Persistence.Entities;
 
 [TenantScoped]
-public sealed class SyncOperation
+public sealed class SyncOperation : ITenantScoped
 {
     public Guid   OperationId      { get; set; }
     public string OperationType    { get; set; } = null!;   // Export|Rollout|Decommission|Recovery
@@ -21,4 +21,5 @@ public sealed class SyncOperation
     public bool   CanRetry         { get; set; }
     public DateTime  StartedAt     { get; set; }
     public DateTime? CompletedAt   { get; set; }
+    public Guid      TenantId      { get; set; }
 }

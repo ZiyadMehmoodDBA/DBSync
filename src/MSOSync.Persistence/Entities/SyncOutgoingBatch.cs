@@ -3,7 +3,7 @@ using MSOSync.Common.Tenancy;
 namespace MSOSync.Persistence.Entities;
 
 [TenantScoped]
-public sealed class SyncOutgoingBatch
+public sealed class SyncOutgoingBatch : ITenantScoped
 {
     public long BatchId { get; set; }
     public long BatchSequence { get; set; }
@@ -18,4 +18,5 @@ public sealed class SyncOutgoingBatch
     public DateTime? CreateTime { get; set; }
     public DateTime? SentTime { get; set; }
     public DateTime? AckTime { get; set; }
+    public Guid TenantId { get; set; }
 }

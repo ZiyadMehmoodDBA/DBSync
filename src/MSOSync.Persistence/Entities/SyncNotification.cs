@@ -4,7 +4,7 @@ using MSOSync.Common.Tenancy;
 namespace MSOSync.Persistence.Entities;
 
 [TenantScoped]
-public sealed class SyncNotification
+public sealed class SyncNotification : ITenantScoped
 {
     public long    NotificationId   { get; set; }
     public string  EventType        { get; set; } = null!;   // NotificationEventType enum name
@@ -20,4 +20,5 @@ public sealed class SyncNotification
     public DateTime LastOccurredAt  { get; set; }
 
     public ICollection<SyncUserNotification> UserNotifications { get; set; } = [];
+    public Guid TenantId { get; set; }
 }

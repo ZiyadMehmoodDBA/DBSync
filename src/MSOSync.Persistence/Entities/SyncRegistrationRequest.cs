@@ -3,7 +3,7 @@ using MSOSync.Common.Tenancy;
 namespace MSOSync.Persistence.Entities;
 
 [TenantScoped]
-public sealed class SyncRegistrationRequest
+public sealed class SyncRegistrationRequest : ITenantScoped
 {
     public long              RequestId        { get; set; }
     public string            NodeId           { get; set; } = null!;   // ExternalId
@@ -20,6 +20,7 @@ public sealed class SyncRegistrationRequest
     public DateTime?         ProcessedAt      { get; set; }
     public string?           ProcessedBy      { get; set; }
     public byte[]            RowVersion       { get; set; } = null!;
+    public Guid              TenantId         { get; set; }
 }
 
 public enum RegistrationType  { New, ReRegistration, Recovery }

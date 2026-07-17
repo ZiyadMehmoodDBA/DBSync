@@ -3,7 +3,7 @@ using MSOSync.Common.Tenancy;
 namespace MSOSync.Persistence.Entities;
 
 [TenantScoped]
-public sealed class SyncConfigurationTemplateVersion
+public sealed class SyncConfigurationTemplateVersion : ITenantScoped
 {
     public Guid Id { get; set; }
     public Guid TemplateId { get; set; }
@@ -17,4 +17,5 @@ public sealed class SyncConfigurationTemplateVersion
     public Guid? PublishedBy { get; set; }
 
     public SyncConfigurationTemplate Template { get; set; } = null!;
+    public Guid TenantId { get; set; }
 }
