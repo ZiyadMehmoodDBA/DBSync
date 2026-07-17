@@ -6,11 +6,13 @@ using Microsoft.Extensions.Hosting;
 using MSOSync.Common.Workers;
 using MSOSync.Persistence;
 using MSOSync.Persistence.Entities;
+using MSOSync.Persistence.Tenancy;
 
 namespace MSOSync.Metadata.Overview;
 
 public sealed class OverviewQueryService(
     AppDbContext db,
+    IPlatformRepository<SyncAudit> auditRepo,
     IWorkerStatusRegistry workerRegistry,
     OverviewSnapshotCache cache,
     IHostEnvironment env) : IOverviewQueryService
@@ -64,8 +66,7 @@ public sealed class OverviewQueryService(
         var queuedOps = opCounts.FirstOrDefault(x => x.Status == "Pending")?.Count ?? 0;
 
         // --- Recent audit events (top 10) ---
-        var recentAuditEvents = await db.Audits
-            .AsNoTracking()
+        var recentAuditEvents = await auditRepo.QueryAll()
             .Where(a => a.CreateTime != null)
             .OrderByDescending(a => a.CreateTime)
             .Take(10)

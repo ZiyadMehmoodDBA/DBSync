@@ -1,9 +1,13 @@
 using Microsoft.EntityFrameworkCore;
 using MSOSync.Persistence;
+using MSOSync.Persistence.Entities;
+using MSOSync.Persistence.Tenancy;
 
 namespace MSOSync.Metadata.Dashboard;
 
-public sealed class DashboardQueryService(AppDbContext db) : IDashboardQueryService
+public sealed class DashboardQueryService(
+    AppDbContext db,
+    IPlatformRepository<SyncAudit> auditRepo) : IDashboardQueryService
 {
     public async Task<DashboardSummaryDto> GetSummaryAsync(CancellationToken ct = default)
     {
@@ -41,7 +45,7 @@ public sealed class DashboardQueryService(AppDbContext db) : IDashboardQueryServ
 
         if (filter.Type is null or "audit")
         {
-            var auditQ = db.Audits.AsNoTracking()
+            var auditQ = auditRepo.QueryAll()
                 .Where(a => a.CreateTime != null);
             if (filter.From is not null) auditQ = auditQ.Where(a => a.CreateTime >= filter.From);
             if (filter.To   is not null) auditQ = auditQ.Where(a => a.CreateTime <= filter.To);

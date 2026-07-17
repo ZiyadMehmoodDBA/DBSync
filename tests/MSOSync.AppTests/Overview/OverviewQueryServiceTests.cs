@@ -9,6 +9,7 @@ using MSOSync.App.Workers;
 using MSOSync.Metadata.Overview;
 using MSOSync.Persistence;
 using MSOSync.Persistence.Entities;
+using MSOSync.Persistence.Tenancy;
 using Xunit;
 
 namespace MSOSync.AppTests.Overview;
@@ -42,7 +43,7 @@ public sealed class OverviewQueryServiceTests : IDisposable
     }
 
     private OverviewQueryService CreateService()
-        => new(_db, _registry, _snapshotCache, _env);
+        => new(_db, new TestPlatformRepository<SyncAudit>(_db), _registry, _snapshotCache, _env);
 
     // Test 1: ClusterHealth = Healthy when all good (no nodes, healthy workers)
     [Fact]
@@ -196,4 +197,14 @@ public sealed class OverviewQueryServiceTests : IDisposable
         _db.Dispose();
         _cache.Dispose();
     }
+}
+
+/// <summary>
+/// In-memory IPlatformRepository&lt;T&gt; for unit tests.
+/// Delegates to db.Set&lt;T&gt;().AsNoTracking() — no IgnoreQueryFilters needed in in-memory tests.
+/// </summary>
+internal sealed class TestPlatformRepository<T>(AppDbContext db) : IPlatformRepository<T>
+    where T : class
+{
+    public IQueryable<T> QueryAll() => db.Set<T>().AsNoTracking();
 }

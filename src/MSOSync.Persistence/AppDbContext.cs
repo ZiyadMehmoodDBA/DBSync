@@ -65,6 +65,28 @@ public class AppDbContext : DbContext
     public DbSet<Tenant>               Tenants           => Set<Tenant>();
     public DbSet<TenantMembership>     TenantMemberships => Set<TenantMembership>();
 
+    public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        PopulateTenantIds();
+        return base.SaveChangesAsync(cancellationToken);
+    }
+
+    public override int SaveChanges()
+    {
+        PopulateTenantIds();
+        return base.SaveChanges();
+    }
+
+    private void PopulateTenantIds()
+    {
+        foreach (var entry in ChangeTracker.Entries<ITenantScoped>()
+            .Where(e => e.State == EntityState.Added && e.Entity.TenantId == Guid.Empty))
+        {
+            // Use current tenant if available, fall back to SystemTenant for background/platform context
+            entry.Entity.TenantId = _tenantAccessor?.TenantId ?? WellKnownTenantIds.SystemTenant;
+        }
+    }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);

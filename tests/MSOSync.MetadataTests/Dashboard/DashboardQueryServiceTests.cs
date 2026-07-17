@@ -14,7 +14,7 @@ public sealed class DashboardQueryServiceTests : IDisposable
     public DashboardQueryServiceTests()
     {
         _db  = TestDbContext.Create();
-        _sut = new DashboardQueryService(_db);
+        _sut = new DashboardQueryService(_db, new TestPlatformRepository<SyncAudit>(_db));
     }
 
     public void Dispose() => _db.Dispose();
