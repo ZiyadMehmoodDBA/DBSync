@@ -3,16 +3,25 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using MSOSync.Batch;
 using MSOSync.Common;
+using MSOSync.Common.Workers;
 using MSOSync.Event;
 using MSOSync.Persistence.Lock;
 
 namespace MSOSync.Scheduler;
 
 public sealed class PurgeJob(
-    IServiceScopeFactory scopeFactory,
-    IClock clock,
-    ILogger<PurgeJob> logger) : BackgroundService
+    IServiceScopeFactory  scopeFactory,
+    IClock                clock,
+    IWorkerStatusRegistry registry,
+    ILogger<PurgeJob>     logger) : BackgroundService
 {
+    public override async Task StartAsync(CancellationToken cancellationToken)
+    {
+        // Task.Delay used intentionally — PurgeJob targets wall-clock 02:00 UTC, not a fixed interval
+        registry.Register(nameof(PurgeJob), TimeSpan.FromHours(24));
+        await base.StartAsync(cancellationToken);
+    }
+
     protected override async Task ExecuteAsync(CancellationToken ct)
     {
         while (!ct.IsCancellationRequested)
@@ -23,7 +32,17 @@ public sealed class PurgeJob(
             try { await Task.Delay(delay, ct); }
             catch (OperationCanceledException) { break; }
 
-            await RunPurgeAsync(ct);
+            registry.RecordTickStart(nameof(PurgeJob));
+            try
+            {
+                await RunPurgeAsync(ct);
+                registry.RecordTickComplete(nameof(PurgeJob));
+            }
+            catch (Exception ex) when (!ct.IsCancellationRequested)
+            {
+                registry.RecordTickFailed(nameof(PurgeJob), ex);
+                logger.LogError(ex, "PurgeJob failed");
+            }
         }
     }
 
@@ -37,14 +56,9 @@ public sealed class PurgeJob(
         await using var lease = await lockProvider.TryAcquireAsync(LockNames.PurgeEngine, ct);
         if (lease == null) { logger.LogDebug("PurgeJob: lock held, skipping"); return; }
 
-        try
-        {
-            var events  = await eventPurger.PurgeAsync(ct);
-            var batches = await batchPurger.PurgeAsync(ct);
-            logger.LogInformation("PurgeJob: deleted {Events} events, {Batches} batches", events, batches);
-        }
-        catch (Exception ex) when (!ct.IsCancellationRequested)
-        { logger.LogError(ex, "PurgeJob failed"); }
+        var events  = await eventPurger.PurgeAsync(ct);
+        var batches = await batchPurger.PurgeAsync(ct);
+        logger.LogInformation("PurgeJob: deleted {Events} events, {Batches} batches", events, batches);
     }
 
     private TimeSpan TimeUntilNextFire()
