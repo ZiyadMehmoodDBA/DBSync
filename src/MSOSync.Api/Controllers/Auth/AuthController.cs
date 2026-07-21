@@ -20,6 +20,9 @@ public sealed class AuthController(
 {
     [HttpPost("login")]
     [EnableRateLimiting("LoginPolicy")]
+    [ProducesResponseType(typeof(LoginResponse), 200)]
+    [ProducesResponseType(typeof(TenantSelectionResponse), 300)]
+    [ProducesResponseType(typeof(ErrorResponse), 401)]
     public async Task<IActionResult> Login(
         [FromBody] LoginRequest request,
         CancellationToken ct)
@@ -45,6 +48,8 @@ public sealed class AuthController(
 
     [HttpPost("refresh")]
     [EnableRateLimiting("RefreshPolicy")]
+    [ProducesResponseType(typeof(RefreshResponse), 200)]
+    [ProducesResponseType(typeof(ErrorResponse), 401)]
     public async Task<IActionResult> Refresh(
         [FromBody] RefreshRequest request,
         CancellationToken ct)
@@ -60,6 +65,7 @@ public sealed class AuthController(
 
     [Authorize]
     [HttpPost("logout")]
+    [ProducesResponseType(204)]
     public async Task<IActionResult> Logout(
         [FromBody] RefreshRequest request,
         CancellationToken ct)
@@ -71,6 +77,7 @@ public sealed class AuthController(
 
     [Authorize]
     [HttpGet("me")]
+    [ProducesResponseType(typeof(MeResponse), 200)]
     public IActionResult Me()
     {
         var username = User.FindFirstValue(ClaimTypes.NameIdentifier)
@@ -86,6 +93,9 @@ public sealed class AuthController(
 
     [HttpPost("switch-tenant")]
     [Authorize]
+    [ProducesResponseType(typeof(SwitchTenantResponse), 200)]
+    [ProducesResponseType(401)]
+    [ProducesResponseType(403)]
     public async Task<IActionResult> SwitchTenant(
         [FromBody] SwitchTenantRequest request,
         CancellationToken ct)

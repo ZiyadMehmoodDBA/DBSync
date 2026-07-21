@@ -23,6 +23,7 @@ public sealed class ParametersController(IParameterMetadataService paramService)
 
     [HttpGet("descriptors")]
     [Authorize]
+    [ProducesResponseType(typeof(IList<ParameterDescriptorDto>), 200)]
     public IActionResult GetDescriptors()
     {
         var descriptors = ParameterDescriptor.Catalog.Values
@@ -34,6 +35,8 @@ public sealed class ParametersController(IParameterMetadataService paramService)
 
     [HttpGet("{name}")]
     [Authorize]
+    [ProducesResponseType(typeof(ParameterDto), 200)]
+    [ProducesResponseType(404)]
     public async Task<IActionResult> GetParameter(string name, CancellationToken ct)
     {
         var result = await paramService.GetParameterAsync(name, ct);
@@ -43,6 +46,7 @@ public sealed class ParametersController(IParameterMetadataService paramService)
 
     [HttpPut("{name}")]
     [Authorize(Policy = "AdminOnly")]
+    [ProducesResponseType(typeof(ParameterDto), 200)]
     public async Task<IActionResult> UpdateParameter(
         string name, [FromBody] UpdateParameterRequest req, CancellationToken ct)
     {
@@ -53,6 +57,7 @@ public sealed class ParametersController(IParameterMetadataService paramService)
 
     [HttpGet("{name}/history")]
     [Authorize]
+    [ProducesResponseType(typeof(IReadOnlyList<ParameterHistoryDto>), 200)]
     public async Task<IActionResult> GetParameterHistory(string name, CancellationToken ct)
     {
         var result = await paramService.GetParameterHistoryAsync(name, ct);
@@ -61,6 +66,7 @@ public sealed class ParametersController(IParameterMetadataService paramService)
 
     [HttpGet("history")]
     [Authorize]
+    [ProducesResponseType(typeof(IReadOnlyList<ParameterHistoryDto>), 200)]
     public async Task<IActionResult> GetAllParameterHistory(CancellationToken ct)
     {
         var result = await paramService.GetAllParameterHistoryAsync(ct);

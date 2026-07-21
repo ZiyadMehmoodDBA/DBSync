@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MSOSync.Api.Authorization;
 using MSOSync.Common.Exceptions;
+using MSOSync.Metadata.Common;
 using MSOSync.Metadata.Lifecycle;
 using MSOSync.Metadata.NodeManagement;
 using MSOSync.Metadata.Permissions;
@@ -25,6 +26,8 @@ public sealed class NodeLifecycleController(
         ?? throw new UnauthorizedException("No identity", "UNAUTHORIZED");
 
     [HttpPost("nodes/{id}/enable")]
+    [ProducesResponseType(204)]
+    [ProducesResponseType(409)]
     public async Task<IActionResult> Enable(string id, CancellationToken ct)
     {
         await authz.EnsurePermissionAsync(SystemPermissions.ManageNodeLifecycle, ct);
@@ -33,6 +36,8 @@ public sealed class NodeLifecycleController(
     }
 
     [HttpPost("nodes/{id}/disable")]
+    [ProducesResponseType(204)]
+    [ProducesResponseType(409)]
     public async Task<IActionResult> Disable(string id, [FromBody] DisableRequest req, CancellationToken ct)
     {
         await authz.EnsurePermissionAsync(SystemPermissions.ManageNodeLifecycle, ct);
@@ -41,6 +46,8 @@ public sealed class NodeLifecycleController(
     }
 
     [HttpPost("nodes/{id}/maintenance/start")]
+    [ProducesResponseType(204)]
+    [ProducesResponseType(409)]
     public async Task<IActionResult> StartMaintenance(string id, [FromBody] MaintenanceStartRequest req, CancellationToken ct)
     {
         await authz.EnsurePermissionAsync(SystemPermissions.ManageNodeLifecycle, ct);
@@ -49,6 +56,8 @@ public sealed class NodeLifecycleController(
     }
 
     [HttpPost("nodes/{id}/maintenance/end")]
+    [ProducesResponseType(204)]
+    [ProducesResponseType(409)]
     public async Task<IActionResult> EndMaintenance(string id, CancellationToken ct)
     {
         await authz.EnsurePermissionAsync(SystemPermissions.ManageNodeLifecycle, ct);
@@ -57,6 +66,8 @@ public sealed class NodeLifecycleController(
     }
 
     [HttpPost("nodes/{id}/decommission")]
+    [ProducesResponseType(202)]
+    [ProducesResponseType(409)]
     public async Task<IActionResult> Decommission(string id, [FromBody] DecommissionRequest req, CancellationToken ct)
     {
         await authz.EnsurePermissionAsync(SystemPermissions.ManageNodeLifecycle, ct);
@@ -65,6 +76,8 @@ public sealed class NodeLifecycleController(
     }
 
     [HttpPost("nodes/{id}/decommission/force")]
+    [ProducesResponseType(204)]
+    [ProducesResponseType(409)]
     public async Task<IActionResult> ForceCompleteDecommission(string id, CancellationToken ct)
     {
         await authz.EnsurePermissionAsync(SystemPermissions.ManageNodeLifecycle, ct);
@@ -73,6 +86,7 @@ public sealed class NodeLifecycleController(
     }
 
     [HttpGet("nodes/{id}/state")]
+    [ProducesResponseType(typeof(NodeStateDto), 200)]
     public async Task<ActionResult<NodeStateDto>> GetState(string id, CancellationToken ct)
     {
         await authz.EnsurePermissionAsync(SystemPermissions.ManageNodeLifecycle, ct);
@@ -80,6 +94,7 @@ public sealed class NodeLifecycleController(
     }
 
     [HttpGet("nodes/{id}/transitions")]
+    [ProducesResponseType(typeof(TransitionsDto), 200)]
     public async Task<ActionResult<TransitionsDto>> GetTransitions(string id, CancellationToken ct)
     {
         await authz.EnsurePermissionAsync(SystemPermissions.ManageNodeLifecycle, ct);
@@ -89,6 +104,7 @@ public sealed class NodeLifecycleController(
     }
 
     [HttpGet("nodes/{id}/history")]
+    [ProducesResponseType(typeof(PagedResult<LifecycleHistoryDto>), 200)]
     public async Task<IActionResult> GetHistory(
         string id,
         [FromQuery] int page = 1, [FromQuery] int pageSize = 50,

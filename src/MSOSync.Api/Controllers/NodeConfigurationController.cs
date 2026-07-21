@@ -18,6 +18,10 @@ public sealed class NodeConfigurationController(INodeConfigurationService config
     /// Returns 200 with effective settings, 204 if no template assigned, 304 if ETag matches.
     /// </summary>
     [HttpGet("current")]
+    [ProducesResponseType(typeof(CurrentConfigDto), 200)]
+    [ProducesResponseType(204)]
+    [ProducesResponseType(304)]
+    [ProducesResponseType(403)]
     public async Task<IActionResult> GetCurrent(CancellationToken ct)
     {
         // Node ID comes from the authenticated claims set by NodeTokenAuthMiddleware

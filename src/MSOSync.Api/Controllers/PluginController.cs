@@ -18,7 +18,7 @@ public sealed class PluginController(
 {
     [HttpGet]
     [ProducesResponseType(typeof(IReadOnlyList<PluginDto>), 200)]
-    [ProducesResponseType(503)]
+    [ProducesResponseType(typeof(ErrorResponse), 503)]
     public IActionResult GetAll()
     {
         if (!registry.IsInitialized)
@@ -30,7 +30,7 @@ public sealed class PluginController(
 
     [HttpGet("summary")]
     [ProducesResponseType(typeof(PluginSummaryDto), 200)]
-    [ProducesResponseType(503)]
+    [ProducesResponseType(typeof(ErrorResponse), 503)]
     public IActionResult GetSummary()
     {
         if (!registry.IsInitialized)
@@ -51,7 +51,7 @@ public sealed class PluginController(
     [HttpGet("{id}")]
     [ProducesResponseType(typeof(PluginDto), 200)]
     [ProducesResponseType(404)]
-    [ProducesResponseType(503)]
+    [ProducesResponseType(typeof(ErrorResponse), 503)]
     public IActionResult GetById(string id)
     {
         if (!registry.IsInitialized)
@@ -65,7 +65,7 @@ public sealed class PluginController(
     [HttpGet("{id}/manifest")]
     [ProducesResponseType(typeof(PluginManifest), 200)]
     [ProducesResponseType(404)]
-    [ProducesResponseType(503)]
+    [ProducesResponseType(typeof(ErrorResponse), 503)]
     public IActionResult GetManifest(string id)
     {
         if (!registry.IsInitialized)

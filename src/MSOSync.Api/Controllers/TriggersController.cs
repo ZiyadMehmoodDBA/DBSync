@@ -16,6 +16,7 @@ public sealed class TriggersController(
 {
     [HttpGet]
     [Authorize]
+    [ProducesResponseType(typeof(IReadOnlyList<TriggerDto>), 200)]
     public async Task<IActionResult> GetTriggers(CancellationToken ct)
     {
         var result = await triggerService.GetTriggersAsync(ct);
@@ -24,6 +25,8 @@ public sealed class TriggersController(
 
     [HttpGet("{triggerId}")]
     [Authorize]
+    [ProducesResponseType(typeof(TriggerDto), 200)]
+    [ProducesResponseType(404)]
     public async Task<IActionResult> GetTrigger(string triggerId, CancellationToken ct)
     {
         var result = await triggerService.GetTriggerAsync(triggerId, ct);
@@ -33,6 +36,7 @@ public sealed class TriggersController(
 
     [HttpGet("channel/{channelId}")]
     [Authorize]
+    [ProducesResponseType(typeof(IReadOnlyList<TriggerDto>), 200)]
     public async Task<IActionResult> GetTriggersForChannel(string channelId, CancellationToken ct)
     {
         var result = await triggerService.GetTriggersForChannelAsync(channelId, ct);
@@ -41,6 +45,7 @@ public sealed class TriggersController(
 
     [HttpPost]
     [Authorize(Policy = "OperatorOrAbove")]
+    [ProducesResponseType(typeof(TriggerDto), 201)]
     public async Task<IActionResult> CreateTrigger([FromBody] CreateTriggerRequest req, CancellationToken ct)
     {
         var result = await triggerService.CreateTriggerAsync(req, ct);
@@ -49,6 +54,7 @@ public sealed class TriggersController(
 
     [HttpPut("{triggerId}")]
     [Authorize(Policy = "OperatorOrAbove")]
+    [ProducesResponseType(typeof(TriggerDto), 200)]
     public async Task<IActionResult> UpdateTrigger(
         string triggerId, [FromBody] UpdateTriggerRequest req, CancellationToken ct)
     {
@@ -58,6 +64,7 @@ public sealed class TriggersController(
 
     [HttpDelete("{triggerId}")]
     [Authorize(Policy = "AdminOnly")]
+    [ProducesResponseType(204)]
     public async Task<IActionResult> DeleteTrigger(string triggerId, CancellationToken ct)
     {
         await triggerService.DeleteTriggerAsync(triggerId, ct);
@@ -66,6 +73,7 @@ public sealed class TriggersController(
 
     [HttpPost("{triggerId}/enable")]
     [Authorize(Policy = "OperatorOrAbove")]
+    [ProducesResponseType(200)]
     public async Task<IActionResult> EnableTrigger(string triggerId, CancellationToken ct)
     {
         await triggerService.EnableTriggerAsync(triggerId, ct);
@@ -74,6 +82,7 @@ public sealed class TriggersController(
 
     [HttpPost("{triggerId}/disable")]
     [Authorize(Policy = "OperatorOrAbove")]
+    [ProducesResponseType(200)]
     public async Task<IActionResult> DisableTrigger(string triggerId, CancellationToken ct)
     {
         await triggerService.DisableTriggerAsync(triggerId, ct);
@@ -82,6 +91,7 @@ public sealed class TriggersController(
 
     [HttpGet("{triggerId}/routers")]
     [Authorize]
+    [ProducesResponseType(typeof(IReadOnlyList<TriggerRouterDto>), 200)]
     public async Task<IActionResult> GetTriggerRouters(string triggerId, CancellationToken ct)
     {
         var result = await triggerService.GetTriggerRoutersAsync(triggerId, ct);
@@ -90,6 +100,7 @@ public sealed class TriggersController(
 
     [HttpPost("{triggerId}/routers")]
     [Authorize(Policy = "OperatorOrAbove")]
+    [ProducesResponseType(200)]
     public async Task<IActionResult> AddTriggerRouter(
         string triggerId, [FromBody] AddTriggerRouterRequest req, CancellationToken ct)
     {
@@ -99,6 +110,7 @@ public sealed class TriggersController(
 
     [HttpDelete("{triggerId}/routers/{routerId}")]
     [Authorize(Policy = "AdminOnly")]
+    [ProducesResponseType(204)]
     public async Task<IActionResult> RemoveTriggerRouter(
         string triggerId, string routerId, CancellationToken ct)
     {
@@ -108,6 +120,7 @@ public sealed class TriggersController(
 
     [HttpGet("{triggerId}/history")]
     [Authorize]
+    [ProducesResponseType(typeof(IReadOnlyList<TriggerHistDto>), 200)]
     public async Task<IActionResult> GetTriggerHistory(string triggerId, CancellationToken ct)
     {
         var result = await triggerService.GetTriggerHistoryAsync(triggerId, ct);
@@ -116,6 +129,7 @@ public sealed class TriggersController(
 
     [HttpPost("{triggerId}/rebuild")]
     [Authorize(Policy = "OperatorOrAbove")]
+    [ProducesResponseType(typeof(TriggerVerifyResult), 200)]
     public async Task<IActionResult> RebuildTrigger(string triggerId, CancellationToken ct)
     {
         var result = await installationService.RebuildAsync(triggerId, ct);
@@ -124,6 +138,7 @@ public sealed class TriggersController(
 
     [HttpPost("{triggerId}/verify")]
     [Authorize]
+    [ProducesResponseType(typeof(TriggerVerifyResult), 200)]
     public async Task<IActionResult> VerifyTrigger(string triggerId, CancellationToken ct)
     {
         var result = await driftDetector.VerifyAsync(triggerId, ct);

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MSOSync.Api.Dtos.Metadata;
 using MSOSync.Metadata.Interfaces;
 
 namespace MSOSync.Api.Controllers;
@@ -15,6 +16,7 @@ public sealed class MetadataController(
 {
     [HttpGet]
     [Authorize]
+    [ProducesResponseType(typeof(MetadataSummaryResponse), 200)]
     public async Task<IActionResult> GetSummary(CancellationToken ct)
     {
         var nodesTask      = nodes.GetNodesAsync(ct);
@@ -25,13 +27,11 @@ public sealed class MetadataController(
 
         await Task.WhenAll(nodesTask, triggersTask, routersTask, channelsTask, parametersTask);
 
-        return Ok(new
-        {
-            nodes      = nodesTask.Result.Count,
-            triggers   = triggersTask.Result.Count,
-            routers    = routersTask.Result.Count,
-            channels   = channelsTask.Result.Count,
-            parameters = parametersTask.Result.Count
-        });
+        return Ok(new MetadataSummaryResponse(
+            nodesTask.Result.Count,
+            triggersTask.Result.Count,
+            routersTask.Result.Count,
+            channelsTask.Result.Count,
+            parametersTask.Result.Count));
     }
 }

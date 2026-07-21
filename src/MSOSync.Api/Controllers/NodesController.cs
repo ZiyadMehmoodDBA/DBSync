@@ -25,6 +25,7 @@ public sealed class NodesController(
 {
     [HttpGet]
     [Authorize]
+    [ProducesResponseType(typeof(IReadOnlyList<NodeDto>), 200)]
     public async Task<IActionResult> GetNodes(CancellationToken ct)
     {
         var result = await nodeService.GetNodesAsync(ct);
@@ -33,7 +34,7 @@ public sealed class NodesController(
 
     [HttpGet("paged")]
     [Authorize]
-    [ProducesResponseType(typeof(PagedResult<NodeDto>), 200)]
+    [ProducesResponseType(typeof(PagedResponse<NodeDto>), 200)]
     public async Task<IActionResult> GetNodesPaged(
         [FromQuery] int pageNumber = 1,
         [FromQuery] int pageSize   = 50,
@@ -48,6 +49,8 @@ public sealed class NodesController(
 
     [HttpGet("{nodeId}")]
     [Authorize]
+    [ProducesResponseType(typeof(NodeDto), 200)]
+    [ProducesResponseType(404)]
     public async Task<IActionResult> GetNode(string nodeId, CancellationToken ct)
     {
         var result = await nodeService.GetNodeAsync(nodeId, ct);
@@ -57,6 +60,7 @@ public sealed class NodesController(
 
     [HttpGet("{nodeId}/security")]
     [Authorize(Policy = "AdminOnly")]
+    [ProducesResponseType(typeof(NodeSecurityInfoDto), 200)]
     public async Task<IActionResult> GetNodeSecurity(string nodeId, CancellationToken ct)
     {
         var result = await nodeService.GetNodeSecurityInfoAsync(nodeId, ct);
@@ -65,6 +69,7 @@ public sealed class NodesController(
 
     [HttpGet("groups")]
     [Authorize]
+    [ProducesResponseType(typeof(IReadOnlyList<NodeGroupDto>), 200)]
     public async Task<IActionResult> GetNodeGroups(CancellationToken ct)
     {
         var result = await nodeService.GetNodeGroupsAsync(ct);
@@ -73,6 +78,7 @@ public sealed class NodesController(
 
     [HttpPut("{nodeId}")]
     [Authorize(Policy = "OperatorOrAbove")]
+    [ProducesResponseType(typeof(NodeDto), 200)]
     public async Task<IActionResult> UpdateNode(
         string nodeId, [FromBody] UpdateNodeRequest req, CancellationToken ct)
     {
@@ -82,6 +88,7 @@ public sealed class NodesController(
 
     [HttpGet("registrations/pending")]
     [Authorize]
+    [ProducesResponseType(typeof(IReadOnlyList<RegistrationRequestDto>), 200)]
     public async Task<IActionResult> GetPendingRegistrations(CancellationToken ct)
     {
         var result = await nodeService.GetPendingRegistrationsAsync(ct);
@@ -90,6 +97,7 @@ public sealed class NodesController(
 
     [HttpDelete("registrations/{requestId:long}")]
     [Authorize(Policy = "AdminOnly")]
+    [ProducesResponseType(204)]
     public async Task<IActionResult> RejectRegistration(long requestId, CancellationToken ct)
     {
         await nodeService.RejectRegistrationAsync(requestId, ct);
@@ -98,6 +106,7 @@ public sealed class NodesController(
 
     [HttpPost]
     [Authorize(Policy = "AdminOnly")]
+    [ProducesResponseType(typeof(CreateNodeResult), 201)]
     public async Task<IActionResult> CreateNode([FromBody] CreateNodeRequest req, CancellationToken ct)
     {
         var result = await nodeService.CreateNodeAsync(req, ct);
@@ -106,6 +115,7 @@ public sealed class NodesController(
 
     [HttpPost("activate")]
     [AllowAnonymous]
+    [ProducesResponseType(typeof(ActivateResultDto), 200)]
     public async Task<ActionResult<ActivateResultDto>> Activate(
         [FromBody] ActivateRequest request, CancellationToken ct)
     {
@@ -116,6 +126,11 @@ public sealed class NodesController(
 
     [HttpPost("{nodeId}/heartbeat")]
     [Authorize(Policy = "NodeToken")]
+    [ProducesResponseType(typeof(HeartbeatResponse), 200)]
+    [ProducesResponseType(typeof(ErrorResponse), 400)]
+    [ProducesResponseType(403)]
+    [ProducesResponseType(404)]
+    [ProducesResponseType(410)]
     public async Task<IActionResult> Heartbeat(
         string nodeId, [FromBody] HeartbeatRequest request, CancellationToken ct)
     {

@@ -32,6 +32,7 @@ public sealed class ConfigurationTemplateController(
     }
 
     [HttpGet]
+    [ProducesResponseType(typeof(IReadOnlyList<TemplateSummaryDto>), 200)]
     public async Task<IActionResult> List([FromQuery] string? status, CancellationToken ct)
     {
         await authz.EnsurePermissionAsync(SystemPermissions.ManageConfigurations, ct);
@@ -40,6 +41,8 @@ public sealed class ConfigurationTemplateController(
     }
 
     [HttpPost]
+    [ProducesResponseType(typeof(TemplateDto), 201)]
+    [ProducesResponseType(typeof(ProblemDetails), 400)]
     public async Task<IActionResult> Create([FromBody] CreateTemplateRequest request, CancellationToken ct)
     {
         await authz.EnsurePermissionAsync(SystemPermissions.ManageConfigurations, ct);
@@ -49,6 +52,7 @@ public sealed class ConfigurationTemplateController(
     }
 
     [HttpGet("{id:guid}")]
+    [ProducesResponseType(typeof(TemplateDto), 200)]
     public async Task<IActionResult> Get(Guid id, CancellationToken ct)
     {
         await authz.EnsurePermissionAsync(SystemPermissions.ManageConfigurations, ct);
@@ -57,6 +61,8 @@ public sealed class ConfigurationTemplateController(
     }
 
     [HttpPut("{id:guid}/draft")]
+    [ProducesResponseType(typeof(TemplateVersionDto), 200)]
+    [ProducesResponseType(typeof(ProblemDetails), 400)]
     public async Task<IActionResult> UpdateDraft(Guid id, [FromBody] UpdateDraftRequest request,
         [FromHeader(Name = "If-Match")] string? ifMatch, CancellationToken ct)
     {
@@ -70,6 +76,8 @@ public sealed class ConfigurationTemplateController(
     }
 
     [HttpPost("{id:guid}/validate")]
+    [ProducesResponseType(typeof(ValidationPreviewResponse), 200)]
+    [ProducesResponseType(typeof(ValidationErrorsResponse), 422)]
     public async Task<IActionResult> Validate(Guid id, CancellationToken ct)
     {
         await authz.EnsurePermissionAsync(SystemPermissions.ManageConfigurations, ct);
@@ -80,6 +88,7 @@ public sealed class ConfigurationTemplateController(
     }
 
     [HttpPost("{id:guid}/publish")]
+    [ProducesResponseType(typeof(TemplateVersionDto), 200)]
     public async Task<IActionResult> Publish(Guid id, CancellationToken ct)
     {
         await authz.EnsurePermissionAsync(SystemPermissions.ManageConfigurations, ct);
@@ -88,6 +97,7 @@ public sealed class ConfigurationTemplateController(
     }
 
     [HttpPost("{id:guid}/clone")]
+    [ProducesResponseType(typeof(TemplateDto), 201)]
     public async Task<IActionResult> Clone(Guid id, [FromBody] CloneTemplateRequest request, CancellationToken ct)
     {
         await authz.EnsurePermissionAsync(SystemPermissions.ManageConfigurations, ct);
@@ -96,6 +106,7 @@ public sealed class ConfigurationTemplateController(
     }
 
     [HttpPost("{id:guid}/archive")]
+    [ProducesResponseType(204)]
     public async Task<IActionResult> Archive(Guid id, CancellationToken ct)
     {
         await authz.EnsurePermissionAsync(SystemPermissions.ManageConfigurations, ct);
@@ -104,6 +115,7 @@ public sealed class ConfigurationTemplateController(
     }
 
     [HttpGet("{id:guid}/versions")]
+    [ProducesResponseType(typeof(IReadOnlyList<TemplateVersionSummaryDto>), 200)]
     public async Task<IActionResult> ListVersions(Guid id, CancellationToken ct)
     {
         await authz.EnsurePermissionAsync(SystemPermissions.ManageConfigurations, ct);
@@ -112,6 +124,7 @@ public sealed class ConfigurationTemplateController(
     }
 
     [HttpGet("{id:guid}/versions/{version:int}")]
+    [ProducesResponseType(typeof(TemplateVersionDto), 200)]
     public async Task<IActionResult> GetVersion(Guid id, int version, CancellationToken ct)
     {
         await authz.EnsurePermissionAsync(SystemPermissions.ManageConfigurations, ct);
@@ -120,6 +133,7 @@ public sealed class ConfigurationTemplateController(
     }
 
     [HttpGet("{id:guid}/versions/{v1:int}/diff/{v2:int}")]
+    [ProducesResponseType(typeof(TemplateVersionDiffResponse), 200)]
     public async Task<IActionResult> DiffVersions(Guid id, int v1, int v2, CancellationToken ct)
     {
         await authz.EnsurePermissionAsync(SystemPermissions.ManageConfigurations, ct);

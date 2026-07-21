@@ -11,6 +11,7 @@ public sealed class ChannelsController(IChannelMetadataService channelService) :
 {
     [HttpGet]
     [Authorize]
+    [ProducesResponseType(typeof(IReadOnlyList<ChannelDto>), 200)]
     public async Task<IActionResult> GetChannels(CancellationToken ct)
     {
         var result = await channelService.GetChannelsAsync(ct);
@@ -19,6 +20,8 @@ public sealed class ChannelsController(IChannelMetadataService channelService) :
 
     [HttpGet("{channelId}")]
     [Authorize]
+    [ProducesResponseType(typeof(ChannelDto), 200)]
+    [ProducesResponseType(404)]
     public async Task<IActionResult> GetChannel(string channelId, CancellationToken ct)
     {
         var result = await channelService.GetChannelAsync(channelId, ct);
@@ -28,6 +31,7 @@ public sealed class ChannelsController(IChannelMetadataService channelService) :
 
     [HttpPost]
     [Authorize(Policy = "OperatorOrAbove")]
+    [ProducesResponseType(typeof(ChannelDto), 201)]
     public async Task<IActionResult> CreateChannel([FromBody] CreateChannelRequest req, CancellationToken ct)
     {
         var result = await channelService.CreateChannelAsync(req, ct);
@@ -36,6 +40,7 @@ public sealed class ChannelsController(IChannelMetadataService channelService) :
 
     [HttpPut("{channelId}")]
     [Authorize(Policy = "OperatorOrAbove")]
+    [ProducesResponseType(typeof(ChannelDto), 200)]
     public async Task<IActionResult> UpdateChannel(
         string channelId, [FromBody] UpdateChannelRequest req, CancellationToken ct)
     {
@@ -45,6 +50,7 @@ public sealed class ChannelsController(IChannelMetadataService channelService) :
 
     [HttpDelete("{channelId}")]
     [Authorize(Policy = "AdminOnly")]
+    [ProducesResponseType(204)]
     public async Task<IActionResult> DeleteChannel(string channelId, CancellationToken ct)
     {
         await channelService.DeleteChannelAsync(channelId, ct);

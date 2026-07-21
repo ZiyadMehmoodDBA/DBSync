@@ -34,6 +34,8 @@ public sealed class ConfigurationAssignmentController(
     }
 
     [HttpPost("nodes/{nodeId}/assign")]
+    [ProducesResponseType(typeof(NodeConfigurationDto), 200)]
+    [ProducesResponseType(typeof(ProblemDetails), 400)]
     public async Task<IActionResult> Assign(string nodeId, [FromBody] AssignRequest request, CancellationToken ct)
     {
         await authz.EnsurePermissionAsync(SystemPermissions.ManageConfigurations, ct);
@@ -43,6 +45,7 @@ public sealed class ConfigurationAssignmentController(
     }
 
     [HttpDelete("nodes/{nodeId}/assign")]
+    [ProducesResponseType(204)]
     public async Task<IActionResult> Unassign(string nodeId, CancellationToken ct)
     {
         await authz.EnsurePermissionAsync(SystemPermissions.ManageConfigurations, ct);
@@ -51,6 +54,7 @@ public sealed class ConfigurationAssignmentController(
     }
 
     [HttpGet("nodes/{nodeId}")]
+    [ProducesResponseType(typeof(NodeConfigurationDto), 200)]
     public async Task<IActionResult> GetNodeConfiguration(string nodeId, CancellationToken ct)
     {
         await authz.EnsurePermissionAsync(SystemPermissions.ManageConfigurations, ct);
@@ -59,6 +63,7 @@ public sealed class ConfigurationAssignmentController(
     }
 
     [HttpGet("nodes/{nodeId}/history")]
+    [ProducesResponseType(typeof(IReadOnlyList<ConfigurationHistoryEventDto>), 200)]
     public async Task<IActionResult> GetNodeHistory(string nodeId, CancellationToken ct)
     {
         await authz.EnsurePermissionAsync(SystemPermissions.ManageConfigurations, ct);
@@ -67,6 +72,8 @@ public sealed class ConfigurationAssignmentController(
     }
 
     [HttpPost("nodes/{nodeId}/overrides")]
+    [ProducesResponseType(200)]
+    [ProducesResponseType(typeof(ProblemDetails), 400)]
     public async Task<IActionResult> SetOverride(string nodeId, [FromBody] SetOverrideRequest request, CancellationToken ct)
     {
         await authz.EnsurePermissionAsync(SystemPermissions.ManageConfigurations, ct);
@@ -76,6 +83,7 @@ public sealed class ConfigurationAssignmentController(
     }
 
     [HttpDelete("nodes/{nodeId}/overrides/{key}")]
+    [ProducesResponseType(204)]
     public async Task<IActionResult> RemoveOverride(string nodeId, string key, CancellationToken ct)
     {
         await authz.EnsurePermissionAsync(SystemPermissions.ManageConfigurations, ct);
@@ -84,6 +92,8 @@ public sealed class ConfigurationAssignmentController(
     }
 
     [HttpPost("rollout")]
+    [ProducesResponseType(typeof(RolloutAcceptedResponse), 202)]
+    [ProducesResponseType(typeof(ProblemDetails), 400)]
     public async Task<IActionResult> StartRollout([FromBody] StartRolloutRequest request, CancellationToken ct)
     {
         await authz.EnsurePermissionAsync(SystemPermissions.ManageConfigurations, ct);
@@ -94,6 +104,7 @@ public sealed class ConfigurationAssignmentController(
     }
 
     [HttpGet("rollout/{rolloutId:guid}")]
+    [ProducesResponseType(typeof(RolloutDto), 200)]
     public async Task<IActionResult> GetRollout(Guid rolloutId, CancellationToken ct)
     {
         await authz.EnsurePermissionAsync(SystemPermissions.ManageConfigurations, ct);
@@ -102,6 +113,7 @@ public sealed class ConfigurationAssignmentController(
     }
 
     [HttpGet("drift")]
+    [ProducesResponseType(typeof(IReadOnlyList<DriftNodeDto>), 200)]
     public async Task<IActionResult> GetDrift(
         [FromQuery] string? state, [FromQuery] Guid? templateId,
         [FromQuery] int? version, [FromQuery] string? nodeGroup,
@@ -113,6 +125,7 @@ public sealed class ConfigurationAssignmentController(
     }
 
     [HttpGet("summary")]
+    [ProducesResponseType(typeof(DriftSummaryDto), 200)]
     public async Task<IActionResult> GetSummary(CancellationToken ct)
     {
         await authz.EnsurePermissionAsync(SystemPermissions.ManageConfigurations, ct);

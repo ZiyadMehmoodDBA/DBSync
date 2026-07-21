@@ -78,7 +78,7 @@ public sealed class OperationsController(
     /// <summary>Returns the detail view of a single operation.</summary>
     [HttpGet("{id:guid}")]
     [ProducesResponseType(typeof(OperationDetailDto), 200)]
-    [ProducesResponseType(404)]
+    [ProducesResponseType(typeof(ErrorResponse), 404)]
     public async Task<IActionResult> GetOperation(Guid id, CancellationToken ct)
     {
         var detail = await queryService.GetDetailAsync(id, ct);
@@ -94,9 +94,9 @@ public sealed class OperationsController(
     /// </summary>
     [HttpPost("{id:guid}/cancel")]
     [ProducesResponseType(typeof(OperationDetailDto), 200)]
-    [ProducesResponseType(404)]
+    [ProducesResponseType(typeof(ErrorResponse), 404)]
     [ProducesResponseType(403)]
-    [ProducesResponseType(409)]
+    [ProducesResponseType(typeof(ErrorResponse), 409)]
     public async Task<IActionResult> CancelOperation(Guid id, CancellationToken ct)
     {
         if (!await HasManagePermissionAsync(ct))
@@ -128,9 +128,9 @@ public sealed class OperationsController(
     /// </summary>
     [HttpPost("{id:guid}/retry")]
     [ProducesResponseType(typeof(OperationDetailDto), 200)]
-    [ProducesResponseType(404)]
+    [ProducesResponseType(typeof(ErrorResponse), 404)]
     [ProducesResponseType(403)]
-    [ProducesResponseType(409)]
+    [ProducesResponseType(typeof(ErrorResponse), 409)]
     public async Task<IActionResult> RetryOperation(Guid id, CancellationToken ct)
     {
         if (!await HasManagePermissionAsync(ct))

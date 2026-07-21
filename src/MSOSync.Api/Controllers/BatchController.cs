@@ -27,6 +27,7 @@ public sealed class BatchController(
 {
     [HttpGet]
     [Authorize]
+    [ProducesResponseType(typeof(PagedResponse<OutgoingBatchDto>), 200)]
     public async Task<IActionResult> GetBatches([FromQuery] BatchListRequest req, CancellationToken ct)
     {
         var query = db.OutgoingBatches.AsNoTracking();
@@ -63,6 +64,8 @@ public sealed class BatchController(
 
     [HttpGet("{batchId:long}")]
     [Authorize]
+    [ProducesResponseType(typeof(OutgoingBatchDto), 200)]
+    [ProducesResponseType(404)]
     public async Task<IActionResult> GetBatch(long batchId, CancellationToken ct)
     {
         var batch = await db.OutgoingBatches.AsNoTracking()
@@ -84,6 +87,9 @@ public sealed class BatchController(
 
     [HttpPost("{batchId:long}/retry")]
     [Authorize(Policy = "OperatorOrAbove")]
+    [ProducesResponseType(200)]
+    [ProducesResponseType(404)]
+    [ProducesResponseType(typeof(CodeMessageResponse), 409)]
     public async Task<IActionResult> RetryBatch(long batchId, CancellationToken ct)
     {
         var batch = await db.OutgoingBatches.AsNoTracking()
@@ -101,6 +107,8 @@ public sealed class BatchController(
 
     [HttpPost("retry-all")]
     [Authorize(Policy = "OperatorOrAbove")]
+    [ProducesResponseType(typeof(RetryAllResponse), 200)]
+    [ProducesResponseType(typeof(CodeMessageResponse), 409)]
     public async Task<IActionResult> RetryAll(CancellationToken ct)
     {
         var lease = await lockProvider.TryAcquireAsync(LockNames.RetryEngine, ct);
@@ -117,6 +125,8 @@ public sealed class BatchController(
 
     [HttpGet("export")]
     [Authorize(Policy = "ViewerOrAbove")]
+    [ProducesResponseType(200)]
+    [ProducesResponseType(typeof(ProblemDetails), 400)]
     public async Task<IActionResult> ExportBatches(
         [FromQuery] OutgoingBatchExportFilter filter,
         [FromQuery] string format = "csv",

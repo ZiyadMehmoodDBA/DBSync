@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MSOSync.Api.Dtos.Common;
+using MSOSync.Metadata.Common;
 using MSOSync.Metadata.Users;
 
 namespace MSOSync.Api.Controllers;
@@ -13,6 +14,7 @@ public sealed class UsersController(
     IUsersManagementService usersService) : ControllerBase
 {
     [HttpGet]
+    [ProducesResponseType(typeof(PagedResult<UserSummaryDto>), 200)]
     public async Task<IActionResult> GetUsers(
         [FromQuery] int     page     = 1,
         [FromQuery] int     pageSize = 20,
@@ -25,6 +27,8 @@ public sealed class UsersController(
     }
 
     [HttpGet("{userId:long}")]
+    [ProducesResponseType(typeof(UserDetailDto), 200)]
+    [ProducesResponseType(404)]
     public async Task<IActionResult> GetUser(long userId, CancellationToken ct)
     {
         var result = await usersService.GetUserAsync(userId, ct);
@@ -33,6 +37,8 @@ public sealed class UsersController(
     }
 
     [HttpPost]
+    [ProducesResponseType(typeof(UserDetailDto), 201)]
+    [ProducesResponseType(typeof(ErrorResponse), 409)]
     public async Task<IActionResult> CreateUser(
         [FromBody] CreateUserRequest request, CancellationToken ct)
     {
@@ -50,6 +56,8 @@ public sealed class UsersController(
     }
 
     [HttpPut("{userId:long}")]
+    [ProducesResponseType(typeof(UserDetailDto), 200)]
+    [ProducesResponseType(404)]
     public async Task<IActionResult> UpdateUser(
         long userId, [FromBody] UpdateUserRequest request, CancellationToken ct)
     {
@@ -65,6 +73,9 @@ public sealed class UsersController(
     }
 
     [HttpDelete("{userId:long}")]
+    [ProducesResponseType(204)]
+    [ProducesResponseType(403)]
+    [ProducesResponseType(404)]
     public async Task<IActionResult> DeleteUser(long userId, CancellationToken ct)
     {
         var callerIdStr = User.FindFirstValue("userId");

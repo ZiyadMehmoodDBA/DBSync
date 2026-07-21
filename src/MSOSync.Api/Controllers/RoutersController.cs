@@ -11,6 +11,7 @@ public sealed class RoutersController(IRouterMetadataService routerService) : Co
 {
     [HttpGet]
     [Authorize]
+    [ProducesResponseType(typeof(IReadOnlyList<RouterDto>), 200)]
     public async Task<IActionResult> GetRouters(CancellationToken ct)
     {
         var result = await routerService.GetRoutersAsync(ct);
@@ -19,6 +20,8 @@ public sealed class RoutersController(IRouterMetadataService routerService) : Co
 
     [HttpGet("{routerId}")]
     [Authorize]
+    [ProducesResponseType(typeof(RouterDto), 200)]
+    [ProducesResponseType(404)]
     public async Task<IActionResult> GetRouter(string routerId, CancellationToken ct)
     {
         var result = await routerService.GetRouterAsync(routerId, ct);
@@ -28,6 +31,7 @@ public sealed class RoutersController(IRouterMetadataService routerService) : Co
 
     [HttpGet("source/{groupId}")]
     [Authorize]
+    [ProducesResponseType(typeof(IReadOnlyList<RouterDto>), 200)]
     public async Task<IActionResult> GetRoutersForSourceGroup(string groupId, CancellationToken ct)
     {
         var result = await routerService.GetRoutersForSourceGroupAsync(groupId, ct);
@@ -36,6 +40,7 @@ public sealed class RoutersController(IRouterMetadataService routerService) : Co
 
     [HttpGet("target/{groupId}")]
     [Authorize]
+    [ProducesResponseType(typeof(IReadOnlyList<RouterDto>), 200)]
     public async Task<IActionResult> GetRoutersForTargetGroup(string groupId, CancellationToken ct)
     {
         var result = await routerService.GetRoutersForTargetGroupAsync(groupId, ct);
@@ -44,6 +49,7 @@ public sealed class RoutersController(IRouterMetadataService routerService) : Co
 
     [HttpPost]
     [Authorize(Policy = "OperatorOrAbove")]
+    [ProducesResponseType(typeof(RouterDto), 201)]
     public async Task<IActionResult> CreateRouter([FromBody] CreateRouterRequest req, CancellationToken ct)
     {
         var result = await routerService.CreateRouterAsync(req, ct);
@@ -52,6 +58,7 @@ public sealed class RoutersController(IRouterMetadataService routerService) : Co
 
     [HttpPut("{routerId}")]
     [Authorize(Policy = "OperatorOrAbove")]
+    [ProducesResponseType(typeof(RouterDto), 200)]
     public async Task<IActionResult> UpdateRouter(
         string routerId, [FromBody] UpdateRouterRequest req, CancellationToken ct)
     {
@@ -61,6 +68,7 @@ public sealed class RoutersController(IRouterMetadataService routerService) : Co
 
     [HttpDelete("{routerId}")]
     [Authorize(Policy = "AdminOnly")]
+    [ProducesResponseType(204)]
     public async Task<IActionResult> DeleteRouter(string routerId, CancellationToken ct)
     {
         await routerService.DeleteRouterAsync(routerId, ct);

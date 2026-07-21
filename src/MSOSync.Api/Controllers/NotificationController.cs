@@ -30,7 +30,7 @@ public sealed class NotificationController(
     }
 
     [HttpGet("unread-count")]
-    [ProducesResponseType(200)]
+    [ProducesResponseType(typeof(UnreadCountResponse), 200)]
     public async Task<IActionResult> GetUnreadCount(CancellationToken ct)
     {
         var userId = await ResolveUserIdAsync(ct);
@@ -49,7 +49,7 @@ public sealed class NotificationController(
 
     [HttpPatch("{id:long}")]
     [ProducesResponseType(200)]
-    [ProducesResponseType(400)]
+    [ProducesResponseType(typeof(ErrorResponse), 400)]
     public async Task<IActionResult> PatchNotification(
         long id, [FromBody] PatchNotificationRequest? request, CancellationToken ct)
     {

@@ -12,6 +12,8 @@ public sealed class NodeScopeController(INodeScopeService scopeService) : Contro
 {
     [HttpGet]
     [Authorize]
+    [ProducesResponseType(typeof(NodeScopeDto), 200)]
+    [ProducesResponseType(404)]
     public async Task<IActionResult> GetScope(string nodeId, CancellationToken ct)
     {
         var result = await scopeService.GetScopeAsync(nodeId, ct);
@@ -21,6 +23,7 @@ public sealed class NodeScopeController(INodeScopeService scopeService) : Contro
 
     [HttpPut]
     [Authorize(Policy = "OperatorOrAbove")]
+    [ProducesResponseType(typeof(NodeScopeDto), 200)]
     public async Task<IActionResult> SetScope(
         string nodeId, [FromBody] SetNodeScopeRequest req, CancellationToken ct)
     {

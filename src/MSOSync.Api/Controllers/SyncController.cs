@@ -32,6 +32,9 @@ public sealed class SyncController(
     // ── PULL: target requests batches from this source node ──────────────────
 
     [HttpPost("pull")]
+    [ProducesResponseType(typeof(PullResponse), 200)]
+    [ProducesResponseType(204)]
+    [ProducesResponseType(401)]
     public async Task<IActionResult> Pull([FromBody] PullRequest req, CancellationToken ct)
     {
         var myNodeId = User.FindFirst("nodeId")?.Value;
@@ -74,6 +77,10 @@ public sealed class SyncController(
     // ── PUSH: another node pushes a batch to us ───────────────────────────────
 
     [HttpPost("push")]
+    [ProducesResponseType(typeof(PushResponse), 200)]
+    [ProducesResponseType(400)]
+    [ProducesResponseType(401)]
+    [ProducesResponseType(typeof(CodeResponse), 409)]
     public async Task<IActionResult> Push(CancellationToken ct)
     {
         BatchPayload payload;
@@ -146,6 +153,8 @@ public sealed class SyncController(
     // ── ACK: target acknowledges a batch pulled from us ──────────────────────
 
     [HttpPost("ack")]
+    [ProducesResponseType(200)]
+    [ProducesResponseType(404)]
     public async Task<IActionResult> Ack([FromBody] AckPayload payload, CancellationToken ct)
     {
         var found = await acknowledgement.AcknowledgeIncomingAsync(payload, ct);
@@ -160,6 +169,7 @@ public sealed class SyncController(
     // ── PING: health check ───────────────────────────────────────────────────
 
     [HttpGet("ping")]
+    [ProducesResponseType(typeof(PingResponse), 200)]
     public async Task<IActionResult> Ping(CancellationToken ct)
     {
         var props   = nodeProps.Value;
