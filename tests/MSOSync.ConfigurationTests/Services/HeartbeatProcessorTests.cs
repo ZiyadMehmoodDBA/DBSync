@@ -122,6 +122,23 @@ public sealed class HeartbeatProcessorTests : IClassFixture<ConfigurationDbFixtu
     }
 
     [Fact]
+    public async Task ProcessAsync_persists_node_version_as_agent_version()
+    {
+        var (node, _) = await SeedNodeWithTemplate();
+
+        var request = new HeartbeatRequest(
+            NodeId: node.NodeId, NodeVersion: "2.4.1", UptimeSeconds: 10,
+            DatabaseType: null, TransportMode: null,
+            AppliedTemplateVersion: null, AppliedEffectiveHash: null,
+            ConfigurationApplyStatus: ConfigurationApplyStatus.Applied);
+
+        await _processor.ProcessAsync(node.NodeId, request, CancellationToken.None);
+
+        var updated = await _fx.Db.Nodes.AsNoTracking().SingleAsync(n => n.NodeId == node.NodeId);
+        updated.AgentVersion.Should().Be("2.4.1");
+    }
+
+    [Fact]
     public async Task Process_SameState_DoesNotDuplicateHistoryEvent()
     {
         var (node, version) = await SeedNodeWithTemplate();

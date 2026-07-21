@@ -151,6 +151,7 @@ public sealed class NodesController(
             case NodeLifecycleState.Active:
             case NodeLifecycleState.Recovery:
             case NodeLifecycleState.Decommissioning:
+            case NodeLifecycleState.Draining:
                 break;   // accepted — draining/recovering nodes still report telemetry
             case NodeLifecycleState.PendingRegistration:
             case NodeLifecycleState.PendingApproval:

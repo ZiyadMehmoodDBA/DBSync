@@ -32,6 +32,8 @@ public sealed class HeartbeatProcessor(
         var previousState = node.ConfigurationState;
 
         // Write reported values — ONLY this method and ConfigurationAssignmentService may write these columns
+        if (!string.IsNullOrWhiteSpace(request.NodeVersion) && node.AgentVersion != request.NodeVersion)
+            node.AgentVersion = request.NodeVersion;
         if (request.AppliedTemplateVersion.HasValue)
             node.AppliedTemplateVersion = request.AppliedTemplateVersion.Value;
         if (request.AppliedEffectiveHash is not null)
