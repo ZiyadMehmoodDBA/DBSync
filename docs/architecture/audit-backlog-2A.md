@@ -24,3 +24,8 @@ Master plan: `docs/superpowers/plans/2026-07-17-phase-2A-master.md`
 | 2A-014 | 27 integration tests require Docker (Testcontainers fixtures: Metadata, Transport, Engine, Operations, migration smoke) — fail on machines without Docker | 2A.10 | P2 | Accepted (environment) |
 | 2A-015 | MultiTenancy integration tests fail when co-run with other collections: `ApplyTenantFilters` bakes `ICurrentTenantAccessor` into EF's cached model via `Expression.Constant`; default model cache keys on context type only, so the first-built fixture's accessor (or null) wins for all parallel collections. Benign in production (single DI singleton accessor). Fix: custom `IModelCacheKeyFactory` or context-instance-member filter. | 2A.10 | P2 | Not Started |
 | 2A-016 | Stale count assertions: permission catalog tests expected 15 (now 16 after M029 MANAGE_PLUGINS), schema test expected 43 tables (now 45 after M028) | 2A.10 | P2 | Complete |
+| 2A-017 | AuditController inline range validation (INVALID_RANGE, RANGE_TOO_LARGE) instead of FluentValidation | 2A.1 | P2 | Not Started |
+| 2A-018 | ExportJobController inline filtersJson/resourceType validation with string BadRequest bodies — handle with 2A-001/2A-003 rework | 2A.1 | P2 | Not Started |
+| 2A-019 | OperationsController inline pageSize range check instead of FluentValidation | 2A.1 | P2 | Not Started |
+| 2A-020 | BatchController ExportBatches inline status validation (INVALID_STATUS) instead of FluentValidation | 2A.1 | P2 | Not Started |
+| 2A-021 | Business-rule BadRequests reviewed and acceptable under RULE-VAL-2: NodesController nodeId/token mismatch, SyncController invalid compressed payload, NotificationController unread-unsupported + null-body guard | — | P2 | Accepted |
