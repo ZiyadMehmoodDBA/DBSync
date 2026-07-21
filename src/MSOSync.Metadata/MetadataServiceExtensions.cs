@@ -22,6 +22,7 @@ using MSOSync.Metadata.Configuration;
 using MSOSync.Metadata.Notifications;
 using MSOSync.Metadata.Operations;
 using MSOSync.Metadata.Operations.Handlers;
+using MSOSync.Metadata.Operations.Rolling;
 using MSOSync.Metadata.Overview;
 using MSOSync.Metadata.Pagination;
 
@@ -127,6 +128,7 @@ public static class MetadataServiceExtensions
 
         // Epic 12C — Operations registry
         services.AddScoped<IOperationService, OperationService>();
+        services.AddScoped<IRollingOperationService, RollingOperationService>();
         services.AddKeyedScoped<IOperationHandler, ExportOperationHandler>(OperationType.Export);
         services.AddKeyedScoped<IOperationHandler, RolloutOperationHandler>(OperationType.Rollout);
         services.AddKeyedScoped<IOperationHandler, DecommissionOperationHandler>(OperationType.Decommission);

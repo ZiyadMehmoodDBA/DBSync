@@ -37,6 +37,7 @@ public sealed class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logge
             ForbiddenOperationException ex         => (403, "Forbidden",             ex.Code,            ex.Message),
             ConcurrencyException ex                => (409, "Conflict",              ex.Code,            ex.Message),
             ConflictException ex                   => (409, "Conflict",              ex.Code,            ex.Message),
+            OperationStateException ex             => (409, "Conflict",              ex.Code,            ex.Message),
             UnauthorizedException ex               => (401, "Unauthorized",          ex.Code,            ex.Message),
             FluentValidation.ValidationException e => (400, "Bad Request",           "VALIDATION_ERROR",
                 string.Join("; ", e.Errors.Select(x => x.ErrorMessage))),
