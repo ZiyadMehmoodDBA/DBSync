@@ -23,48 +23,47 @@
 
 Execute workstream plans in this order. P1 items (2A.8, 2A.9) must complete before any other workstream begins. P2 items (2A.1–2A.7) can execute in any order after P1 is complete. 2A.10 runs last.
 
-| Order | Plan | Workstream | Priority | Audit Findings |
-|---|---|---|---|---|
-| 1 | [2A.8 Configuration](2026-07-17-phase-2A-8-configuration.md) | Configuration typed options | P1 | 2A-004, 2A-005, 2A-006, 2A-007, 2A-008 |
-| 2 | [2A.9 Background Services](2026-07-17-phase-2A-9-background-services.md) | Worker registry compliance | P1 | 2A-009, 2A-010, 2A-011, 2A-012 |
-| 3 | [2A.3 Validation](2026-07-17-phase-2A-3-validation.md) | FluentValidation exclusively | P2 | 2A-002 |
-| 4 | [2A.6 DTO Standardization](2026-07-17-phase-2A-6-dto-standardization.md) | No inline DTOs | P2 | 2A-003 |
-| 5 | [2A.1 API Standardization](2026-07-17-phase-2A-1-api-standardization.md) | ProducesResponseType + no anonymous responses | P2 | 2A-001 |
-| 6 | [2A.2 Error Handling](2026-07-17-phase-2A-2-error-handling.md) | Exception hierarchy documentation | P2 | None (audit clean) |
-| 7 | [2A.4 Dependency Injection](2026-07-17-phase-2A-4-dependency-injection.md) | DI lifetime table + justification comments | P2 | None (audit clean) |
-| 8 | [2A.5 Architecture Consistency](2026-07-17-phase-2A-5-architecture-consistency.md) | Service responsibility map | P2 | None (audit clean) |
-| 9 | [2A.7 Logging](2026-07-17-phase-2A-7-logging.md) | Log level guide | P2 | None (audit clean) |
-| 10 | [2A.10 Test Infrastructure](2026-07-17-phase-2A-10-test-infrastructure.md) | Coverage report + gap tests | P2 | N/A |
+| Order | Plan | Workstream | Priority | Audit Findings | Status |
+|---|---|---|---|---|---|
+| 1 | [2A.8 Configuration](2026-07-17-phase-2A-8-configuration.md) | Configuration typed options | P1 | 2A-004, 2A-005, 2A-006, 2A-007, 2A-008 | Complete |
+| 2 | [2A.9 Background Services](2026-07-17-phase-2A-9-background-services.md) | Worker registry compliance | P1 | 2A-009, 2A-010, 2A-011, 2A-012, 2A-013 | Complete |
+| 3 | [2A.3 Validation](2026-07-17-phase-2A-3-validation.md) | FluentValidation exclusively | P2 | 2A-002 | Complete |
+| 4 | [2A.6 DTO Standardization](2026-07-17-phase-2A-6-dto-standardization.md) | No inline DTOs | P2 | 2A-003, 2A-022 | Complete |
+| 5 | [2A.1 API Standardization](2026-07-17-phase-2A-1-api-standardization.md) | ProducesResponseType + no anonymous responses | P2 | 2A-001, 2A-017..2A-020, 2A-024 | Complete |
+| 6 | [2A.2 Error Handling](2026-07-17-phase-2A-2-error-handling.md) | Exception hierarchy documentation | P2 | 2A-025..2A-028 | Complete |
+| 7 | [2A.4 Dependency Injection](2026-07-17-phase-2A-4-dependency-injection.md) | DI lifetime table + justification comments | P2 | None (audit clean) | Complete |
+| 8 | [2A.5 Architecture Consistency](2026-07-17-phase-2A-5-architecture-consistency.md) | Service responsibility map | P2 | 2A-029, 2A-030 | Complete |
+| 9 | [2A.7 Logging](2026-07-17-phase-2A-7-logging.md) | Log level guide | P2 | None (audit clean) | Complete |
+| 10 | [2A.10 Test Infrastructure](2026-07-17-phase-2A-10-test-infrastructure.md) | Coverage report + gap tests | P2 | 2A-014..2A-016, 2A-023 | Complete |
 
 ---
 
 ## Audit Backlog Status
 
-Full backlog in: `docs/architecture/audit-backlog-2A.md` (created by 2A.1 plan, Task 1)
-
-| ID | Finding | Workstream | Priority | Status |
-|---|---|---|---|---|
-| 2A-001 | ExportJobController returns anonymous `new { jobId }` on 202 | 2A.1 | P2 | Not Started |
-| 2A-002 | PreferencesController manual key validation instead of FluentValidation | 2A.3 | P2 | Not Started |
-| 2A-003 | `CreateExportJobRequest`, `ExportJobDto` defined inline in controller file | 2A.6 | P2 | Not Started |
-| 2A-004 | HeartbeatWorker uses `IConfiguration.GetValue("Heartbeat:IntervalSeconds")` | 2A.8 | P1 | Not Started |
-| 2A-005 | ProbeWorker uses `IConfiguration.GetValue("Heartbeat:ProbeIntervalSeconds")` | 2A.8 | P1 | Not Started |
-| 2A-006 | ConnectivityEvaluator uses raw IConfiguration for heartbeat/probe intervals | 2A.8 | P1 | Not Started |
-| 2A-007 | PullJob uses `IConfiguration.GetValue("Sync:PullIntervalSeconds")` | 2A.8 | P1 | Not Started |
-| 2A-008 | SyncJob uses `IConfiguration.GetValue("Sync:IntervalSeconds")` | 2A.8 | P1 | Not Started |
-| 2A-009 | SyncJob missing IWorkerStatusRegistry | 2A.9 | P1 | Not Started |
-| 2A-010 | PullJob missing IWorkerStatusRegistry | 2A.9 | P1 | Not Started |
-| 2A-011 | RetryJob missing IWorkerStatusRegistry, interval hardcoded | 2A.9 | P1 | Not Started |
-| 2A-012 | PurgeJob missing IWorkerStatusRegistry, uses Task.Delay loop | 2A.9 | P1 | Not Started |
+Authoritative backlog: `docs/architecture/audit-backlog-2A.md` — all 30 findings
+(2A-001..2A-030) resolved: 25 Complete, 4 Accepted, 1 Deferred (2A-029 → Phase 2B).
+The snapshot table previously kept here is superseded by that document.
 
 ---
 
-## Phase 2A Exit Gate
+## Phase 2A Exit Gate — VERIFIED 2026-07-21
 
-After all workstream plans complete, all 10 exit criteria in the spec must be verified. Do not declare Phase 2A complete until every item in the spec's Exit Criteria section is satisfied.
+All 10 spec exit criteria satisfied:
 
-Run final verification:
-```
-dotnet test D:\MSOSync\MSOSync.sln
-```
-Expected: 0 failures.
+1. Every finding resolved (Complete / Accepted / Deferred) — see backlog doc. ✅
+2. All P1 findings Fixed (2A-004..2A-013, 2A-025). ✅
+3. Stabilization rules documented; PR checklist at `.github/PULL_REQUEST_TEMPLATE.md`. ✅
+4. Full-solution `dotnet test` run 2026-07-21: all 12 unit assemblies + Plugin.IntegrationTests
+   green (819 passed, 4 skipped); only failures are the 27 accepted environmental
+   IntegrationTests failures (2A-014 Docker fixtures, 2A-023 Operations DB login). ✅
+5. Coverage baseline generated via coverlet (`coverage-baseline/`, git-ignored) and
+   recorded in `docs/architecture/test-infrastructure.md`. ✅
+6. Architecture docs committed: api-response-contract, exception-hierarchy, dto-inventory,
+   di-lifetime-reference, service-responsibility-map, background-workers,
+   worker-config-inventory, logging-guide, test-infrastructure, audit-backlog-2A. ✅
+7. No anonymous controller responses (2A-024 sweep). ✅
+8. No raw `IConfiguration` in workers (2A.8). ✅
+9. No DTOs in controller files (2A.6 + 2A-022 sweep). ✅
+10. No singleton→scoped capture without `IServiceScopeFactory` (2A.4 audit clean). ✅
+
+**Phase 2A is complete. Phase 2B may begin.**
