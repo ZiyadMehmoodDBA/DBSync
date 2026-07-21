@@ -24,6 +24,7 @@ public static class SyncSchedulerExtensions
         // NodeStatusWorker deleted in Epic 12B-1 — lifecycle handled by NodeLifecycleState
         services.AddHostedService<ConnectivityEvaluator>();
         services.AddHostedService<DecommissionWorker>();
+        services.AddHostedService<RollingOperationWorker>();
         return services;
     }
 }

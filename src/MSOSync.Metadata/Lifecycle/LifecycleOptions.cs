@@ -9,4 +9,5 @@ public sealed class LifecycleOptions
     public int ConnectivityHistoryRetentionDays { get; init; } = 30;
     public int ConnectivityEvaluatorIntervalSeconds { get; init; } = 30;
     public int DecommissionWorkerIntervalSeconds { get; init; } = 30;
+    public int RollingWorkerIntervalSeconds { get; init; } = 15;
 }
