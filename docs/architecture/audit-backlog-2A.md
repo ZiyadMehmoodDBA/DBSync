@@ -9,7 +9,7 @@ Master plan: `docs/superpowers/plans/2026-07-17-phase-2A-master.md`
 | ID | Finding | Workstream | Priority | Status |
 |---|---|---|---|---|
 | 2A-001 | ExportJobController returns anonymous `new { jobId }` on 202 | 2A.1 | P2 | Not Started |
-| 2A-002 | PreferencesController manual key validation instead of FluentValidation | 2A.3 | P2 | Not Started |
+| 2A-002 | PreferencesController manual key validation instead of FluentValidation | 2A.3 | P2 | Complete (f192a8c) |
 | 2A-003 | `CreateExportJobRequest`, `ExportJobDto` defined inline in controller file | 2A.6 | P2 | Not Started |
 | 2A-004 | HeartbeatWorker uses `IConfiguration.GetValue("Heartbeat:IntervalSeconds")` | 2A.8 | P1 | Complete (411649e) |
 | 2A-005 | ProbeWorker uses `IConfiguration.GetValue("Heartbeat:ProbeIntervalSeconds")` | 2A.8 | P1 | Complete (2a3b43c) |
