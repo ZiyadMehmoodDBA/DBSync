@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
+using MSOSync.Api.Dtos.Common;
 using Microsoft.Extensions.Options;
 using MSOSync.Batch;
 using MSOSync.Common;
@@ -113,7 +114,7 @@ public sealed class SyncController(
             logger.LogWarning(
                 "Push: sequence gap for source={Source} channel={Ch} expected={Expected} got={Got}",
                 payload.SourceNodeId, payload.ChannelId, lastSeq + 1, payload.BatchSequence);
-            return Conflict(new { code = "SEQUENCE_GAP" });
+            return Conflict(new CodeResponse("SEQUENCE_GAP"));
         }
 
         // Insert incoming batch

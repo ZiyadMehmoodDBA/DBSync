@@ -1,6 +1,7 @@
 // src/MSOSync.Api/Controllers/NotificationController.cs
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MSOSync.Api.Dtos.Common;
 using MSOSync.Api.Dtos.Notifications;
 using MSOSync.Common;
 using MSOSync.Metadata.Notifications;
@@ -34,7 +35,7 @@ public sealed class NotificationController(
     {
         var userId = await ResolveUserIdAsync(ct);
         var count  = await queryService.GetUnreadCountAsync(userId, ct);
-        return Ok(new { count });
+        return Ok(new UnreadCountResponse(count));
     }
 
     [HttpPost("{id:long}/read")]
@@ -53,9 +54,9 @@ public sealed class NotificationController(
         long id, [FromBody] PatchNotificationRequest? request, CancellationToken ct)
     {
         if (request is null)
-            return BadRequest(new { error = "Request body is required." });
+            return BadRequest(new ErrorResponse("Request body is required."));
         if (!request.IsRead)
-            return BadRequest(new { error = "Marking a notification as unread is not supported." });
+            return BadRequest(new ErrorResponse("Marking a notification as unread is not supported."));
 
         var userId = await ResolveUserIdAsync(ct);
         await queryService.MarkReadAsync(userId, id, ct);

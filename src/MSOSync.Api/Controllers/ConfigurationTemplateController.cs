@@ -3,6 +3,7 @@ using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MSOSync.Api.Authorization;
+using MSOSync.Api.Dtos.Configuration;
 using MSOSync.Metadata.Configuration;
 using MSOSync.Metadata.Permissions;
 
@@ -74,11 +75,8 @@ public sealed class ConfigurationTemplateController(
         await authz.EnsurePermissionAsync(SystemPermissions.ManageConfigurations, ct);
         var result = await templateSvc.ValidatePreviewAsync(id, ct);
         if (!result.Validation.IsValid)
-            return UnprocessableEntity(new
-            {
-                errors = result.Validation.Errors.Select(e => new { field = e.Field, message = e.Message })
-            });
-        return Ok(new { hashPreview = result.HashPreview, effectiveSettings = result.EffectiveSettings });
+            return UnprocessableEntity(new ValidationErrorsResponse(result.Validation.Errors));
+        return Ok(new ValidationPreviewResponse(result.HashPreview, result.EffectiveSettings));
     }
 
     [HttpPost("{id:guid}/publish")]
@@ -127,6 +125,6 @@ public sealed class ConfigurationTemplateController(
         await authz.EnsurePermissionAsync(SystemPermissions.ManageConfigurations, ct);
         var ver1 = await templateSvc.GetVersionAsync(id, v1, ct);
         var ver2 = await templateSvc.GetVersionAsync(id, v2, ct);
-        return Ok(new { version1 = ver1, version2 = ver2 });
+        return Ok(new TemplateVersionDiffResponse(ver1, ver2));
     }
 }

@@ -1,6 +1,7 @@
 using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MSOSync.Api.Dtos.NodeManagement;
 using MSOSync.Common;
 using MSOSync.Common.Exceptions;
 using MSOSync.Metadata.NodeManagement;
@@ -64,7 +65,7 @@ public sealed class NodeManagementController(
         [FromBody] InboundRegistrationDto dto, CancellationToken ct)
     {
         var id = await lifecycle.RegisterAsync(dto, ct);
-        return StatusCode(202, new { registrationId = id });
+        return StatusCode(202, new RegistrationAcceptedResponse(id));
     }
 
     // ── Approve / Reject ───────────────────────────────────────────────────────
@@ -170,7 +171,7 @@ public sealed class NodeManagementController(
             return Forbid();
 
         var result = await lifecycle.ProvisionAsync(dto, currentUser.GetCurrentUsername(), ct);
-        return StatusCode(201, new { nodeId = result.NodeId, token = result.Token });
+        return StatusCode(201, new ProvisionResponse(result.NodeId, result.Token));
     }
 
     [HttpPost("provision-package")]

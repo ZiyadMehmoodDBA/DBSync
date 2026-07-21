@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using MSOSync.Api.Dtos.Auth;
+using MSOSync.Api.Dtos.Common;
 using MSOSync.Persistence;
 using MSOSync.Persistence.Entities;
 using MSOSync.Security;
@@ -28,17 +29,15 @@ public sealed class AuthController(
             request.Username, request.Password, correlationId, ct);
 
         if (!result.Success)
-            return Unauthorized(new { error = result.Error });
+            return Unauthorized(new ErrorResponse(result.Error!));
 
         // Multiple memberships — return picker list, client must call switch-tenant
         if (result.RequiresTenantSelection)
         {
-            return StatusCode(300, new
-            {
-                requiresTenantSelection = true,
-                refreshToken = result.RefreshToken,
-                tenants = result.Tenants?.Select(t => new { t.TenantId, t.TenantSlug })
-            });
+            return StatusCode(300, new TenantSelectionResponse(
+                RequiresTenantSelection: true,
+                RefreshToken: result.RefreshToken,
+                Tenants: result.Tenants));
         }
 
         return Ok(new LoginResponse(result.AccessToken!, result.RefreshToken!, result.ExpiresAt!.Value));
@@ -54,7 +53,7 @@ public sealed class AuthController(
         var result = await authService.RefreshAsync(request.RefreshToken, correlationId, ct);
 
         if (!result.Success)
-            return Unauthorized(new { error = result.Error });
+            return Unauthorized(new ErrorResponse(result.Error!));
 
         return Ok(new RefreshResponse(result.AccessToken!, result.RefreshToken!, result.ExpiresAt!.Value));
     }
@@ -116,7 +115,7 @@ public sealed class AuthController(
             .ToListAsync(ct);
 
         var token = jwtService.CreateAccessToken(userId, user.Username, roles, tenantId: request.TenantId);
-        return Ok(new { token, tenantId = request.TenantId, tenantSlug = membership.Tenant!.Slug });
+        return Ok(new SwitchTenantResponse(token, request.TenantId, membership.Tenant!.Slug));
     }
 
     private string GetOrCreateCorrelationId() =>

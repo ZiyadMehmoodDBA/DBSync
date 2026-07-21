@@ -3,6 +3,7 @@ using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MSOSync.Api.Authorization;
+using MSOSync.Api.Dtos.Configuration;
 using MSOSync.Metadata.Configuration;
 using MSOSync.Metadata.Permissions;
 
@@ -89,7 +90,7 @@ public sealed class ConfigurationAssignmentController(
         await rolloutValidator.ValidateAndThrowAsync(request, ct);
         var rollout = await rolloutSvc.StartRolloutAsync(
             request.TemplateId, request.TemplateVersion, request.NodeIds, ActorGuid, ct);
-        return Accepted(new { rolloutId = rollout.Id, status = rollout.Status });
+        return Accepted(new RolloutAcceptedResponse(rollout.Id, rollout.Status));
     }
 
     [HttpGet("rollout/{rolloutId:guid}")]

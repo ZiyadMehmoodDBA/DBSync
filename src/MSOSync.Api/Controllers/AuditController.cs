@@ -2,6 +2,7 @@ using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MSOSync.Api.Dtos.Audit;
+using MSOSync.Api.Dtos.Common;
 using MSOSync.Common.Exceptions;
 using MSOSync.Metadata.Audit;
 using MSOSync.Metadata.Export;
@@ -112,8 +113,8 @@ public sealed class AuditController(
         {
             "json"     => Ok(timeline),
             "markdown" => Content(BuildMarkdown(timeline), "text/markdown"),
-            "pdf"      => StatusCode(501, new { message = "PDF export is not implemented in 12C. Planned for a future release." }),
-            _          => BadRequest(new { message = $"Unsupported export format '{format}'. Supported: json, markdown." })
+            "pdf"      => StatusCode(501, new MessageResponse("PDF export is not implemented in 12C. Planned for a future release.")),
+            _          => BadRequest(new MessageResponse($"Unsupported export format '{format}'. Supported: json, markdown."))
         };
     }
 

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MSOSync.Api.Dtos.Batches;
+using MSOSync.Api.Dtos.Common;
 using MSOSync.Api.Validators;
 using MSOSync.Batch;
 using MSOSync.Common;
@@ -57,7 +58,7 @@ public sealed class BatchController(
             b.BatchId, (BatchStatus)b.Status, b.NodeId, b.ChannelId,
             b.CreateTime, b.SentTime, b.AckTime, b.RetryCount, b.RowCount, null));
 
-        return Ok(new { data, total, page = req.Page, pageSize = req.PageSize, totalPages });
+        return Ok(new PagedResponse<OutgoingBatchDto>(data, total, req.Page, req.PageSize, totalPages));
     }
 
     [HttpGet("{batchId:long}")]
@@ -92,8 +93,8 @@ public sealed class BatchController(
         var transitioned = await stateMachine.MoveToRetryAsync(batchId, ct);
 
         if (!transitioned)
-            return Conflict(new { code = "INVALID_TRANSITION",
-                message = $"Batch {batchId} is not in Error status" });
+            return Conflict(new CodeMessageResponse(
+                "INVALID_TRANSITION", $"Batch {batchId} is not in Error status"));
 
         return Ok();
     }
@@ -104,7 +105,8 @@ public sealed class BatchController(
     {
         var lease = await lockProvider.TryAcquireAsync(LockNames.RetryEngine, ct);
         if (lease == null)
-            return Conflict(new { code = "LOCK_UNAVAILABLE", message = "Retry engine is currently running. Try again shortly." });
+            return Conflict(new CodeMessageResponse(
+                "LOCK_UNAVAILABLE", "Retry engine is currently running. Try again shortly."));
 
         await using (lease)
         {

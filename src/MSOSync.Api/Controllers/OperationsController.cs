@@ -1,6 +1,7 @@
 using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MSOSync.Api.Dtos.Common;
 using MSOSync.Api.Validators;
 using MSOSync.Common.Exceptions;
 using MSOSync.Metadata.Operations;
@@ -81,7 +82,7 @@ public sealed class OperationsController(
     public async Task<IActionResult> GetOperation(Guid id, CancellationToken ct)
     {
         var detail = await queryService.GetDetailAsync(id, ct);
-        if (detail is null) return NotFound(new { error = $"Operation {id} not found." });
+        if (detail is null) return NotFound(new ErrorResponse($"Operation {id} not found."));
         return Ok(detail);
     }
 
@@ -107,11 +108,11 @@ public sealed class OperationsController(
         }
         catch (KeyNotFoundException)
         {
-            return NotFound(new { error = $"Operation {id} not found." });
+            return NotFound(new ErrorResponse($"Operation {id} not found."));
         }
         catch (InvalidOperationException ex)
         {
-            return Conflict(new { error = ex.Message });
+            return Conflict(new ErrorResponse(ex.Message));
         }
 
         var updated = await queryService.GetDetailAsync(id, ct);
@@ -141,11 +142,11 @@ public sealed class OperationsController(
         }
         catch (KeyNotFoundException)
         {
-            return NotFound(new { error = $"Operation {id} not found." });
+            return NotFound(new ErrorResponse($"Operation {id} not found."));
         }
         catch (InvalidOperationException ex)
         {
-            return Conflict(new { error = ex.Message });
+            return Conflict(new ErrorResponse(ex.Message));
         }
 
         var updated = await queryService.GetDetailAsync(id, ct);

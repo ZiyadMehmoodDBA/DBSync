@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MSOSync.Api.Dtos.Common;
 using MSOSync.Api.Dtos.Plugins;
 using MSOSync.Common.Exceptions;
 using MSOSync.Plugin.Abstractions;
@@ -21,7 +22,7 @@ public sealed class PluginController(
     public IActionResult GetAll()
     {
         if (!registry.IsInitialized)
-            return StatusCode(503, new { error = "Plugin host not yet initialized" });
+            return StatusCode(503, new ErrorResponse("Plugin host not yet initialized"));
 
         var dtos = registry.GetAll().Select(ToDto).ToList();
         return Ok(dtos);
@@ -33,7 +34,7 @@ public sealed class PluginController(
     public IActionResult GetSummary()
     {
         if (!registry.IsInitialized)
-            return StatusCode(503, new { error = "Plugin host not yet initialized" });
+            return StatusCode(503, new ErrorResponse("Plugin host not yet initialized"));
 
         var all = registry.GetAll();
         return Ok(new PluginSummaryDto
@@ -54,7 +55,7 @@ public sealed class PluginController(
     public IActionResult GetById(string id)
     {
         if (!registry.IsInitialized)
-            return StatusCode(503, new { error = "Plugin host not yet initialized" });
+            return StatusCode(503, new ErrorResponse("Plugin host not yet initialized"));
 
         var plugin = registry.GetById(id);
         if (plugin == null) return NotFound();
@@ -68,7 +69,7 @@ public sealed class PluginController(
     public IActionResult GetManifest(string id)
     {
         if (!registry.IsInitialized)
-            return StatusCode(503, new { error = "Plugin host not yet initialized" });
+            return StatusCode(503, new ErrorResponse("Plugin host not yet initialized"));
 
         var plugin = registry.GetById(id);
         if (plugin == null) return NotFound();

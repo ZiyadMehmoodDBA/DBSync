@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MSOSync.Api.Dtos.Common;
 using MSOSync.Metadata.Users;
 
 namespace MSOSync.Api.Controllers;
@@ -42,7 +43,7 @@ public sealed class UsersController(
         }
         catch (InvalidOperationException ex) when (ex.Message.Contains("already taken"))
         {
-            return Conflict(new { error = ex.Message });
+            return Conflict(new ErrorResponse(ex.Message));
         }
 
         return CreatedAtAction(nameof(GetUser), new { userId = result.UserId }, result);

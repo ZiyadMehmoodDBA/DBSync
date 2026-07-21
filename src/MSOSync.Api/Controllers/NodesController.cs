@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using MSOSync.Api.Dtos.Common;
 using MSOSync.Api.Dtos.Nodes;
 using MSOSync.Common;
 using MSOSync.Metadata.Common;
@@ -42,7 +43,7 @@ public sealed class NodesController(
         pageNumber = Math.Max(1, pageNumber);
         var result = await nodeService.GetNodesPagedAsync(pageNumber, pageSize, ct);
         var totalPages = (int)Math.Ceiling((double)result.TotalCount / result.PageSize);
-        return Ok(new { data = result.Items, total = result.TotalCount, page = result.Page, pageSize = result.PageSize, totalPages });
+        return Ok(new PagedResponse<NodeDto>(result.Items, result.TotalCount, result.Page, result.PageSize, totalPages));
     }
 
     [HttpGet("{nodeId}")]
@@ -123,7 +124,7 @@ public sealed class NodesController(
         if (!string.Equals(nodeId, request.NodeId, StringComparison.Ordinal)
             || !string.Equals(nodeId, claimNodeId, StringComparison.Ordinal))
         {
-            return BadRequest(new { error = "NodeId mismatch between route, body, and token claim" });
+            return BadRequest(new ErrorResponse("NodeId mismatch between route, body, and token claim"));
         }
 
         var node = await nodeService.GetNodeAsync(nodeId, ct);
