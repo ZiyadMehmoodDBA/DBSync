@@ -10,7 +10,7 @@ Master plan: `docs/superpowers/plans/2026-07-17-phase-2A-master.md`
 |---|---|---|---|---|
 | 2A-001 | ExportJobController returns anonymous `new { jobId }` on 202 | 2A.1 | P2 | Not Started |
 | 2A-002 | PreferencesController manual key validation instead of FluentValidation | 2A.3 | P2 | Complete (f192a8c) |
-| 2A-003 | `CreateExportJobRequest`, `ExportJobDto` defined inline in controller file | 2A.6 | P2 | Not Started |
+| 2A-003 | `CreateExportJobRequest`, `ExportJobDto` defined inline in controller file | 2A.6 | P2 | Complete (282145c) |
 | 2A-004 | HeartbeatWorker uses `IConfiguration.GetValue("Heartbeat:IntervalSeconds")` | 2A.8 | P1 | Complete (411649e) |
 | 2A-005 | ProbeWorker uses `IConfiguration.GetValue("Heartbeat:ProbeIntervalSeconds")` | 2A.8 | P1 | Complete (2a3b43c) |
 | 2A-006 | ConnectivityEvaluator uses raw IConfiguration for heartbeat/probe intervals | 2A.8 | P1 | Complete (bb8e14b) |
@@ -29,3 +29,4 @@ Master plan: `docs/superpowers/plans/2026-07-17-phase-2A-master.md`
 | 2A-019 | OperationsController inline pageSize range check instead of FluentValidation | 2A.1 | P2 | Not Started |
 | 2A-020 | BatchController ExportBatches inline status validation (INVALID_STATUS) instead of FluentValidation | 2A.1 | P2 | Not Started |
 | 2A-021 | Business-rule BadRequests reviewed and acceptable under RULE-VAL-2: NodesController nodeId/token mismatch, SyncController invalid compressed payload, NotificationController unread-unsupported + null-body guard | — | P2 | Accepted |
+| 2A-022 | Additional inline controller DTOs found during 2A.6 sweep: `SwitchTenantRequest` (AuthController), `PatchNotificationRequest` (NotificationController), `PluginDto`/`PluginSummaryDto`/`PluginActionResult` (PluginController) | 2A.6 | P2 | Complete (0a2fed4) |
