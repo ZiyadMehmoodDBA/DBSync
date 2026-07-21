@@ -30,6 +30,13 @@ export function OperationStatusBadge({ status, result }: Props) {
       </Badge>
     );
   }
+  if (status === 'Paused') {
+    return (
+      <Badge className="bg-amber-100 text-amber-800 border border-amber-200">
+        Paused
+      </Badge>
+    );
+  }
   if (status === 'Failed') {
     return (
       <Badge className="bg-red-100 text-red-800 border border-red-200">

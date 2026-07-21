@@ -19,4 +19,5 @@ public sealed record NodeDto(
     string? DbName,
     string? DbAuthMode,
     string? DbUser,
-    bool HasDbPassword);   // true if password is stored; never expose the encrypted value
+    bool HasDbPassword,
+    string? AgentVersion);

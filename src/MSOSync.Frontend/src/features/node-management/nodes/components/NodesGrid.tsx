@@ -13,6 +13,7 @@ import { formatRelativeTime } from '../../../../shared/utils/date';
 import { useHasPermission } from '../../../../shared/hooks/usePermissions';
 import {
   useEnableNode, useDisableNode, useEndMaintenance, useForceCompleteDecommission,
+  useStartDrain, useResumeDrain,
 } from '../../../../shared/hooks/useNodeLifecycle';
 import { PermissionKeys } from '../../../../shared/types/permissions';
 import { NodeActionsMenu } from './NodeActionsMenu';
@@ -65,6 +66,8 @@ export function NodesGrid({ selectedNodeId, onSelectNode }: Props) {
   const disableMutation = useDisableNode();
   const endMaintenanceMutation = useEndMaintenance();
   const forceCompleteDecommissionMutation = useForceCompleteDecommission();
+  const startDrainMutation = useStartDrain();
+  const resumeDrainMutation = useResumeDrain();
 
   const nodeNameOf = useCallback((nodeId: string) => {
     const n = allNodes?.find(n => n.nodeId === nodeId);
@@ -77,8 +80,11 @@ export function NodesGrid({ selectedNodeId, onSelectNode }: Props) {
       case 'Disable':    disableMutation.mutate({ nodeId }); break;
       case 'EndMaintenance': endMaintenanceMutation.mutate({ nodeId }); break;
       case 'ForceCompleteDecommission': forceCompleteDecommissionMutation.mutate({ nodeId }); break;
+      case 'StartDrain':  startDrainMutation.mutate({ nodeId }); break;
+      case 'ResumeDrain': resumeDrainMutation.mutate({ nodeId }); break;
     }
-  }, [enableMutation, disableMutation, endMaintenanceMutation, forceCompleteDecommissionMutation]);
+  }, [enableMutation, disableMutation, endMaintenanceMutation, forceCompleteDecommissionMutation,
+      startDrainMutation, resumeDrainMutation]);
 
   const onAction = useCallback((nodeId: string, action: TransitionActionDto) => {
     if (action.action === 'Decommission') {
@@ -118,6 +124,10 @@ export function NodesGrid({ selectedNodeId, onSelectNode }: Props) {
         p.data ? <MaintenanceBadge active={p.data.maintenanceMode} /> : null,
     },
     {
+      field: 'agentVersion' as const, headerName: 'Agent', width: 110,
+      valueFormatter: (p: ValueFormatterParams<NodeDto>) => (p.value as string | undefined) ?? '—',
+    },
+    {
       field: 'lastHeartbeat' as const, headerName: 'Last Heartbeat', width: 150,
       valueFormatter: (p: ValueFormatterParams<NodeDto>) =>
         (p.value ? formatRelativeTime(p.value as string) : '—'),
@@ -132,7 +142,8 @@ export function NodesGrid({ selectedNodeId, onSelectNode }: Props) {
 
   const isPendingConfirm =
     enableMutation.isPending || disableMutation.isPending ||
-    endMaintenanceMutation.isPending || forceCompleteDecommissionMutation.isPending;
+    endMaintenanceMutation.isPending || forceCompleteDecommissionMutation.isPending ||
+    startDrainMutation.isPending || resumeDrainMutation.isPending;
 
   const confirmDialog = dialog?.kind === 'confirm' ? dialog : null;
 

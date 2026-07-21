@@ -52,7 +52,10 @@ export async function routeToCache(
       ]);
       return;
     case OperationsEventType.OperationChanged:
-      await queryClient.invalidateQueries({ queryKey: operationKeys.all });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: operationKeys.all }),
+        queryClient.invalidateQueries({ queryKey: ['rolling-operations'] }),
+      ]);
       return;
     case OperationsEventType.WorkerStatusChanged:
       await queryClient.invalidateQueries({ queryKey: systemKeys.workers });

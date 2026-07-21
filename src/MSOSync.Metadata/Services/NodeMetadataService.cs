@@ -165,7 +165,7 @@ public sealed class NodeMetadataService(
             n.LifecycleState == NodeLifecycleState.Active && !n.MaintenanceMode,
             n.TransportMode, n.ConnectivityStatus, n.MaintenanceMode,
             n.DbServer, n.DbName, n.DbAuthMode, n.DbUser,
-            n.DbPasswordEncrypted != null);
+            n.DbPasswordEncrypted != null, n.AgentVersion);
 
     private static RegistrationRequestDto MapRegistration(SyncRegistrationRequest r) =>
         new(r.RequestId, r.NodeId, r.NodeGroup, r.SyncUrl, r.NodeVersion, r.DbType, r.RequestTime, r.Approved);

@@ -1,5 +1,5 @@
 import {
-  CheckCircle2, CircleOff, Clock, HardDriveDownload, LifeBuoy, Trash2, XCircle, KeyRound,
+  CheckCircle2, CircleOff, Clock, HardDriveDownload, LifeBuoy, Trash2, Waves, XCircle, KeyRound,
 } from 'lucide-react';
 import type { NodeLifecycleState } from '../../types/lifecycle';
 import { cn } from '../../../lib/utils';
@@ -9,6 +9,7 @@ const META: Record<NodeLifecycleState, { icon: typeof CheckCircle2; className: s
   PendingApproval:     { icon: Clock,             className: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' },
   PendingRegistration: { icon: KeyRound,           className: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' },
   Active:              { icon: CheckCircle2,       className: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' },
+  Draining:            { icon: Waves,              className: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-400' },
   Recovery:            { icon: LifeBuoy,           className: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400' },
   Disabled:            { icon: CircleOff,          className: 'bg-neutral-200 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300' },
   Decommissioning:     { icon: HardDriveDownload,  className: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400' },

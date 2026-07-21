@@ -20,6 +20,7 @@ export const CONNECTIVITY_META: Record<number, { label: string; dot: string }> =
 
 export const LIFECYCLE_META: Record<string, { label: string; border: string; icon: string }> = {
   Active:              { label: 'Active',              border: 'border-green-500',   icon: '●' },
+  Draining:            { label: 'Draining',            border: 'border-cyan-500',    icon: '◒' },
   Recovery:            { label: 'Recovery',            border: 'border-orange-500',  icon: '◐' },
   Disabled:            { label: 'Disabled',            border: 'border-neutral-400', icon: '○' },
   Decommissioning:     { label: 'Decommissioning',     border: 'border-purple-500',  icon: '◍' },

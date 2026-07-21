@@ -4,6 +4,7 @@ export type NodeLifecycleState =
   | 'Active'
   | 'Recovery'
   | 'Disabled'
+  | 'Draining'
   | 'Decommissioning'
   | 'Decommissioned'
   | 'Rejected';
@@ -51,6 +52,8 @@ export type LifecycleAction =
   | 'Disable'
   | 'StartMaintenance'
   | 'EndMaintenance'
+  | 'StartDrain'
+  | 'ResumeDrain'
   | 'Decommission'
   | 'ForceCompleteDecommission';
 

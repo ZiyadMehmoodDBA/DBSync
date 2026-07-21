@@ -18,4 +18,5 @@ export interface NodeDto {
   dbAuthMode?: string;
   dbUser?: string;
   hasDbPassword: boolean;
+  agentVersion?: string;
 }

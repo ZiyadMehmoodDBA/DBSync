@@ -11,10 +11,15 @@ describe('LifecycleBadge', () => {
     expect(screen.getByText('Active')).toBeInTheDocument();
   });
 
+  it('renders Draining badge', () => {
+    render(<LifecycleBadge state="Draining" />);
+    expect(screen.getByText('Draining')).toBeInTheDocument();
+  });
+
   it('renders an icon for every state', () => {
     const states = [
       'PendingApproval', 'PendingRegistration', 'Active', 'Recovery',
-      'Disabled', 'Decommissioning', 'Decommissioned', 'Rejected',
+      'Disabled', 'Draining', 'Decommissioning', 'Decommissioned', 'Rejected',
     ] as const;
     for (const s of states) {
       const { container, unmount } = render(<LifecycleBadge state={s} />);

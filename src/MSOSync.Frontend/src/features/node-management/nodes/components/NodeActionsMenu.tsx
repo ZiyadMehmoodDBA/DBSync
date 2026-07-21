@@ -14,6 +14,8 @@ const LABELS: Record<string, string> = {
   Disable: 'Disable',
   StartMaintenance: 'Start Maintenance',
   EndMaintenance: 'End Maintenance',
+  StartDrain: 'Start Drain',
+  ResumeDrain: 'Resume from Drain',
   Decommission: 'Decommission',
   ForceCompleteDecommission: 'Force Complete Decommission',
 };

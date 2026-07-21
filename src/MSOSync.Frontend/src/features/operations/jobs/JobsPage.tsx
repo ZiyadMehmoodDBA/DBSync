@@ -1,10 +1,14 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { ColDef, ICellRendererParams } from 'ag-grid-community';
+import { useHasPermission } from '@/shared/hooks/usePermissions';
+import { PermissionKeys } from '@/shared/types/permissions';
 import { DataGrid } from '@/shared/components/data-display/DataGrid';
 import { useOperations, useCancelOperation, useRetryOperation } from '@/shared/hooks/useOperations';
 import { OperationStatusBadge } from './components/OperationStatusBadge';
 import { OperationProgressCell } from './components/OperationProgressCell';
+import { RollingOperationWizard } from './components/RollingOperationWizard';
+import { RollingOperationDetailPanel } from './components/RollingOperationDetailPanel';
 import { ConfirmDialog } from '@/shared/components/actions/ConfirmDialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -36,15 +40,16 @@ function duration(startedAt: string, completedAt: string | null): string {
 }
 
 const TYPE_BADGE_COLORS: Record<string, string> = {
-  Export:       'bg-violet-100 text-violet-800',
-  Rollout:      'bg-blue-100 text-blue-800',
-  Decommission: 'bg-orange-100 text-orange-800',
-  Recovery:     'bg-teal-100 text-teal-800',
+  Export:             'bg-violet-100 text-violet-800',
+  Rollout:            'bg-blue-100 text-blue-800',
+  Decommission:       'bg-orange-100 text-orange-800',
+  Recovery:           'bg-teal-100 text-teal-800',
+  RollingMaintenance: 'bg-cyan-100 text-cyan-800',
+  RollingUpgrade:     'bg-indigo-100 text-indigo-800',
 };
 
-// 'Recovery' excluded: no IOperationHandler exists yet — filter would silently return empty
-const ALL_TYPES: OperationType[] = ['Export', 'Rollout', 'Decommission'];
-const ALL_STATUSES: OperationStatus[] = ['Pending', 'Running', 'Completed', 'Failed', 'Cancelled'];
+const ALL_TYPES: OperationType[] = ['Export', 'Rollout', 'Decommission', 'RollingMaintenance', 'RollingUpgrade'];
+const ALL_STATUSES: OperationStatus[] = ['Pending', 'Running', 'Paused', 'Completed', 'Failed', 'Cancelled'];
 
 // --- Component ---
 
@@ -54,6 +59,9 @@ export function JobsPage() {
   const [selectedType, setSelectedType] = useState<string>('all');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [cancelTarget, setCancelTarget] = useState<string | null>(null);
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [detailOperationId, setDetailOperationId] = useState<string | null>(null);
+  const canManageLifecycle = useHasPermission(PermissionKeys.ManageNodeLifecycle);
   const [cursor, setCursor] = useState<string | undefined>(undefined);
   const [rows, setRows] = useState<OperationDto[]>([]);
   const isResetRef = useRef(false);
@@ -232,11 +240,18 @@ export function JobsPage() {
   return (
     <div className="flex flex-col gap-4 p-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Jobs</h1>
-        <p className="text-sm text-muted-foreground">
-          System operations — exports, rollouts, lifecycle events
-        </p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Jobs</h1>
+          <p className="text-sm text-muted-foreground">
+            System operations — exports, rollouts, lifecycle events
+          </p>
+        </div>
+        {canManageLifecycle && (
+          <Button variant="outline" size="sm" onClick={() => setWizardOpen(true)}>
+            New Rolling Operation
+          </Button>
+        )}
       </div>
 
       {/* Filter bar */}
@@ -294,10 +309,11 @@ export function JobsPage() {
         onRetry={() => void refetch()}
         onRowClicked={(e) => {
           const op = e.data as OperationDto | undefined;
-          if (op?.correlationId) {
-            navigate(
-              `/operations/activity?correlationId=${encodeURIComponent(op.correlationId)}`,
-            );
+          if (!op) return;
+          if (op.operationType === 'RollingMaintenance' || op.operationType === 'RollingUpgrade') {
+            setDetailOperationId(op.operationId);
+          } else if (op.correlationId) {
+            navigate(`/operations/activity?correlationId=${encodeURIComponent(op.correlationId)}`);
           }
         }}
       />
@@ -335,6 +351,14 @@ export function JobsPage() {
           if (!open) setCancelTarget(null);
         }}
       />
+
+      <RollingOperationWizard open={wizardOpen} onOpenChange={setWizardOpen} />
+      {detailOperationId && (
+        <RollingOperationDetailPanel
+          operationId={detailOperationId}
+          onClose={() => setDetailOperationId(null)}
+        />
+      )}
     </div>
   );
 }

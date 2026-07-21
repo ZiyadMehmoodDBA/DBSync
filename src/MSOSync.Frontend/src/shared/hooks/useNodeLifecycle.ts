@@ -1,8 +1,8 @@
 import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
-  decommissionNode, disableNode, enableNode, endMaintenance, forceCompleteDecommission,
-  getNodeLifecycleHistory, getNodeState, getNodeTransitions, startMaintenance,
+  decommissionNode, disableNode, drainNode, enableNode, endMaintenance, forceCompleteDecommission,
+  getNodeLifecycleHistory, getNodeState, getNodeTransitions, resumeDrain, startMaintenance,
 } from '../api/lifecycle';
 import type { LifecycleHistoryFilter } from '../types/lifecycle';
 import { getErrorMessage } from '../utils/error';
@@ -82,3 +82,11 @@ export const useDecommissionNode = lifecycleMutation(
 export const useForceCompleteDecommission = lifecycleMutation(
   (a: { nodeId: string }) => forceCompleteDecommission(a.nodeId),
   'Decommission completed', (a) => a.nodeId);
+
+export const useStartDrain = lifecycleMutation(
+  (a: { nodeId: string; reason?: string }) => drainNode(a.nodeId, a.reason),
+  'Drain started', (a) => a.nodeId);
+
+export const useResumeDrain = lifecycleMutation(
+  (a: { nodeId: string; reason?: string }) => resumeDrain(a.nodeId, a.reason),
+  'Drain resumed', (a) => a.nodeId);

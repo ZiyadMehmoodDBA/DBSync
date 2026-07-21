@@ -51,3 +51,11 @@ export async function decommissionNode(
 export async function forceCompleteDecommission(nodeId: string): Promise<void> {
   await client.post(`${base(nodeId)}/decommission/force`);
 }
+
+export async function drainNode(nodeId: string, reason?: string): Promise<void> {
+  await client.post(`${base(nodeId)}/drain`, { reason: reason ?? null });
+}
+
+export async function resumeDrain(nodeId: string, reason?: string): Promise<void> {
+  await client.post(`${base(nodeId)}/resume-drain`, { reason: reason ?? null });
+}
