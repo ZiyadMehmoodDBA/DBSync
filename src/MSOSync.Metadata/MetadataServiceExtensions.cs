@@ -129,6 +129,7 @@ public static class MetadataServiceExtensions
         // Epic 12C — Operations registry
         services.AddScoped<IOperationService, OperationService>();
         services.AddScoped<IRollingOperationService, RollingOperationService>();
+        services.AddScoped<IRollingOperationQueryService, RollingOperationQueryService>();
         services.AddKeyedScoped<IOperationHandler, ExportOperationHandler>(OperationType.Export);
         services.AddKeyedScoped<IOperationHandler, RolloutOperationHandler>(OperationType.Rollout);
         services.AddKeyedScoped<IOperationHandler, DecommissionOperationHandler>(OperationType.Decommission);
