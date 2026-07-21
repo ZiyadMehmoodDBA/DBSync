@@ -1,6 +1,7 @@
 using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MSOSync.Api.Dtos.Audit;
 using MSOSync.Common.Exceptions;
 using MSOSync.Metadata.Audit;
 using MSOSync.Metadata.Export;
@@ -13,6 +14,7 @@ namespace MSOSync.Api.Controllers;
 public sealed class AuditController(
     IAuditQueryService            audit,
     IValidator<AuditFilter>       validator,
+    IValidator<AuditSummaryRequest> summaryValidator,
     IExportService<AuditFilter>   exporter,
     IExportAuditService           exportAudit,
     IAuditSummaryService          summaryService,
@@ -42,15 +44,11 @@ public sealed class AuditController(
     [ProducesResponseType(200)]
     [ProducesResponseType(typeof(ProblemDetails), 400)]
     public async Task<IActionResult> GetAuditSummary(
-        [FromQuery] DateTime from,
-        [FromQuery] DateTime to,
+        [FromQuery] AuditSummaryRequest request,
         CancellationToken ct)
     {
-        if (from >= to)
-            return BadRequest(new { code = "INVALID_RANGE", message = "'from' must be before 'to'" });
-        if ((to - from).TotalDays > 365)
-            return BadRequest(new { code = "RANGE_TOO_LARGE", message = "Date range cannot exceed 365 days." });
-        return Ok(await summaryService.GetSummaryAsync(from, to, ct));
+        await summaryValidator.ValidateAndThrowAsync(request, ct);
+        return Ok(await summaryService.GetSummaryAsync(request.From, request.To, ct));
     }
 
     [HttpGet("export")]
