@@ -1,12 +1,9 @@
-using System.Text.Json;
+using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MSOSync.Api.Dtos.Export;
 using MSOSync.Common;
-using MSOSync.Metadata.Audit;
-using MSOSync.Metadata.Events;
 using MSOSync.Metadata.Export;
-using MSOSync.Metadata.IncomingBatches;
 using MSOSync.Metadata.Permissions;
 using MSOSync.Persistence.Entities;
 
@@ -18,7 +15,8 @@ namespace MSOSync.Api.Controllers;
 public sealed class ExportJobController(
     IExportJobService     jobService,
     ICurrentUserService   currentUser,
-    IPermissionService    permissionService)
+    IPermissionService    permissionService,
+    IValidator<CreateExportJobRequest> createJobValidator)
     : ControllerBase
 {
     [HttpPost]
@@ -32,38 +30,7 @@ public sealed class ExportJobController(
         if (!exportPerms.Permissions.Contains(SystemPermissions.ExportData))
             return Forbid();
 
-        if (!string.IsNullOrEmpty(request.FiltersJson))
-        {
-            var jsonOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-            try
-            {
-                switch (request.ResourceType)
-                {
-                    case "events":
-                        var ef = JsonSerializer.Deserialize<EventFilter>(request.FiltersJson, jsonOptions);
-                        if (ef is null) return BadRequest("Invalid filtersJson for events");
-                        break;
-                    case "incoming-batches":
-                        var ibf = JsonSerializer.Deserialize<IncomingBatchFilter>(request.FiltersJson, jsonOptions);
-                        if (ibf is null) return BadRequest("Invalid filtersJson for incoming-batches");
-                        break;
-                    case "audit":
-                        var af = JsonSerializer.Deserialize<AuditFilter>(request.FiltersJson, jsonOptions);
-                        if (af is null) return BadRequest("Invalid filtersJson for audit");
-                        break;
-                    default:
-                        return BadRequest($"Unknown resourceType: {request.ResourceType}");
-                }
-            }
-            catch (JsonException)
-            {
-                return BadRequest("Invalid filtersJson: malformed JSON");
-            }
-        }
-        else if (!new[] { "events", "incoming-batches", "audit" }.Contains(request.ResourceType))
-        {
-            return BadRequest($"Unknown resourceType: {request.ResourceType}");
-        }
+        await createJobValidator.ValidateAndThrowAsync(request, ct);
 
         var username = currentUser.GetCurrentUsername();
         var job = await jobService.CreateJobAsync(
