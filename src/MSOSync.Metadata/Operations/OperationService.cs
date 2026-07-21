@@ -10,6 +10,10 @@ namespace MSOSync.Metadata.Operations;
 public sealed class OperationService(
     AppDbContext             db,
     IPublisher               publisher,
+    // Keyed service resolution: IOperationHandler implementations are registered with
+    // OperationType keys. GetKeyedService<T>(key) is only available on IServiceProvider —
+    // IServiceScopeFactory does not expose it. OperationService is registered as scoped,
+    // so no lifetime mismatch exists.
     IServiceProvider         serviceProvider) : IOperationService
 {
     public async Task<Guid> CreateAsync(
