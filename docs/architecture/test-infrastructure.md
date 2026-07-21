@@ -8,7 +8,7 @@
 | `MSOSync.ArchTests` | Architecture | Dependency rules (NetArchTest) | 1 | 2 |
 | `MSOSync.ConfigurationTests` | Unit | Configuration templates, assignments, drift, rollouts | 8 | 49 |
 | `MSOSync.EngineTests` | Unit | SQL apply, batch state machine, retry, routing | 12 | 82 |
-| `MSOSync.IntegrationTests` | Integration | Full API + DB (Testcontainers / WebApplicationFactory) | 49 | 359 |
+| `MSOSync.IntegrationTests` | Integration | Full API + DB (Testcontainers / WebApplicationFactory) | 52 | 376 |
 | `MSOSync.MetadataTests` | Unit | Domain services, query services, DTOs, validators | 49 | 435 |
 | `MSOSync.PluginTests` | Unit | Plugin loading, lifecycle, registry | 11 | 96 |
 | `MSOSync.Plugin.IntegrationTests` | Integration | Plugin full lifecycle (Testcontainers) | 4 | 10 |
@@ -19,8 +19,8 @@
 | `MSOSync.TransportTests` | Unit | Push/pull clients, compression, node HTTP client | 5 | 23 |
 | `MSOSync.TestPlugin` | Helper | Sample plugin assembly consumed by plugin tests (no tests) | 0 | — |
 
-Counts as of Phase 2A.10 (2026-07-21). Full-solution exit-gate run: all unit
-assemblies green (819 passed, 4 skipped); `MSOSync.IntegrationTests` 332/359
+Counts as of Phase 2B.1 (2026-07-21). Full-solution exit-gate run: all unit
+assemblies green (819 passed, 4 skipped); `MSOSync.IntegrationTests` 349/376
 with the 27 accepted environmental failures (2A-014 + 2A-023) below.
 
 ## Running Tests

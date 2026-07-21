@@ -59,7 +59,7 @@ public sealed class PullJobTests
     private static NodeDto Node(TransportMode mode) => new(
         LocalNodeId, "g1", "http://local", NodeLifecycleState.Active,
         null, null, 30, true, mode, ConnectivityStatus.Reachable,
-        false, null, null, null, null, false);
+        false, null, null, null, null, false, null);
 
     private static BatchPayload Batch(long seq) => new(
         BatchId: 42, BatchSequence: seq, ChannelId: "ch1",

@@ -32,10 +32,10 @@ MSOSync.Scheduler             — Scheduled jobs (referenced by App only)
   Verified: no matches.
 - **RULE-ARCH-3:** `AppDbContext` access is confined to `MSOSync.Metadata`,
   `MSOSync.Persistence`, `MSOSync.Security`, and `MSOSync.App` workers.
-  Three controller-level exceptions exist (`AuthController` switch-tenant
-  membership lookup, `BatchController` outgoing-batch queries,
-  `NodeLifecycleController` node read) — recorded as 2A-029 (Deferred:
-  extract to query services in Phase 2B).
+  Three controller-level exceptions were resolved in Phase 2B.1 — 2A-029
+  closed: `AuthController` now uses `ITenantMembershipQueryService`,
+  `BatchController` uses `IOutgoingBatchQueryService`, and
+  `NodeLifecycleController` uses `INodeReadQueryService`.
 
 Codified invariants (`tests/MSOSync.ArchTests/DependencyTests.cs`, NetArchTest):
 
@@ -69,6 +69,11 @@ Codified invariants (`tests/MSOSync.ArchTests/DependencyTests.cs`, NetArchTest):
 | `UsersManagementService` | User CRUD, role assignment | `AppDbContext`, `IUserService` |
 | `NodeLifecycleService` | Node state machine commands | `AppDbContext`, `INodeLifecycleStateMachine`, `NodeLifecycleLockRegistry` |
 | `NodeManagementService` | Node registration workflow | `AppDbContext`, `IRegistrationDiffService` |
+| `INodeReadQueryService` / `NodeReadQueryService` | Lightweight node reads for lifecycle controller (avoids direct AppDbContext in controller) | `AppDbContext` |
+| `IRollingOperationService` / `RollingOperationService` | Create rolling-maintenance/upgrade operations, validate node states, build operation + step rows | `AppDbContext`, `INodeLifecycleStateMachine` |
+| `IRollingOperationQueryService` / `RollingOperationQueryService` | Read rolling operation detail (policy + steps) | `AppDbContext` |
+| `ITenantMembershipQueryService` / `TenantMembershipQueryService` | Resolve tenant membership for switch-tenant flows (extracted from AuthController) | `AppDbContext` |
+| `IOutgoingBatchQueryService` / `OutgoingBatchQueryService` | Outgoing batch reads for BatchController (extracted from controller) | `AppDbContext` |
 | `OperationService` | Async operation tracking and dispatch | `AppDbContext`, `IPublisher`, keyed `IOperationHandler` |
 | `*ExportService` (Event, IncomingBatch, OutgoingBatch, Audit) | CSV/JSON export streams | `AppDbContext` |
 | `DashboardQueryService` | Dashboard aggregation | `AppDbContext` |
@@ -80,6 +85,7 @@ Codified invariants (`tests/MSOSync.ArchTests/DependencyTests.cs`, NetArchTest):
 |---|---|---|
 | `ExportJobWorker` | Process queued export jobs | Polling (5s) |
 | `ExportCleanupWorker` | Expire/delete old export files | Polling |
+| `RollingOperationWorker` | Advance rolling operations wave-by-wave (drain → maintain → verify → next wave) | `Lifecycle:RollingWorkerIntervalSeconds` (default 15s) |
 | `WorkerStatusRegistry` | Singleton tick/status registry for all workers | — |
 
 ### MSOSync.Scheduler — Scheduled Jobs

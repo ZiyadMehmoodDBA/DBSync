@@ -72,6 +72,9 @@ public sealed class SyncNodeConfiguration : IEntityTypeConfiguration<SyncNode>
         builder.Property(e => e.MaintenanceUntil).HasColumnName("maintenance_until");
         builder.Property(e => e.MaintenanceStartedBy).HasColumnName("maintenance_started_by")
             .HasColumnType("nvarchar(100)").HasMaxLength(100);
+        builder.Property(e => e.DrainCompletedAt).HasColumnName("drain_completed_at");
+        builder.Property(e => e.AgentVersion).HasColumnName("agent_version")
+            .HasColumnType("nvarchar(100)").HasMaxLength(100);
         builder.Property(e => e.DecommissionReason).HasColumnName("decommission_reason")
             .HasColumnType("nvarchar(512)").HasMaxLength(512);
         builder.Property(e => e.DecommissionStartedAt).HasColumnName("decommission_started_at");
