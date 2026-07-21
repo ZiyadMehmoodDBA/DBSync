@@ -36,6 +36,7 @@ public static class SecurityServiceExtensions
         services.AddSingleton<AuthMetrics>();
         services.AddScoped<IUserService, UserService>();
         services.AddScoped<AuthenticationService>();
+        services.AddScoped<ITenantMembershipQueryService, TenantMembershipQueryService>();
         services.AddScoped<NodeSecurityService>();
         services.AddScoped<AuditService>();
 

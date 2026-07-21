@@ -1,14 +1,13 @@
 using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using MSOSync.Api.Dtos.Batches;
 using MSOSync.Api.Dtos.Common;
 using MSOSync.Api.Validators;
 using MSOSync.Batch;
 using MSOSync.Common;
 using MSOSync.Metadata.Export;
-using MSOSync.Persistence;
+using MSOSync.Metadata.OutgoingBatches;
 using MSOSync.Persistence.Lock;
 
 namespace MSOSync.Api.Controllers;
@@ -16,7 +15,7 @@ namespace MSOSync.Api.Controllers;
 [ApiController]
 [Route("api/v1/batches")]
 public sealed class BatchController(
-    AppDbContext db,
+    IOutgoingBatchQueryService batchQuery,
     IBatchStateMachine stateMachine,
     RetryProcessor retryProcessor,
     ICurrentUserService currentUser,
@@ -30,36 +29,20 @@ public sealed class BatchController(
     [ProducesResponseType(typeof(PagedResponse<OutgoingBatchDto>), 200)]
     public async Task<IActionResult> GetBatches([FromQuery] BatchListRequest req, CancellationToken ct)
     {
-        var query = db.OutgoingBatches.AsNoTracking();
-
-        if (!string.IsNullOrEmpty(req.NodeId))    query = query.Where(b => b.NodeId == req.NodeId);
-        if (!string.IsNullOrEmpty(req.ChannelId)) query = query.Where(b => b.ChannelId == req.ChannelId);
+        byte? status = null;
         if (!string.IsNullOrEmpty(req.Status) &&
-            Enum.TryParse<BatchStatus>(req.Status, ignoreCase: true, out var status))
-            query = query.Where(b => b.Status == (byte)status);
+            Enum.TryParse<BatchStatus>(req.Status, ignoreCase: true, out var parsed))
+            status = (byte)parsed;
 
-        query = (req.SortBy, req.SortDirection.ToLowerInvariant()) switch
-        {
-            ("batchId",    "asc")  => query.OrderBy(b => b.BatchId),
-            ("batchId",    _)      => query.OrderByDescending(b => b.BatchId),
-            ("status",     "asc")  => query.OrderBy(b => b.Status),
-            ("status",     _)      => query.OrderByDescending(b => b.Status),
-            (_,            "asc")  => query.OrderBy(b => b.CreateTime),
-            _                      => query.OrderByDescending(b => b.CreateTime),
-        };
+        var page = await batchQuery.GetBatchesAsync(new OutgoingBatchQueryFilter(
+            req.NodeId, req.ChannelId, status, req.SortBy, req.SortDirection, req.Page, req.PageSize), ct);
 
-        var total      = await query.CountAsync(ct);
-        var totalPages = (int)Math.Ceiling(total / (double)req.PageSize);
-        var items      = await query
-            .Skip((req.Page - 1) * req.PageSize)
-            .Take(req.PageSize)
-            .ToListAsync(ct);
-
-        var data = items.Select(b => new OutgoingBatchDto(
+        var totalPages = (int)Math.Ceiling(page.Total / (double)req.PageSize);
+        var data = page.Items.Select(b => new OutgoingBatchDto(
             b.BatchId, (BatchStatus)b.Status, b.NodeId, b.ChannelId,
-            b.CreateTime, b.SentTime, b.AckTime, b.RetryCount, b.RowCount, null));
+            b.CreateTime, b.SentTime, b.AckTime, b.RetryCount, b.RowCount, b.LatestError));
 
-        return Ok(new PagedResponse<OutgoingBatchDto>(data, total, req.Page, req.PageSize, totalPages));
+        return Ok(new PagedResponse<OutgoingBatchDto>(data, page.Total, req.Page, req.PageSize, totalPages));
     }
 
     [HttpGet("{batchId:long}")]
@@ -68,19 +51,12 @@ public sealed class BatchController(
     [ProducesResponseType(404)]
     public async Task<IActionResult> GetBatch(long batchId, CancellationToken ct)
     {
-        var batch = await db.OutgoingBatches.AsNoTracking()
-            .FirstOrDefaultAsync(b => b.BatchId == batchId, ct);
-        if (batch == null) return NotFound();
-
-        var error = await db.BatchErrors.AsNoTracking()
-            .Where(e => e.BatchId == batchId)
-            .OrderByDescending(e => e.ErrorId)
-            .Select(e => e.ErrorMessage)
-            .FirstOrDefaultAsync(ct);
+        var batch = await batchQuery.GetBatchByIdAsync(batchId, ct);
+        if (batch is null) return NotFound();
 
         var dto = new OutgoingBatchDto(
             batch.BatchId, (BatchStatus)batch.Status, batch.NodeId, batch.ChannelId,
-            batch.CreateTime, batch.SentTime, batch.AckTime, batch.RetryCount, batch.RowCount, error);
+            batch.CreateTime, batch.SentTime, batch.AckTime, batch.RetryCount, batch.RowCount, batch.LatestError);
 
         return Ok(dto);
     }
@@ -92,9 +68,8 @@ public sealed class BatchController(
     [ProducesResponseType(typeof(CodeMessageResponse), 409)]
     public async Task<IActionResult> RetryBatch(long batchId, CancellationToken ct)
     {
-        var batch = await db.OutgoingBatches.AsNoTracking()
-            .FirstOrDefaultAsync(b => b.BatchId == batchId, ct);
-        if (batch == null) return NotFound();
+        var batch = await batchQuery.GetBatchByIdAsync(batchId, ct);
+        if (batch is null) return NotFound();
 
         var transitioned = await stateMachine.MoveToRetryAsync(batchId, ct);
 

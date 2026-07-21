@@ -23,6 +23,7 @@ using MSOSync.Metadata.Notifications;
 using MSOSync.Metadata.Operations;
 using MSOSync.Metadata.Operations.Handlers;
 using MSOSync.Metadata.Operations.Rolling;
+using MSOSync.Metadata.OutgoingBatches;
 using MSOSync.Metadata.Overview;
 using MSOSync.Metadata.Pagination;
 
@@ -62,6 +63,7 @@ public static class MetadataServiceExtensions
         services.AddSingleton<IErrorSeverityClassifier, ErrorSeverityClassifier>();
         services.AddScoped<IEventQueryService, EventQueryService>();
         services.AddScoped<IIncomingBatchQueryService, IncomingBatchQueryService>();
+        services.AddScoped<IOutgoingBatchQueryService, OutgoingBatchQueryService>();
         services.AddScoped<IBatchErrorQueryService, BatchErrorQueryService>();
         services.AddScoped<IValidator<EventFilter>, EventFilterValidator>();
         services.AddScoped<IValidator<IncomingBatchFilter>, IncomingBatchFilterValidator>();

@@ -2,11 +2,8 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
-using Microsoft.EntityFrameworkCore;
 using MSOSync.Api.Dtos.Auth;
 using MSOSync.Api.Dtos.Common;
-using MSOSync.Persistence;
-using MSOSync.Persistence.Entities;
 using MSOSync.Security;
 
 namespace MSOSync.Api.Controllers.Auth;
@@ -15,7 +12,7 @@ namespace MSOSync.Api.Controllers.Auth;
 [Route("api/v1/auth")]
 public sealed class AuthController(
     AuthenticationService authService,
-    AppDbContext db,
+    ITenantMembershipQueryService membershipQuery,
     JwtService jwtService) : ControllerBase
 {
     [HttpPost("login")]
@@ -104,28 +101,11 @@ public sealed class AuthController(
         if (!long.TryParse(userIdClaim, out var userId))
             return Unauthorized();
 
-        // Validate the new tenant membership
-        var membership = await db.TenantMemberships
-            .AsNoTracking()
-            .Include(m => m.Tenant)
-            .FirstOrDefaultAsync(m => m.TenantId == request.TenantId
-                                   && m.UserId   == userId
-                                   && m.Status   == MemberStatus.Active, ct);
+        var context = await membershipQuery.GetSwitchTenantContextAsync(userId, request.TenantId, ct);
+        if (context is null) return Forbid();
 
-        if (membership is null || membership.Tenant?.Status != TenantStatus.Active)
-            return Forbid();
-
-        var user = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.UserId == userId, ct);
-        if (user is null) return Unauthorized();
-
-        var roles = await db.UserRoles
-            .AsNoTracking()
-            .Where(ur => ur.UserId == userId)
-            .Join(db.Roles, ur => ur.RoleId, r => r.RoleId, (_, r) => r.RoleName)
-            .ToListAsync(ct);
-
-        var token = jwtService.CreateAccessToken(userId, user.Username, roles, tenantId: request.TenantId);
-        return Ok(new SwitchTenantResponse(token, request.TenantId, membership.Tenant!.Slug));
+        var token = jwtService.CreateAccessToken(userId, context.Username, context.Roles, tenantId: request.TenantId);
+        return Ok(new SwitchTenantResponse(token, request.TenantId, context.TenantSlug));
     }
 
     private string GetOrCreateCorrelationId() =>
