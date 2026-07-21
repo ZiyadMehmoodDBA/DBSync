@@ -23,17 +23,17 @@ Spec: `docs/superpowers/specs/2026-07-21-phase-2B-1-orchestration-design.md`
 
 ## Execution Order
 
-| # | Task file | Deliverable |
-|---|---|---|
-| 1 | [Task 1 — Persistence + M033](2026-07-21-phase-2B-1-task-1-persistence.md) | `Draining` enum value, `AgentVersion`/`DrainCompletedAt` columns, `SyncOperationStep` entity+config+DbSet, `OperationType` additions, M033 migration |
-| 2 | [Task 2 — Drain lifecycle](2026-07-21-phase-2B-1-task-2-drain-lifecycle.md) | State-machine transitions, `StartDrainAsync`/`ResumeFromDrainAsync`, drain/resume endpoints, transition metadata, node-read query service (2A-029 part 1) |
-| 3 | [Task 3 — Heartbeat](2026-07-21-phase-2B-1-task-3-heartbeat.md) | Heartbeat accepts `Draining` (matrix), persists `NodeVersion` → `AgentVersion` |
-| 4 | [Task 4 — Rolling service](2026-07-21-phase-2B-1-task-4-rolling-service.md) | `OperationStateException`, policy/step models, `IRollingOperationService` + impl + unit tests |
-| 5 | [Task 5 — Rolling controller](2026-07-21-phase-2B-1-task-5-rolling-controller.md) | `RollingOperationsController`, DTOs, validator, handler mapping |
-| 6 | [Task 6 — Worker](2026-07-21-phase-2B-1-task-6-worker.md) | `RollingOperationWorker` (drain detection, step advance, wave gate) + SchedulerTests |
-| 7 | [Task 7 — 2A-029 remainder](2026-07-21-phase-2B-1-task-7-2a029.md) | Auth membership + outgoing-batch query services; controllers lose `AppDbContext` |
-| 8 | [Task 8 — Frontend](2026-07-21-phase-2B-1-task-8-frontend.md) | Drain menu/badge, `AgentVersion` column, rolling wizard + detail panel |
-| 9 | [Task 9 — Integration + docs](2026-07-21-phase-2B-1-task-9-integration-docs.md) | Drain endpoint matrix, rolling API, M033 smoke integration tests; docs updates; final gate |
+| # | Status | Task file | Deliverable |
+|---|---|---|---|
+| 1 | ✅ | [Task 1 — Persistence + M033](2026-07-21-phase-2B-1-task-1-persistence.md) | `Draining` enum value, `AgentVersion`/`DrainCompletedAt` columns, `SyncOperationStep` entity+config+DbSet, `OperationType` additions, M033 migration |
+| 2 | ✅ | [Task 2 — Drain lifecycle](2026-07-21-phase-2B-1-task-2-drain-lifecycle.md) | State-machine transitions, `StartDrainAsync`/`ResumeFromDrainAsync`, drain/resume endpoints, transition metadata, node-read query service (2A-029 part 1) |
+| 3 | ✅ | [Task 3 — Heartbeat](2026-07-21-phase-2B-1-task-3-heartbeat.md) | Heartbeat accepts `Draining` (matrix), persists `NodeVersion` → `AgentVersion` |
+| 4 | ✅ | [Task 4 — Rolling service](2026-07-21-phase-2B-1-task-4-rolling-service.md) | `OperationStateException`, policy/step models, `IRollingOperationService` + impl + unit tests |
+| 5 | ✅ | [Task 5 — Rolling controller](2026-07-21-phase-2B-1-task-5-rolling-controller.md) | `RollingOperationsController`, DTOs, validator, handler mapping |
+| 6 | ✅ | [Task 6 — Worker](2026-07-21-phase-2B-1-task-6-worker.md) | `RollingOperationWorker` (drain detection, step advance, wave gate) + SchedulerTests |
+| 7 | ✅ | [Task 7 — 2A-029 remainder](2026-07-21-phase-2B-1-task-7-2a029.md) | Auth membership + outgoing-batch query services; controllers lose `AppDbContext` |
+| 8 | ✅ | [Task 8 — Frontend](2026-07-21-phase-2B-1-task-8-frontend.md) | Drain menu/badge, `AgentVersion` column, rolling wizard + detail panel |
+| 9 | ✅ | [Task 9 — Integration + docs](2026-07-21-phase-2B-1-task-9-integration-docs.md) | Drain endpoint matrix, rolling API, M033 smoke integration tests; docs updates; final gate |
 
 Tasks 1→6 are sequential (each consumes prior interfaces). Task 7 independent after Task 2. Task 8 after 5+6. Task 9 last.
 
