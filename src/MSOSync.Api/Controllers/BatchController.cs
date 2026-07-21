@@ -1,7 +1,9 @@
+using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MSOSync.Api.Dtos.Batches;
+using MSOSync.Api.Validators;
 using MSOSync.Batch;
 using MSOSync.Common;
 using MSOSync.Metadata.Export;
@@ -19,7 +21,8 @@ public sealed class BatchController(
     ICurrentUserService currentUser,
     IDatabaseLockProvider lockProvider,
     IExportService<OutgoingBatchExportFilter> exporter,
-    IExportAuditService exportAudit) : ControllerBase
+    IExportAuditService exportAudit,
+    OutgoingBatchExportFilterValidator exportFilterValidator) : ControllerBase
 {
     [HttpGet]
     [Authorize]
@@ -112,21 +115,12 @@ public sealed class BatchController(
 
     [HttpGet("export")]
     [Authorize(Policy = "ViewerOrAbove")]
-#pragma warning disable CS1998 // no await needed; StreamingExportResult performs async I/O
     public async Task<IActionResult> ExportBatches(
         [FromQuery] OutgoingBatchExportFilter filter,
         [FromQuery] string format = "csv",
         CancellationToken ct = default)
     {
-        if (!string.IsNullOrEmpty(filter.Status) &&
-            !OutgoingBatchExportService.IsValidStatus(filter.Status))
-        {
-            return BadRequest(new
-            {
-                code    = "INVALID_STATUS",
-                message = $"Unknown status '{filter.Status}'. Valid values: New, Sending, Acknowledged, Error, Retry."
-            });
-        }
+        await exportFilterValidator.ValidateAndThrowAsync(filter, ct);
 
         var isJson = format.Equals("json", StringComparison.OrdinalIgnoreCase);
         var date = DateTime.UtcNow.ToString("yyyy-MM-dd");
@@ -139,5 +133,4 @@ public sealed class BatchController(
             (rows, ms) => exportAudit.WriteAsync("outgoing-batches", format, rows, ms, ct),
             ct);
     }
-#pragma warning restore CS1998
 }
