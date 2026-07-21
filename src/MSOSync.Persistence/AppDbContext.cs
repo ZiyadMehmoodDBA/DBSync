@@ -65,6 +65,11 @@ public class AppDbContext : DbContext
     public DbSet<Tenant>               Tenants           => Set<Tenant>();
     public DbSet<TenantMembership>     TenantMemberships => Set<TenantMembership>();
 
+    // Referenced by tenant query filters. Must be an instance member: EF rewrites
+    // context references in filters per instance, so the cached model never pins
+    // a specific accessor (2A-015). Null = platform context — filter passes all rows.
+    public Guid? CurrentTenantId => _tenantAccessor?.TenantId;
+
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
         PopulateTenantIds();
@@ -91,10 +96,10 @@ public class AppDbContext : DbContext
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
 
-        if (_tenantAccessor is not null)
-            modelBuilder.ApplyTenantFilters(_tenantAccessor);
-        // else: running without tenant filters (unit tests or background workers — intentional)
-        // If this is unexpected, check DI registration of ICurrentTenantAccessor.
+        // Always applied so the cached model is identical for every context instance.
+        // Without an accessor (unit tests, background workers) CurrentTenantId is null
+        // and the filter passes all rows.
+        modelBuilder.ApplyTenantFilters(this);
     }
 
     /// <summary>

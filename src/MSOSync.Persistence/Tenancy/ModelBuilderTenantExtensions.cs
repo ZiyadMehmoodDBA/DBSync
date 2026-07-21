@@ -6,36 +6,36 @@ namespace MSOSync.Persistence.Tenancy;
 
 public static class ModelBuilderTenantExtensions
 {
-    public static void ApplyTenantFilters(this ModelBuilder modelBuilder, ICurrentTenantAccessor accessor)
+    public static void ApplyTenantFilters(this ModelBuilder modelBuilder, AppDbContext context)
     {
         foreach (var entityType in modelBuilder.Model.GetEntityTypes()
             .Where(t => typeof(ITenantScoped).IsAssignableFrom(t.ClrType)))
         {
             modelBuilder.Entity(entityType.ClrType)
-                .HasQueryFilter(BuildFilter(entityType.ClrType, accessor));
+                .HasQueryFilter(BuildFilter(entityType.ClrType, context));
         }
     }
 
-    // Builds: e => accessor.TenantId == null || e.TenantId == accessor.TenantId.Value
-    // EF Core evaluates accessor.TenantId at query time (singleton reads IHttpContextAccessor).
-    private static LambdaExpression BuildFilter(Type clrType, ICurrentTenantAccessor accessor)
+    // Builds: e => context.CurrentTenantId == null || (Guid?)e.TenantId == context.CurrentTenantId
+    // The context reference is rewritten by EF per query to the executing context instance,
+    // so the model cache (keyed on context type) stays correct across instances (2A-015).
+    // Lifted nullable comparison — no .Value: EF's parameter extraction evaluates
+    // client subexpressions eagerly and .Value throws when CurrentTenantId is null.
+    private static LambdaExpression BuildFilter(Type clrType, AppDbContext context)
     {
         var param        = Expression.Parameter(clrType, "e");
         var tenantIdProp = Expression.Property(param, nameof(ITenantScoped.TenantId));
 
-        var accessorExpr     = Expression.Constant(accessor, typeof(ICurrentTenantAccessor));
-        var accessorTenantId = Expression.Property(accessorExpr, nameof(ICurrentTenantAccessor.TenantId));
+        var contextExpr     = Expression.Constant(context, typeof(AppDbContext));
+        var currentTenantId = Expression.Property(contextExpr, nameof(AppDbContext.CurrentTenantId));
 
-        // accessor.TenantId == null  (platform context or no request)
-        var isNull = Expression.Equal(accessorTenantId, Expression.Constant(null, typeof(Guid?)));
+        // context.CurrentTenantId == null  (platform context or no request)
+        var isNull = Expression.Equal(currentTenantId, Expression.Constant(null, typeof(Guid?)));
 
-        // accessor.TenantId.Value  (unwrap Guid? → Guid)
-        var accessorValue = Expression.Property(accessorTenantId, "Value");
+        // (Guid?)e.TenantId == context.CurrentTenantId
+        var equals = Expression.Equal(
+            Expression.Convert(tenantIdProp, typeof(Guid?)), currentTenantId);
 
-        // e.TenantId == accessor.TenantId.Value
-        var equals = Expression.Equal(tenantIdProp, accessorValue);
-
-        // accessor.TenantId == null || e.TenantId == accessor.TenantId.Value
         var filter = Expression.OrElse(isNull, equals);
 
         return Expression.Lambda(filter, param);
