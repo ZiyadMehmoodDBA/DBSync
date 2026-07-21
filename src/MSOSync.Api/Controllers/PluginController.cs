@@ -2,7 +2,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MSOSync.Api.Dtos.Common;
 using MSOSync.Api.Dtos.Plugins;
-using MSOSync.Common.Exceptions;
 using MSOSync.Plugin.Abstractions;
 using MSOSync.Plugin.Models;
 
@@ -79,35 +78,19 @@ public sealed class PluginController(
 
     [HttpPost("{id}/enable")]
     [ProducesResponseType(typeof(PluginActionResult), 200)]
-    [ProducesResponseType(404)]
+    [ProducesResponseType(typeof(ProblemDetails), 404)]
     public async Task<IActionResult> Enable(string id, CancellationToken ct)
     {
-        try
-        {
-            await store.SetEnabledAsync(id, true, ct);
-        }
-        catch (NotFoundException)
-        {
-            return NotFound();
-        }
-
+        await store.SetEnabledAsync(id, true, ct);
         return Ok(new PluginActionResult(Success: true, RestartRequired: true));
     }
 
     [HttpPost("{id}/disable")]
     [ProducesResponseType(typeof(PluginActionResult), 200)]
-    [ProducesResponseType(404)]
+    [ProducesResponseType(typeof(ProblemDetails), 404)]
     public async Task<IActionResult> Disable(string id, CancellationToken ct)
     {
-        try
-        {
-            await store.SetEnabledAsync(id, false, ct);
-        }
-        catch (NotFoundException)
-        {
-            return NotFound();
-        }
-
+        await store.SetEnabledAsync(id, false, ct);
         return Ok(new PluginActionResult(Success: true, RestartRequired: true));
     }
 

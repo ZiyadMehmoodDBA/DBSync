@@ -57,39 +57,25 @@ public sealed class UsersController(
 
     [HttpPut("{userId:long}")]
     [ProducesResponseType(typeof(UserDetailDto), 200)]
-    [ProducesResponseType(404)]
+    [ProducesResponseType(typeof(ProblemDetails), 404)]
     public async Task<IActionResult> UpdateUser(
         long userId, [FromBody] UpdateUserRequest request, CancellationToken ct)
     {
-        try
-        {
-            var result = await usersService.UpdateUserAsync(userId, request, ct);
-            return Ok(result);
-        }
-        catch (MSOSync.Common.Exceptions.NotFoundException)
-        {
-            return NotFound();
-        }
+        var result = await usersService.UpdateUserAsync(userId, request, ct);
+        return Ok(result);
     }
 
     [HttpDelete("{userId:long}")]
     [ProducesResponseType(204)]
     [ProducesResponseType(403)]
-    [ProducesResponseType(404)]
+    [ProducesResponseType(typeof(ProblemDetails), 404)]
     public async Task<IActionResult> DeleteUser(long userId, CancellationToken ct)
     {
         var callerIdStr = User.FindFirstValue("userId");
         if (long.TryParse(callerIdStr, out var callerId) && callerId == userId)
             return Forbid();
 
-        try
-        {
-            await usersService.DeactivateUserAsync(userId, ct);
-            return NoContent();
-        }
-        catch (MSOSync.Common.Exceptions.NotFoundException)
-        {
-            return NotFound();
-        }
+        await usersService.DeactivateUserAsync(userId, ct);
+        return NoContent();
     }
 }

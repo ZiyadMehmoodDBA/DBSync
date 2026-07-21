@@ -17,6 +17,7 @@ public sealed class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logge
         if (exception is InvalidLifecycleTransitionException lifecycleEx)
         {
             httpContext.Response.StatusCode = StatusCodes.Status409Conflict;
+            httpContext.Response.Headers["X-Correlation-Id"] = lifecycleEx.CorrelationId.ToString();
             await httpContext.Response.WriteAsJsonAsync(new
             {
                 code = "INVALID_LIFECYCLE_TRANSITION",
@@ -35,6 +36,7 @@ public sealed class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logge
             MSOSync.Common.Exceptions.ValidationException ex => (400, "Bad Request",    ex.Code,            ex.Message),
             ForbiddenOperationException ex         => (403, "Forbidden",             ex.Code,            ex.Message),
             ConcurrencyException ex                => (409, "Conflict",              ex.Code,            ex.Message),
+            ConflictException ex                   => (409, "Conflict",              ex.Code,            ex.Message),
             UnauthorizedException ex               => (401, "Unauthorized",          ex.Code,            ex.Message),
             FluentValidation.ValidationException e => (400, "Bad Request",           "VALIDATION_ERROR",
                 string.Join("; ", e.Errors.Select(x => x.ErrorMessage))),
@@ -49,6 +51,7 @@ public sealed class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logge
             ?? httpContext.TraceIdentifier;
 
         httpContext.Response.StatusCode = status;
+        httpContext.Response.Headers["X-Correlation-Id"] = correlationId;
         await httpContext.Response.WriteAsJsonAsync(new
         {
             timestamp = DateTime.UtcNow,
