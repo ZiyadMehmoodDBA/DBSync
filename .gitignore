@@ -35,3 +35,7 @@ Thumbs.db
 # Log files
 *.log
 *.err
+
+# Code coverage output
+coverage-baseline/
+coverage/
