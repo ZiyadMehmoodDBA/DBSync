@@ -205,23 +205,23 @@ public sealed class PermissionsIntegrationTests(PermissionsFixture fx)
     }
 
     [Fact]
-    public async Task GetMyPermissions_AsAdmin_ReturnsAllFifteen()
+    public async Task GetMyPermissions_AsAdmin_ReturnsAllSixteen()
     {
         var client   = await fx.AdminClientAsync();
         var response = await client.GetFromJsonAsync<EffectivePermissionsDto>("/api/v1/me/permissions");
 
-        response!.Permissions.Should().HaveCount(15);
+        response!.Permissions.Should().HaveCount(16);
     }
 
     // ── GET /api/v1/permissions (catalog) ────────────────────────────────────
 
     [Fact]
-    public async Task GetCatalog_AsViewer_Returns200WithAllFifteenPermissions()
+    public async Task GetCatalog_AsViewer_Returns200WithAllSixteenPermissions()
     {
         var client   = await fx.ViewerClientAsync();
         var response = await client.GetFromJsonAsync<PermissionDto[]>("/api/v1/permissions");
 
-        response!.Should().HaveCount(15);
+        response!.Should().HaveCount(16);
         response.Should().Contain(p => p.PermissionKey == "VIEW_EVENTS");
         response.Should().Contain(p => p.PermissionKey == "MANAGE_USERS");
     }
