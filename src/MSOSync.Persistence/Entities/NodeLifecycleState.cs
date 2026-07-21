@@ -7,6 +7,7 @@ public enum NodeLifecycleState
     Active,
     Recovery,             // identity replacement under review / awaiting re-activation
     Disabled,
+    Draining,             // reversible quiesce: routing excluded, in-flight completes, heartbeats accepted
     Decommissioning,      // orchestrated drain in progress
     Decommissioned,       // terminal
     Rejected,             // terminal

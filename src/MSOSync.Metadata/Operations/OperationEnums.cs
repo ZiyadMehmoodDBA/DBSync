@@ -6,6 +6,8 @@ public enum OperationType
     Rollout,
     Decommission,
     Recovery,
+    RollingMaintenance,
+    RollingUpgrade,
 }
 
 public enum OperationSource

@@ -30,6 +30,10 @@ public sealed class SyncNode : ITenantScoped
     public DateTimeOffset? MaintenanceUntil { get; set; }
     public string? MaintenanceStartedBy { get; set; }
 
+    // Drain (2B.1)
+    public DateTimeOffset? DrainCompletedAt { get; set; }   // set by RollingOperationWorker when outgoing queue empties; cleared on StartDrain/Resume
+    public string? AgentVersion { get; set; }               // last NodeVersion reported via heartbeat
+
     // Decommission
     public string? DecommissionReason { get; set; }
     public DateTimeOffset? DecommissionStartedAt { get; set; }
