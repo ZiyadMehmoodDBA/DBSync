@@ -25,30 +25,35 @@ public sealed class RetryJob(
 
         while (await timer.WaitForNextTickAsync(ct))
         {
-            registry.RecordTickStart(nameof(RetryJob));
-            try
+            await RunTickAsync(ct);
+        }
+    }
+
+    internal async Task RunTickAsync(CancellationToken ct)
+    {
+        registry.RecordTickStart(nameof(RetryJob));
+        try
+        {
+            await using var scope        = scopeFactory.CreateAsyncScope();
+            var lockProvider = scope.ServiceProvider.GetRequiredService<IDatabaseLockProvider>();
+            var processor    = scope.ServiceProvider.GetRequiredService<RetryProcessor>();
+
+            await using var lease = await lockProvider.TryAcquireAsync(LockNames.RetryEngine, ct);
+            if (lease == null)
             {
-                await using var scope        = scopeFactory.CreateAsyncScope();
-                var lockProvider = scope.ServiceProvider.GetRequiredService<IDatabaseLockProvider>();
-                var processor    = scope.ServiceProvider.GetRequiredService<RetryProcessor>();
-
-                await using var lease = await lockProvider.TryAcquireAsync(LockNames.RetryEngine, ct);
-                if (lease == null)
-                {
-                    logger.LogDebug("RetryJob: lock held, skipping");
-                    registry.RecordTickComplete(nameof(RetryJob));
-                    continue;
-                }
-
-                var count = await processor.ProcessAsync(ct);
-                if (count > 0) logger.LogInformation("RetryJob queued {Count} batches for retry", count);
+                logger.LogDebug("RetryJob: lock held, skipping");
                 registry.RecordTickComplete(nameof(RetryJob));
+                return;
             }
-            catch (Exception ex) when (!ct.IsCancellationRequested)
-            {
-                registry.RecordTickFailed(nameof(RetryJob), ex);
-                logger.LogError(ex, "RetryJob failed");
-            }
+
+            var count = await processor.ProcessAsync(ct);
+            if (count > 0) logger.LogInformation("RetryJob queued {Count} batches for retry", count);
+            registry.RecordTickComplete(nameof(RetryJob));
+        }
+        catch (Exception ex) when (!ct.IsCancellationRequested)
+        {
+            registry.RecordTickFailed(nameof(RetryJob), ex);
+            logger.LogError(ex, "RetryJob failed");
         }
     }
 }

@@ -27,29 +27,34 @@ public sealed class SyncJob(
 
         while (await timer.WaitForNextTickAsync(ct))
         {
-            registry.RecordTickStart(nameof(SyncJob));
-            try
+            await RunTickAsync(ct);
+        }
+    }
+
+    internal async Task RunTickAsync(CancellationToken ct)
+    {
+        registry.RecordTickStart(nameof(SyncJob));
+        try
+        {
+            await using var scope = scopeFactory.CreateAsyncScope();
+            var lockProvider = scope.ServiceProvider.GetRequiredService<IDatabaseLockProvider>();
+            var engine       = scope.ServiceProvider.GetRequiredService<SyncEngine>();
+
+            await using var lease = await lockProvider.TryAcquireAsync(LockNames.SyncEngine, ct);
+            if (lease == null)
             {
-                await using var scope = scopeFactory.CreateAsyncScope();
-                var lockProvider = scope.ServiceProvider.GetRequiredService<IDatabaseLockProvider>();
-                var engine       = scope.ServiceProvider.GetRequiredService<SyncEngine>();
-
-                await using var lease = await lockProvider.TryAcquireAsync(LockNames.SyncEngine, ct);
-                if (lease == null)
-                {
-                    logger.LogDebug("SyncJob: lock held by another instance, skipping tick");
-                    registry.RecordTickComplete(nameof(SyncJob));
-                    continue;
-                }
-
-                await engine.RunAsync(ct);
+                logger.LogDebug("SyncJob: lock held by another instance, skipping tick");
                 registry.RecordTickComplete(nameof(SyncJob));
+                return;
             }
-            catch (Exception ex) when (!ct.IsCancellationRequested)
-            {
-                registry.RecordTickFailed(nameof(SyncJob), ex);
-                logger.LogError(ex, "SyncJob run failed");
-            }
+
+            await engine.RunAsync(ct);
+            registry.RecordTickComplete(nameof(SyncJob));
+        }
+        catch (Exception ex) when (!ct.IsCancellationRequested)
+        {
+            registry.RecordTickFailed(nameof(SyncJob), ex);
+            logger.LogError(ex, "SyncJob run failed");
         }
     }
 }

@@ -32,38 +32,48 @@ public sealed class PullJob(
     {
         var props = nodeProps.Value;
 
-        // Self-check: if this node is in PUSH mode, PullJob is disabled
-        await using (var scope = scopeFactory.CreateAsyncScope())
-        {
-            var nodeMeta = scope.ServiceProvider.GetRequiredService<INodeMetadataService>();
-            var ownNode  = await nodeMeta.GetNodeAsync(props.NodeId, ct);
-            if (ownNode?.TransportMode == TransportMode.Push)
-            {
-                logger.LogInformation("PullJob disabled — node {NodeId} is in Push mode", props.NodeId);
-                return;
-            }
-        }
+        if (!await IsPullEnabledAsync(ct))
+            return;
 
         var interval = TimeSpan.FromSeconds(syncOptions.Value.PullIntervalSeconds);
         using var timer     = new PeriodicTimer(interval);
 
         while (await timer.WaitForNextTickAsync(ct))
         {
-            registry.RecordTickStart(nameof(PullJob));
-            try
-            {
-                await RunTickAsync(props.NodeId, ct);
-                registry.RecordTickComplete(nameof(PullJob));
-            }
-            catch (Exception ex) when (!ct.IsCancellationRequested)
-            {
-                registry.RecordTickFailed(nameof(PullJob), ex);
-                logger.LogError(ex, "PullJob tick failed");
-            }
+            await RunTickAsync(props.NodeId, ct);
         }
     }
 
-    private async Task RunTickAsync(string localNodeId, CancellationToken ct)
+    // Self-check: if this node is in PUSH mode, PullJob is disabled
+    internal async Task<bool> IsPullEnabledAsync(CancellationToken ct)
+    {
+        await using var scope = scopeFactory.CreateAsyncScope();
+        var nodeMeta = scope.ServiceProvider.GetRequiredService<INodeMetadataService>();
+        var ownNode  = await nodeMeta.GetNodeAsync(nodeProps.Value.NodeId, ct);
+        if (ownNode?.TransportMode == TransportMode.Push)
+        {
+            logger.LogInformation("PullJob disabled — node {NodeId} is in Push mode", nodeProps.Value.NodeId);
+            return false;
+        }
+        return true;
+    }
+
+    internal async Task RunTickAsync(string localNodeId, CancellationToken ct)
+    {
+        registry.RecordTickStart(nameof(PullJob));
+        try
+        {
+            await PollAllAsync(localNodeId, ct);
+            registry.RecordTickComplete(nameof(PullJob));
+        }
+        catch (Exception ex) when (!ct.IsCancellationRequested)
+        {
+            registry.RecordTickFailed(nameof(PullJob), ex);
+            logger.LogError(ex, "PullJob tick failed");
+        }
+    }
+
+    private async Task PollAllAsync(string localNodeId, CancellationToken ct)
     {
         await using var scope = scopeFactory.CreateAsyncScope();
         var sp = scope.ServiceProvider;

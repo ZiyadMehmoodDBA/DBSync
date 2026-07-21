@@ -7,7 +7,7 @@ public sealed class DatabaseLockProvider(AppDbContext db) : IDatabaseLockProvide
     private static readonly string Schema =
         Environment.GetEnvironmentVariable("MSOSYNC_SCHEMA") ?? "msosync";
 
-    public async Task<DatabaseLockLease?> TryAcquireAsync(string lockName, CancellationToken ct = default)
+    public async Task<IAsyncDisposable?> TryAcquireAsync(string lockName, CancellationToken ct = default)
     {
         var owner = $"{Environment.MachineName}:{Environment.ProcessId}";
 

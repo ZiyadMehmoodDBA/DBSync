@@ -46,7 +46,7 @@ public sealed class PurgeJob(
         }
     }
 
-    private async Task RunPurgeAsync(CancellationToken ct)
+    internal async Task RunPurgeAsync(CancellationToken ct)
     {
         await using var scope        = scopeFactory.CreateAsyncScope();
         var lockProvider = scope.ServiceProvider.GetRequiredService<IDatabaseLockProvider>();
@@ -61,7 +61,7 @@ public sealed class PurgeJob(
         logger.LogInformation("PurgeJob: deleted {Events} events, {Batches} batches", events, batches);
     }
 
-    private TimeSpan TimeUntilNextFire()
+    internal TimeSpan TimeUntilNextFire()
     {
         var now  = clock.UtcNow;
         var next = now.Date.AddHours(2);

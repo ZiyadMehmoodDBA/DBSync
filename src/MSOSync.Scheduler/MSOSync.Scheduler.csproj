@@ -3,6 +3,11 @@
     <Description>SyncWorker, RetryWorker, HeartbeatWorker, PurgeWorker, MetricsWorker, NotificationWorker</Description>
   </PropertyGroup>
   <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
+      <_Parameter1>MSOSync.SchedulerTests</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="MediatR" />
     <PackageReference Include="Microsoft.Extensions.Hosting" />
   </ItemGroup>
