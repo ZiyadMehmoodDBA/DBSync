@@ -1,7 +1,9 @@
 // src/MSOSync.Api/Controllers/PreferencesController.cs
 using System.Text.Json;
+using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MSOSync.Api.Validators;
 using MSOSync.Metadata.Preferences;
 
 namespace MSOSync.Api.Controllers;
@@ -9,7 +11,9 @@ namespace MSOSync.Api.Controllers;
 [ApiController]
 [Route("api/v1/preferences")]
 [Authorize(Policy = "ViewerOrAbove")]
-public sealed class PreferencesController(IUserPreferencesService preferencesService)
+public sealed class PreferencesController(
+    IUserPreferencesService          preferencesService,
+    UpsertPreferenceRequestValidator keyValidator)
     : ControllerBase
 {
     [HttpGet]
@@ -22,8 +26,7 @@ public sealed class PreferencesController(IUserPreferencesService preferencesSer
     [ProducesResponseType(typeof(ProblemDetails), 400)]
     public async Task<IActionResult> Upsert(string key, [FromBody] JsonElement value, CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(key) || key.Length > 100)
-            return BadRequest(new { code = "INVALID_KEY", message = "Preference key must be 1–100 characters." });
+        await keyValidator.ValidateAndThrowAsync(key, ct);
         await preferencesService.UpsertAsync(key, value, ct);
         return Ok();
     }
