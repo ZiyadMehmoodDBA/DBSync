@@ -1,5 +1,7 @@
+using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MSOSync.Api.Validators;
 using MSOSync.Common.Exceptions;
 using MSOSync.Metadata.Operations;
 using MSOSync.Metadata.Permissions;
@@ -10,9 +12,10 @@ namespace MSOSync.Api.Controllers;
 [Route("api/v1/operations")]
 [Authorize(Policy = "ViewerOrAbove")]
 public sealed class OperationsController(
-    IOperationQueryService queryService,
-    IOperationService      operationService,
-    IPermissionService     permissions) : ControllerBase
+    IOperationQueryService     queryService,
+    IOperationService          operationService,
+    IPermissionService         permissions,
+    OperationsPageSizeValidator pageSizeValidator) : ControllerBase
 {
     private string Actor => User.Identity?.Name
         ?? throw new UnauthorizedException("No identity", "UNAUTHORIZED");
@@ -53,8 +56,7 @@ public sealed class OperationsController(
         [FromQuery] int       pageSize    = 25,
         CancellationToken ct = default)
     {
-        if (pageSize is < 1 or > 100)
-            return BadRequest(new { error = "pageSize must be between 1 and 100." });
+        await pageSizeValidator.ValidateAndThrowAsync(pageSize, ct);
 
         var filter = new OperationFilter(
             Types:       SplitCsv(types),
