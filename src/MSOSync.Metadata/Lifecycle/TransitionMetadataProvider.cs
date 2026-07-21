@@ -18,8 +18,14 @@ public sealed class TransitionMetadataProvider(INodeLifecycleStateMachine stateM
                 case NodeLifecycleState.Active when node.LifecycleState == NodeLifecycleState.Disabled:
                     actions.Add(new("Enable", false, true, "Normal"));
                     break;
+                case NodeLifecycleState.Active when node.LifecycleState == NodeLifecycleState.Draining:
+                    actions.Add(new("ResumeDrain", false, false, "Normal"));
+                    break;
                 case NodeLifecycleState.Disabled when node.LifecycleState == NodeLifecycleState.Active:
                     actions.Add(new("Disable", false, true, "Normal"));
+                    break;
+                case NodeLifecycleState.Draining when node.LifecycleState == NodeLifecycleState.Active:
+                    actions.Add(new("StartDrain", false, true, "Normal"));
                     break;
                 case NodeLifecycleState.Decommissioning:
                     actions.Add(new("Decommission", true, true, "Critical"));

@@ -174,4 +174,55 @@ public sealed class NodeLifecycleServiceTests
         var node = db.Nodes.Find("ext-8")!;
         node.LifecycleState.Should().Be(NodeLifecycleState.PendingRegistration);
     }
+
+    [Fact]
+    public async Task StartDrainAsync_ActiveNode_BecomesRaining_ClearsDrainCompletedAt()
+    {
+        var svc = MakeService(out var db);
+        db.Nodes.Add(new SyncNode
+        {
+            NodeId = "drain-1", GroupId = "g1", SyncUrl = "http://n",
+            ExternalId = "drain-1", LifecycleState = NodeLifecycleState.Active,
+            DrainCompletedAt = DateTimeOffset.UtcNow
+        });
+        await db.SaveChangesAsync();
+
+        await svc.StartDrainAsync("drain-1", "test drain", "admin");
+
+        var node = db.Nodes.Find("drain-1")!;
+        node.LifecycleState.Should().Be(NodeLifecycleState.Draining);
+        node.DrainCompletedAt.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task ResumeFromDrainAsync_DrainingNode_BecomesActive()
+    {
+        var svc = MakeService(out var db);
+        db.Nodes.Add(new SyncNode
+        {
+            NodeId = "drain-2", GroupId = "g1", SyncUrl = "http://n",
+            ExternalId = "drain-2", LifecycleState = NodeLifecycleState.Draining
+        });
+        await db.SaveChangesAsync();
+
+        await svc.ResumeFromDrainAsync("drain-2", null, "admin");
+
+        var node = db.Nodes.Find("drain-2")!;
+        node.LifecycleState.Should().Be(NodeLifecycleState.Active);
+    }
+
+    [Fact]
+    public async Task StartDrainAsync_DisabledNode_ThrowsInvalidLifecycleTransitionException()
+    {
+        var svc = MakeService(out var db);
+        db.Nodes.Add(new SyncNode
+        {
+            NodeId = "drain-3", GroupId = "g1", SyncUrl = "http://n",
+            ExternalId = "drain-3", LifecycleState = NodeLifecycleState.Disabled
+        });
+        await db.SaveChangesAsync();
+
+        var act = async () => await svc.StartDrainAsync("drain-3", null, "admin");
+        await act.Should().ThrowAsync<InvalidLifecycleTransitionException>();
+    }
 }

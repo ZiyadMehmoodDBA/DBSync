@@ -17,7 +17,9 @@ public sealed class NodeLifecycleStateMachine : INodeLifecycleStateMachine
             [NodeLifecycleState.PendingRegistration] =
                 [NodeLifecycleState.Active, NodeLifecycleState.Decommissioning],
             [NodeLifecycleState.Active] =
-                [NodeLifecycleState.Disabled, NodeLifecycleState.Recovery, NodeLifecycleState.Decommissioning],
+                [NodeLifecycleState.Disabled, NodeLifecycleState.Recovery, NodeLifecycleState.Decommissioning, NodeLifecycleState.Draining],
+            [NodeLifecycleState.Draining] =
+                [NodeLifecycleState.Active, NodeLifecycleState.Decommissioning],
             [NodeLifecycleState.Recovery] =
                 [NodeLifecycleState.Active, NodeLifecycleState.Disabled, NodeLifecycleState.Decommissioning],
             [NodeLifecycleState.Disabled] =

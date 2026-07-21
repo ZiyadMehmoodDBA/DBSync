@@ -25,6 +25,11 @@ public static class NodeManagementAuditActions
     public const string NodeRecoveryRejected       = "NODE_RECOVERY_REJECTED";
     public const string NodeRecoveryActivated      = "NODE_RECOVERY_ACTIVATED";
 
+    // Phase 2B.1 — Drain
+    public const string NodeDrainStarted   = "NODE_DRAIN_STARTED";
+    public const string NodeDrainResumed   = "NODE_DRAIN_RESUMED";
+    public const string NodeDrainCompleted = "NODE_DRAIN_COMPLETED";
+
     // Epic 12C — Sync Scope
     public const string NodeScopeUpdated = "NODE_SCOPE_UPDATED";
 }

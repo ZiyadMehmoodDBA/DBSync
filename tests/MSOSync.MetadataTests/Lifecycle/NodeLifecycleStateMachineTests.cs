@@ -29,6 +29,10 @@ public sealed class NodeLifecycleStateMachineTests
         (NodeLifecycleState.Disabled,            NodeLifecycleState.Decommissioning),
         (NodeLifecycleState.Decommissioning,     NodeLifecycleState.Decommissioned),
         (NodeLifecycleState.Decommissioning,     NodeLifecycleState.Disabled),      // cancel-decommission path (12C)
+        // Drain transitions (2B.1)
+        (NodeLifecycleState.Active,              NodeLifecycleState.Draining),
+        (NodeLifecycleState.Draining,            NodeLifecycleState.Active),
+        (NodeLifecycleState.Draining,            NodeLifecycleState.Decommissioning),
     ];
 
     public static TheoryData<NodeLifecycleState, NodeLifecycleState> AllPairs()
@@ -79,6 +83,7 @@ public sealed class NodeLifecycleStateMachineTests
             NodeLifecycleState.PendingRegistration,
             NodeLifecycleState.Recovery,
             NodeLifecycleState.Disabled,
+            NodeLifecycleState.Draining,
         ]);
     }
 }

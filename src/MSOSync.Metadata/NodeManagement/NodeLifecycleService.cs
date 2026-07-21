@@ -526,6 +526,16 @@ public sealed class NodeLifecycleService(
         => ExecuteTransitionAsync(nodeId, NodeLifecycleState.Disabled, LifecycleTrigger.Manual,
             actorUsername, reason, NodeManagementAuditActions.NodeDisabled, ct: ct);
 
+    public Task StartDrainAsync(string nodeId, string? reason, string actorUsername, CancellationToken ct = default)
+        => ExecuteTransitionAsync(nodeId, NodeLifecycleState.Draining, LifecycleTrigger.Manual,
+            actorUsername, reason, NodeManagementAuditActions.NodeDrainStarted,
+            mutate: (node, _) => { node.DrainCompletedAt = null; return Task.CompletedTask; }, ct: ct);
+
+    public Task ResumeFromDrainAsync(string nodeId, string? reason, string actorUsername, CancellationToken ct = default)
+        => ExecuteTransitionAsync(nodeId, NodeLifecycleState.Active, LifecycleTrigger.Manual,
+            actorUsername, reason, NodeManagementAuditActions.NodeDrainResumed,
+            mutate: (node, _) => { node.DrainCompletedAt = null; return Task.CompletedTask; }, ct: ct);
+
     public async Task StartMaintenanceAsync(
         string nodeId, string reason, DateTimeOffset? expectedEndAt, bool notifyNode,
         string actorUsername, CancellationToken ct = default)

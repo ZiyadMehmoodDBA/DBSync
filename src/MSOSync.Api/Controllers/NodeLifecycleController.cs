@@ -1,13 +1,11 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using MSOSync.Api.Authorization;
 using MSOSync.Common.Exceptions;
 using MSOSync.Metadata.Common;
 using MSOSync.Metadata.Lifecycle;
 using MSOSync.Metadata.NodeManagement;
 using MSOSync.Metadata.Permissions;
-using MSOSync.Persistence;
 using MSOSync.Persistence.Entities;
 
 namespace MSOSync.Api.Controllers;
@@ -20,7 +18,7 @@ public sealed class NodeLifecycleController(
     INodeLifecycleHistoryService history,
     ITransitionMetadataProvider transitions,
     INodeAuthorizationService authz,
-    AppDbContext db) : ControllerBase
+    INodeReadQueryService nodeRead) : ControllerBase
 {
     private string Actor => User.Identity?.Name
         ?? throw new UnauthorizedException("No identity", "UNAUTHORIZED");
@@ -85,6 +83,28 @@ public sealed class NodeLifecycleController(
         return NoContent();
     }
 
+    [HttpPost("nodes/{id}/drain")]
+    [ProducesResponseType(204)]
+    [ProducesResponseType(404)]
+    [ProducesResponseType(409)]
+    public async Task<IActionResult> Drain(string id, [FromBody] DrainRequest req, CancellationToken ct)
+    {
+        await authz.EnsurePermissionAsync(SystemPermissions.ManageNodeLifecycle, ct);
+        await lifecycle.StartDrainAsync(id, req.Reason, Actor, ct);
+        return NoContent();
+    }
+
+    [HttpPost("nodes/{id}/resume-drain")]
+    [ProducesResponseType(204)]
+    [ProducesResponseType(404)]
+    [ProducesResponseType(409)]
+    public async Task<IActionResult> ResumeDrain(string id, [FromBody] ResumeDrainRequest req, CancellationToken ct)
+    {
+        await authz.EnsurePermissionAsync(SystemPermissions.ManageNodeLifecycle, ct);
+        await lifecycle.ResumeFromDrainAsync(id, req.Reason, Actor, ct);
+        return NoContent();
+    }
+
     [HttpGet("nodes/{id}/state")]
     [ProducesResponseType(typeof(NodeStateDto), 200)]
     public async Task<ActionResult<NodeStateDto>> GetState(string id, CancellationToken ct)
@@ -98,7 +118,7 @@ public sealed class NodeLifecycleController(
     public async Task<ActionResult<TransitionsDto>> GetTransitions(string id, CancellationToken ct)
     {
         await authz.EnsurePermissionAsync(SystemPermissions.ManageNodeLifecycle, ct);
-        var node = await db.Nodes.AsNoTracking().FirstOrDefaultAsync(n => n.NodeId == id, ct)
+        var node = await nodeRead.GetNodeAsync(id, ct)
             ?? throw new NotFoundException($"Node {id} not found", "NODE_NOT_FOUND");
         return Ok(transitions.GetTransitions(node));
     }

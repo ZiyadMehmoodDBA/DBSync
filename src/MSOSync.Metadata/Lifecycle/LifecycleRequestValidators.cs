@@ -27,6 +27,22 @@ public sealed class DisableRequestValidator : AbstractValidator<DisableRequest>
     }
 }
 
+public sealed class DrainRequestValidator : AbstractValidator<DrainRequest>
+{
+    public DrainRequestValidator()
+    {
+        RuleFor(x => x.Reason).MaximumLength(1000).When(x => x.Reason is not null);
+    }
+}
+
+public sealed class ResumeDrainRequestValidator : AbstractValidator<ResumeDrainRequest>
+{
+    public ResumeDrainRequestValidator()
+    {
+        RuleFor(x => x.Reason).MaximumLength(1000).When(x => x.Reason is not null);
+    }
+}
+
 public sealed class ActivateRequestValidator : AbstractValidator<ActivateRequest>
 {
     public ActivateRequestValidator()

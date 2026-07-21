@@ -16,9 +16,9 @@ public sealed class TransitionMetadataProviderTests
     };
 
     [Fact]
-    public void Active_NoMaintenance_OffersDisableStartMaintenanceDecommission()
+    public void Active_NoMaintenance_OffersDisableStartMaintenanceDecommissionStartDrain()
         => _provider.GetTransitions(Node(NodeLifecycleState.Active)).AllowedTransitions
-            .Select(t => t.Action).Should().BeEquivalentTo(["Disable", "StartMaintenance", "Decommission"]);
+            .Select(t => t.Action).Should().BeEquivalentTo(["Disable", "StartMaintenance", "Decommission", "StartDrain"]);
 
     [Fact]
     public void Active_InMaintenance_OffersEndMaintenance_NotStart()

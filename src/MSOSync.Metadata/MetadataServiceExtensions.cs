@@ -101,6 +101,7 @@ public static class MetadataServiceExtensions
         services.AddScoped<IRegistrationDiffService, RegistrationDiffService>();
         services.AddScoped<INodeManagementService, NodeManagementService>();
         services.AddScoped<INodeLifecycleService, NodeLifecycleService>();
+        services.AddScoped<INodeReadQueryService, NodeReadQueryService>();
         services.AddScoped<IProvisionPackageService, ProvisionPackageService>();
         services.AddScoped<IAuditService, AuditService>();
         services.AddScoped<IValidator<NodeManagement.RegistrationFilter>, NodeManagement.RegistrationListFilterValidator>();
@@ -111,6 +112,8 @@ public static class MetadataServiceExtensions
         services.AddScoped<IValidator<Lifecycle.DecommissionRequest>, Lifecycle.DecommissionRequestValidator>();
         services.AddScoped<IValidator<Lifecycle.DisableRequest>, Lifecycle.DisableRequestValidator>();
         services.AddScoped<IValidator<Lifecycle.ActivateRequest>, Lifecycle.ActivateRequestValidator>();
+        services.AddScoped<IValidator<Lifecycle.DrainRequest>, Lifecycle.DrainRequestValidator>();
+        services.AddScoped<IValidator<Lifecycle.ResumeDrainRequest>, Lifecycle.ResumeDrainRequestValidator>();
 
         // Epic 12B-2 — Configuration Management
         services.AddScoped<IConfigurationValidationService, ConfigurationValidationService>();
