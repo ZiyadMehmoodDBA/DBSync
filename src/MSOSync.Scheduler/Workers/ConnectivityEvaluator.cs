@@ -5,6 +5,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MSOSync.Common;
+using MSOSync.Common.Workers;
 using MSOSync.Metadata.Lifecycle;
 using MSOSync.Persistence;
 using MSOSync.Persistence.Entities;
@@ -19,9 +20,17 @@ public sealed class ConnectivityEvaluator(
     IOptions<NodeProperties> nodeProps,
     IOptions<LifecycleOptions> lifecycleOptions,
     IOptions<HeartbeatOptions> heartbeatOptions,
+    IWorkerStatusRegistry registry,
     ILogger<ConnectivityEvaluator> logger) : BackgroundService
 {
     private int _running;
+
+    public override async Task StartAsync(CancellationToken cancellationToken)
+    {
+        registry.Register(nameof(ConnectivityEvaluator),
+            TimeSpan.FromSeconds(lifecycleOptions.Value.ConnectivityEvaluatorIntervalSeconds));
+        await base.StartAsync(cancellationToken);
+    }
 
     protected override async Task ExecuteAsync(CancellationToken ct)
     {
@@ -45,9 +54,17 @@ public sealed class ConnectivityEvaluator(
                 logger.LogWarning("ConnectivityEvaluator cycle skipped — previous evaluation still running");
                 continue;
             }
-            try { await RunCycleAsync(ct); }
+            registry.RecordTickStart(nameof(ConnectivityEvaluator));
+            try
+            {
+                await RunCycleAsync(ct);
+                registry.RecordTickComplete(nameof(ConnectivityEvaluator));
+            }
             catch (Exception ex) when (!ct.IsCancellationRequested)
-            { logger.LogError(ex, "ConnectivityEvaluator cycle failed"); }
+            {
+                registry.RecordTickFailed(nameof(ConnectivityEvaluator), ex);
+                logger.LogError(ex, "ConnectivityEvaluator cycle failed");
+            }
             finally { Interlocked.Exchange(ref _running, 0); }
         }
     }
