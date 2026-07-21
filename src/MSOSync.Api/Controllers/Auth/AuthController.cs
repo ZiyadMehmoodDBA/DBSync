@@ -123,5 +123,3 @@ public sealed class AuthController(
         Request.Headers["X-Correlation-Id"].FirstOrDefault()
             ?? Guid.NewGuid().ToString();
 }
-
-public sealed record SwitchTenantRequest(Guid TenantId);

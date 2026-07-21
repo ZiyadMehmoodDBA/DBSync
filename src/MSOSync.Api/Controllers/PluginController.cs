@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MSOSync.Api.Dtos.Plugins;
 using MSOSync.Common.Exceptions;
 using MSOSync.Plugin.Abstractions;
 using MSOSync.Plugin.Models;
@@ -130,37 +131,3 @@ public sealed class PluginController(
         Dependencies         = p.Dependencies,
     };
 }
-
-// DTO records — defined here to keep the controller self-contained
-public sealed class PluginDto
-{
-    public string    PluginId             { get; init; } = null!;
-    public string    Name                 { get; init; } = null!;
-    public string    Version              { get; init; } = null!;
-    public string    Status               { get; init; } = null!;
-    public long      LoadDurationMs       { get; init; }
-    public long?     InitializeDurationMs { get; init; }
-    public long?     StartDurationMs      { get; init; }
-    public long?     TotalDurationMs      { get; init; }
-    public DateTime  LoadedAt             { get; init; }
-    public DateTime? InitializedAt        { get; init; }
-    public DateTime? StartedAt            { get; init; }
-    public string?   LastError            { get; init; }
-    public string?   FailureStage         { get; init; }
-    public string    HostCompatibility    { get; init; } = null!;
-    public IReadOnlyList<string> Capabilities  { get; init; } = [];
-    public IReadOnlyList<string> Permissions   { get; init; } = [];
-    public IReadOnlyList<string> Dependencies  { get; init; } = [];
-}
-
-public sealed class PluginSummaryDto
-{
-    public int       Total             { get; init; }
-    public int       Loaded            { get; init; }
-    public int       Failed            { get; init; }
-    public int       Disabled          { get; init; }
-    public long      StartupDurationMs { get; init; }
-    public DateTime? LastScanAt        { get; init; }
-}
-
-public sealed record PluginActionResult(bool Success, bool RestartRequired);

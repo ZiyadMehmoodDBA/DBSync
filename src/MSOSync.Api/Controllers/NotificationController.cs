@@ -1,6 +1,7 @@
 // src/MSOSync.Api/Controllers/NotificationController.cs
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MSOSync.Api.Dtos.Notifications;
 using MSOSync.Common;
 using MSOSync.Metadata.Notifications;
 
@@ -73,5 +74,3 @@ public sealed class NotificationController(
     private Task<long> ResolveUserIdAsync(CancellationToken ct)
         => queryService.ResolveUserIdAsync(currentUser.GetCurrentUsername(), ct);
 }
-
-public sealed record PatchNotificationRequest(bool IsRead);
