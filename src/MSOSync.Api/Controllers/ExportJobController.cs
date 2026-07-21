@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MSOSync.Api.Dtos.Export;
 using MSOSync.Common;
 using MSOSync.Metadata.Audit;
 using MSOSync.Metadata.Events;
@@ -150,26 +151,3 @@ public sealed class ExportJobController(
         j.Status, j.ProgressPercent, j.RowCount, j.ErrorMessage,
         j.ExpiresAt, j.CreatedAt, j.StartedAt, j.CompletedAt);
 }
-
-public sealed record CreateExportJobRequest(
-    string ResourceType,
-    string Format,
-    string FiltersJson,
-    Guid?  ParentJobId = null
-);
-
-public sealed record ExportJobDto(
-    Guid            JobId,
-    Guid?           ParentJobId,
-    string          RequestedBy,
-    string          ResourceType,
-    string          Format,
-    string          Status,
-    int             ProgressPercent,
-    long?           RowCount,
-    string?         ErrorMessage,
-    DateTimeOffset? ExpiresAt,
-    DateTimeOffset  CreatedAt,
-    DateTimeOffset? StartedAt,
-    DateTimeOffset? CompletedAt
-);

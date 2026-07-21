@@ -16,6 +16,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using MSOSync.Api.Controllers;
 using MSOSync.Api.Controllers.Auth;
+using MSOSync.Api.Dtos.Export;
 using MSOSync.Api.Exceptions;
 using MSOSync.App;
 using MSOSync.App.Export;
