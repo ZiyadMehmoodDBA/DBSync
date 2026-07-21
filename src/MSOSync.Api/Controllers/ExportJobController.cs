@@ -22,7 +22,9 @@ public sealed class ExportJobController(
     : ControllerBase
 {
     [HttpPost]
-    [ProducesResponseType(202)]
+    [ProducesResponseType(typeof(CreateExportJobResponse), 202)]
+    [ProducesResponseType(typeof(ProblemDetails), 400)]
+    [ProducesResponseType(typeof(ProblemDetails), 403)]
     public async Task<IActionResult> CreateJob(
         [FromBody] CreateExportJobRequest request, CancellationToken ct)
     {
@@ -71,7 +73,7 @@ public sealed class ExportJobController(
             request.FiltersJson,
             request.ParentJobId,
             ct);
-        return StatusCode(202, new { jobId = job.JobId });
+        return StatusCode(202, new CreateExportJobResponse(job.JobId));
     }
 
     [HttpGet]
