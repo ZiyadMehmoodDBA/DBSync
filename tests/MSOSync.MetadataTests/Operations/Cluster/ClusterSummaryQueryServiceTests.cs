@@ -222,7 +222,7 @@ public sealed class ClusterSummaryQueryServiceTests : IDisposable
         var svc = new ClusterSummaryQueryService(_db);
         var result = await svc.GetSummaryAsync();
 
-        result.ActiveOperations.Count.Should().BeLessThanOrEqualTo(50);
+        result.ActiveOperations.Count.Should().Be(50);
     }
 
     [Fact]
