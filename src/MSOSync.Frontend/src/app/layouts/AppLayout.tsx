@@ -24,6 +24,7 @@ import {
   Stethoscope,
   PieChart,
   Package,
+  Monitor,
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Separator } from '../../components/ui/separator';
@@ -54,6 +55,7 @@ const NAV_GROUPS: { heading: string | null; items: NavItem[] }[] = [
       { label: 'Nodes',         path: '/operations/nodes',         icon: Server,      requiredPermission: PermissionKeys.ViewTopology },
       { label: 'Configuration', path: '/operations/configuration', icon: Settings2,   requiredPermission: PermissionKeys.ManageConfigurations },
       { label: 'Jobs',          path: '/operations/jobs',          icon: Briefcase },
+      { label: 'Cluster',       path: '/operations/cluster',       icon: Monitor },
       { label: 'Health',        path: '/operations/health',        icon: HeartPulse },
       { label: 'Activity',      path: '/operations/activity',      icon: Activity,    requiredPermission: PermissionKeys.ViewAudit },
     ],

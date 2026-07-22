@@ -39,6 +39,7 @@ import { LicensePage } from '../features/administration/license/LicensePage';
 import { DiagnosticsPage } from '../features/administration/diagnostics/DiagnosticsPage';
 import { NotificationsPage } from '../features/notifications/NotificationsPage';
 import { PluginsPage } from '../features/plugins/PluginsPage';
+import ClusterPage from '../features/operations/cluster/ClusterPage';
 
 function RoleBasedRedirect() {
   const { user } = useAuth();
@@ -75,6 +76,7 @@ export const router = createBrowserRouter([
               // Operations group
               { path: 'operations/nodes',         element: <PermissionGuard permissionKey={PermissionKeys.ViewTopology}><NodesPage /></PermissionGuard> },
               { path: 'operations/jobs',          element: <JobsPage /> },
+              { path: 'operations/cluster',       element: <ClusterPage /> },
               { path: 'operations/health',        element: <HealthPage /> },
               {
                 path: 'operations/activity',

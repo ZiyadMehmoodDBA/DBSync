@@ -2,6 +2,7 @@ import type { QueryClient } from '@tanstack/react-query';
 import { OperationsEventType, type OperationsEvent, type PermissionEvent, type ExportJobEvent } from './types';
 import type { ExportJobDto } from '../types/export';
 import { queryKeys } from '../queryKeys';
+import { clusterKeys } from '../api/cluster';
 import { operationKeys } from '../api/operations';
 import { systemKeys } from '../api/system';
 
@@ -30,6 +31,7 @@ export async function routeToCache(
         queryClient.invalidateQueries({ queryKey: ['node-transitions', event.nodeId] }),
         queryClient.invalidateQueries({ queryKey: ['node-lifecycle-history', event.nodeId] }),
         queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] }),
+        queryClient.invalidateQueries({ queryKey: clusterKeys.summary }),
       ]);
       return;
     case OperationsEventType.NodeMaintenanceChanged:
@@ -56,6 +58,7 @@ export async function routeToCache(
         queryClient.invalidateQueries({ queryKey: operationKeys.all }),
         queryClient.invalidateQueries({ queryKey: ['rolling-operations'] }),
         queryClient.invalidateQueries({ queryKey: ['replay-operations'] }),
+        queryClient.invalidateQueries({ queryKey: clusterKeys.summary }),
       ]);
       return;
     case OperationsEventType.WorkerStatusChanged:

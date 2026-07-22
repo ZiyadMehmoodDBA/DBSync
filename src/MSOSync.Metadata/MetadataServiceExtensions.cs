@@ -21,6 +21,7 @@ using MSOSync.Metadata.Users;
 using MSOSync.Metadata.Configuration;
 using MSOSync.Metadata.Notifications;
 using MSOSync.Metadata.Operations;
+using MSOSync.Metadata.Operations.Cluster;
 using MSOSync.Metadata.Operations.Handlers;
 using MSOSync.Metadata.Operations.Replay;
 using MSOSync.Metadata.Operations.Rolling;
@@ -156,6 +157,9 @@ public static class MetadataServiceExtensions
             configuration.GetSection(MSOSync.Metadata.Options.ReplayOptions.Section));
         services.AddScoped<IReplayOperationService,      ReplayOperationService>();
         services.AddScoped<IReplayOperationQueryService, ReplayOperationQueryService>();
+
+        // Phase 2B.3 — Advanced Operations Analytics
+        services.AddScoped<IClusterSummaryQueryService, ClusterSummaryQueryService>();
 
         // Epic 13 — Notifications
         services.AddScoped<INotificationService, NotificationService>();
