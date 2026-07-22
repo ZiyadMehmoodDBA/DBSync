@@ -114,3 +114,20 @@ see 2A.8/2A.9 backlog entries.
 | `ReplayOperationService` | `IReplayOperationService` | MSOSync.Metadata | Create/cancel replay operations; item enumeration |
 | `ReplayOperationQueryService` | `IReplayOperationQueryService` | MSOSync.Metadata | Detail + paginated items |
 | `ReplayWorker` | `BackgroundService` | MSOSync.Scheduler | Tick-based advance; uses IBatchCreator + IRoutingService |
+
+### Phase 2B.3 — Advanced Operations Analytics
+
+| Service | Interface | Project | Notes |
+|---|---|---|---|
+| `ClusterSummaryQueryService` | `IClusterSummaryQueryService` | MSOSync.Metadata | 6 sequential queries aggregated; node counts, op counts, active ops, rolling ops, replay ops, recent node changes |
+| `JsonDiffEngine` | — (internal static) | MSOSync.Metadata | Flattens two `JsonElement` blobs to dot-notation dictionaries, diffs them; arrays/scalars atomic |
+| `ConfigurationComparisonService` | `IConfigurationComparisonService` | MSOSync.Metadata | Loads two `SyncConfigurationTemplateVersion` rows, delegates diff to `JsonDiffEngine` |
+| `AuditQueryService` (extended) | `IAuditQueryService` | MSOSync.Metadata | Added `Usernames[]`/`ActionNames[]`/`ObjectNames[]` multi-value filters (OR within group) and `GetEntityHistoryAsync(objectName)` |
+| `OperationTimelineService` | `IOperationTimelineService` | MSOSync.Metadata | Projects `SyncOperation` rows to Gantt-ready DTOs with `HasMore`/`ReturnedCount` truncation signaling |
+
+New controller endpoints (no new controllers):
+- `GET /api/v1/cluster/summary` → `ClusterController`
+- `GET /api/v1/configuration/templates/{id}/compare?v1=&v2=` → `ConfigurationTemplateController` (extended)
+- `GET /api/v1/audit?Usernames=&ActionNames=&ObjectNames=` → `AuditController` (extended)
+- `GET /api/v1/audit/entity/{objectName}` → `AuditController` (new endpoint)
+- `GET /api/v1/operations/timeline?from=&to=&types=&limit=` → `OperationsController` (extended)
