@@ -8,6 +8,7 @@ public enum OperationType
     Recovery,
     RollingMaintenance,
     RollingUpgrade,
+    BatchReplay,
 }
 
 public enum OperationSource
@@ -34,4 +35,5 @@ public enum OperationResult
     PartialSuccess,
     Failure,
     Cancelled,
+    NoData,
 }

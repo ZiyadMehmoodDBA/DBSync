@@ -56,6 +56,8 @@ public class AppDbContext : DbContext
     public DbSet<SyncExportJob>      ExportJobs       => Set<SyncExportJob>();
     public DbSet<SyncOperation>      Operations       => Set<SyncOperation>();
     public DbSet<SyncOperationStep>  OperationSteps   => Set<SyncOperationStep>();
+    public DbSet<SyncReplayRequest>  ReplayRequests   => Set<SyncReplayRequest>();
+    public DbSet<SyncReplayItem>     ReplayItems      => Set<SyncReplayItem>();
     public DbSet<SyncNodeScope>             NodeScopes             => Set<SyncNodeScope>();
     public DbSet<SyncNodeChannelAssignment> NodeChannelAssignments => Set<SyncNodeChannelAssignment>();
     public DbSet<SyncNodeTriggerAssignment> NodeTriggerAssignments => Set<SyncNodeTriggerAssignment>();
