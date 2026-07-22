@@ -62,7 +62,15 @@ describe('TimelinePage', () => {
     vi.mocked(api.getOperationTimeline).mockResolvedValue({
       ...emptyTimeline,
       hasMore: true, returnedCount: 200,
-      items: [],
+      items: [{
+        operationId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+        type: 'Export',
+        status: 'Succeeded',
+        label: 'Test op',
+        startedAt: '2026-07-22T00:00:00Z',
+        completedAt: '2026-07-22T01:00:00Z',
+        progressPercent: 100,
+      }],
     });
     render(<TimelinePage />, { wrapper });
     expect(await screen.findByText(/narrow the time range/i)).toBeInTheDocument();
