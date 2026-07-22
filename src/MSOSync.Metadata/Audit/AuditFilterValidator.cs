@@ -21,13 +21,10 @@ public sealed class AuditFilterValidator : AbstractValidator<AuditFilter>
             .WithMessage("ObjectNames filter cannot exceed 10 values.");
 
         RuleFor(f => f)
-            .Must(f =>
-            {
-                var total = (f.Usernames?.Length ?? 0)
-                          + (f.ActionNames?.Length ?? 0)
-                          + (f.ObjectNames?.Length ?? 0);
-                return total <= 40;
-            })
-            .WithMessage("Combined filter values cannot exceed 40.");
+            .Must(f => (f.Usernames?.Length ?? 0)
+                     + (f.ActionNames?.Length ?? 0)
+                     + (f.ObjectNames?.Length ?? 0) <= 40)
+            .OverridePropertyName("Filter")
+            .WithMessage("Combined total of Usernames, ActionNames, and ObjectNames must not exceed 40.");
     }
 }

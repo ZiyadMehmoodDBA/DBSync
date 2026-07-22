@@ -14,13 +14,14 @@ namespace MSOSync.Api.Controllers;
 [Route("api/v1/audit")]
 [Authorize(Policy = "ViewerOrAbove")]
 public sealed class AuditController(
-    IAuditQueryService            audit,
-    IValidator<AuditFilter>       validator,
-    IValidator<AuditSummaryRequest> summaryValidator,
-    IExportService<AuditFilter>   exporter,
-    IExportAuditService           exportAudit,
-    IAuditSummaryService          summaryService,
-    CorrelationTimelineAssembler  assembler) : ControllerBase
+    IAuditQueryService                      audit,
+    IValidator<AuditFilter>                 validator,
+    IValidator<AuditSummaryRequest>         summaryValidator,
+    IValidator<GetEntityHistoryRequest>     entityHistoryValidator,
+    IExportService<AuditFilter>             exporter,
+    IExportAuditService                     exportAudit,
+    IAuditSummaryService                    summaryService,
+    CorrelationTimelineAssembler            assembler) : ControllerBase
 {
     [HttpGet]
     [ProducesResponseType(200)]
@@ -76,13 +77,14 @@ public sealed class AuditController(
     // GET /api/v1/audit/entity/{objectName}?cursor=&pageSize=50
     [HttpGet("entity/{objectName}")]
     [ProducesResponseType(typeof(CursorPageResult<AuditDto>), 200)]
+    [ProducesResponseType(typeof(ProblemDetails), 400)]
     public async Task<IActionResult> GetEntityHistory(
-        string  objectName,
-        [FromQuery] string? cursor,
-        [FromQuery] int     pageSize = 50,
+        string objectName,
+        [FromQuery] GetEntityHistoryRequest request,
         CancellationToken ct = default)
     {
-        var result = await audit.GetEntityHistoryAsync(objectName, cursor, pageSize, ct);
+        await entityHistoryValidator.ValidateAndThrowAsync(request, ct);
+        var result = await audit.GetEntityHistoryAsync(objectName, request.Cursor, request.PageSize, ct);
         return Ok(result);
     }
 

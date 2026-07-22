@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { DataGrid } from '@/shared/components/data-display/DataGrid';
-import client from '@/shared/api/client';
+import { getEntityHistory } from '@/shared/api/audit';
 import type { ColDef } from 'ag-grid-community';
 import type { AuditDto } from '@/shared/types/audit';
 import { formatDistanceToNow } from 'date-fns';
@@ -10,13 +10,7 @@ import { formatDistanceToNow } from 'date-fns';
 function useEntityHistory(objectName: string | null) {
   return useQuery({
     queryKey:  ['audit', 'entity', objectName],
-    queryFn:   async ({ signal }) => {
-      const { data } = await client.get(
-        `/audit/entity/${encodeURIComponent(objectName!)}`,
-        { params: { pageSize: 100 }, signal },
-      );
-      return data as { items: AuditDto[]; hasMore: boolean };
-    },
+    queryFn:   ({ signal }) => getEntityHistory(objectName!, { pageSize: 100, signal }),
     enabled:   objectName !== null && objectName.trim() !== '',
     staleTime: 30_000,
   });
