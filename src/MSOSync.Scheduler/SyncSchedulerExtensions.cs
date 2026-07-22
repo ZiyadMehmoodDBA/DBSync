@@ -25,6 +25,9 @@ public static class SyncSchedulerExtensions
         services.AddHostedService<ConnectivityEvaluator>();
         services.AddHostedService<DecommissionWorker>();
         services.AddHostedService<RollingOperationWorker>();
+        services.Configure<MSOSync.Metadata.Options.ReplayOptions>(
+            config.GetSection(MSOSync.Metadata.Options.ReplayOptions.Section));
+        services.AddHostedService<ReplayWorker>();
         return services;
     }
 }
