@@ -32,6 +32,7 @@ export async function routeToCache(
         queryClient.invalidateQueries({ queryKey: ['node-lifecycle-history', event.nodeId] }),
         queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] }),
         queryClient.invalidateQueries({ queryKey: clusterKeys.summary }),
+        queryClient.invalidateQueries({ queryKey: ['cluster', 'health-trends'] }),
       ]);
       return;
     case OperationsEventType.NodeMaintenanceChanged:
@@ -75,6 +76,7 @@ async function invalidateNodeHealth(queryClient: QueryClient): Promise<void> {
     queryClient.invalidateQueries({ queryKey: ['topology-summary'] }),
     queryClient.invalidateQueries({ queryKey: ['metrics-summary'] }),
     queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] }),
+    queryClient.invalidateQueries({ queryKey: ['cluster', 'health-trends'] }),
   ]);
 }
 

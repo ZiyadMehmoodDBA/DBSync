@@ -59,3 +59,28 @@ export interface ClusterSummaryDto {
   activeReplays: ReplayOperationSummaryDto[];
   recentNodeChanges: NodeStateChangeDto[];
 }
+
+// Phase 2B.4 — Cluster Health Trends
+export interface HealthBucketDto {
+  bucketStart: string;
+  reachableCount: number;
+  degradedCount: number;
+  unreachableCount: number;
+  totalNodes: number;
+  transitionCount: number;
+}
+
+export interface NodeProbeStatsDto {
+  nodeId: string;
+  connectivityStatus: string;
+  lastProbeLatencyMs: number | null;
+  consecutiveProbeFailures: number;
+  uptimePct: number;
+}
+
+export interface ClusterHealthTrendDto {
+  window: string;
+  bucketCount: number;
+  buckets: HealthBucketDto[];
+  nodeProbeStats: NodeProbeStatsDto[];
+}

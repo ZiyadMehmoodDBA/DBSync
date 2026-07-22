@@ -44,6 +44,7 @@ import { PluginsPage } from '../features/plugins/PluginsPage';
 // here to match the established pattern. Convert the whole router to lazy-loading
 // as a dedicated refactor if code-splitting becomes a priority.
 import ClusterPage from '../features/operations/cluster/ClusterPage';
+import HealthTrendsPage from '../features/operations/cluster/HealthTrendsPage';
 import TimelinePage from '../features/operations/timeline/TimelinePage';
 
 function RoleBasedRedirect() {
@@ -81,8 +82,9 @@ export const router = createBrowserRouter([
               // Operations group
               { path: 'operations/nodes',         element: <PermissionGuard permissionKey={PermissionKeys.ViewTopology}><NodesPage /></PermissionGuard> },
               { path: 'operations/jobs',          element: <JobsPage /> },
-              { path: 'operations/cluster',       element: <ClusterPage /> },
-              { path: 'operations/health',        element: <HealthPage /> },
+              { path: 'operations/cluster',                    element: <ClusterPage /> },
+              { path: 'operations/cluster/health-trends',    element: <HealthTrendsPage /> },
+              { path: 'operations/health',                   element: <HealthPage /> },
               {
                 path: 'operations/activity',
                 element: (
