@@ -4,24 +4,26 @@
 
 | Project | Type | What It Tests | Test Files | Tests |
 |---|---|---|---|---|
-| `MSOSync.AppTests` | Unit | App workers, worker registry, health checks, audit timeline, SignalR publishers, options binding | 10 | 46 |
+| `MSOSync.AppTests` | Unit | App workers, worker registry, health checks, audit timeline, SignalR publishers, options binding, replay worker registry | 11 | 69 |
 | `MSOSync.ArchTests` | Architecture | Dependency rules (NetArchTest) | 1 | 2 |
 | `MSOSync.ConfigurationTests` | Unit | Configuration templates, assignments, drift, rollouts | 8 | 49 |
 | `MSOSync.EngineTests` | Unit | SQL apply, batch state machine, retry, routing | 12 | 82 |
-| `MSOSync.IntegrationTests` | Integration | Full API + DB (Testcontainers / WebApplicationFactory) | 52 | 376 |
-| `MSOSync.MetadataTests` | Unit | Domain services, query services, DTOs, validators | 49 | 435 |
+| `MSOSync.IntegrationTests` | Integration | Full API + DB (Testcontainers / WebApplicationFactory) | 54 | 381 |
+| `MSOSync.MetadataTests` | Unit | Domain services, query services, DTOs, validators | 53 | 499 |
 | `MSOSync.PluginTests` | Unit | Plugin loading, lifecycle, registry | 11 | 96 |
 | `MSOSync.Plugin.IntegrationTests` | Integration | Plugin full lifecycle (Testcontainers) | 4 | 10 |
-| `MSOSync.SchedulerTests` | Unit | SyncJob, PullJob, RetryJob, PurgeJob tick behavior | 4 | 14 |
+| `MSOSync.SchedulerTests` | Unit | SyncJob, PullJob, RetryJob, PurgeJob, RollingOperationWorker, ReplayWorker tick behavior | 6 | 30 |
 | `MSOSync.SdkTests` | Unit | Plugin SDK public API surface | 3 | 9 |
 | `MSOSync.SecurityTests` | Unit | Auth, JWT, BCrypt, users, audit | 10 | 56 |
 | `MSOSync.Tests` | Unit | Tenancy filters, hybrid lookup, tenant id population | 4 | 11 |
 | `MSOSync.TransportTests` | Unit | Push/pull clients, compression, node HTTP client | 5 | 23 |
 | `MSOSync.TestPlugin` | Helper | Sample plugin assembly consumed by plugin tests (no tests) | 0 | — |
 
-Counts as of Phase 2B.1 (2026-07-21). Full-solution exit-gate run: all unit
-assemblies green (819 passed, 4 skipped); `MSOSync.IntegrationTests` 349/376
-with the 27 accepted environmental failures (2A-014 + 2A-023) below.
+Counts as of Phase 2B.2 (2026-07-22). New since 2B.1: `ReplayOperationServiceTests` (~9 tests),
+`ReplayWorkerTests` (~9 tests), `ReplayWorkerRegistryTests` (1 test), `ReplayApiTests` (5 tests,
+integration), `M034MigrationTests` (3 tests, integration), `ReplayWizard.test.tsx` (5 tests, frontend).
+Full-solution exit-gate run: all unit assemblies green; `MSOSync.IntegrationTests` environmental
+failures (2A-014 + 2A-023) remain accepted.
 
 ## Running Tests
 

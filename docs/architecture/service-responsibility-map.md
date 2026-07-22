@@ -106,3 +106,11 @@ All workers register with `IWorkerStatusRegistry` (see
 `docs/architecture/background-workers.md`); interval-driven workers read
 their cadence from typed options (`SyncOptions`, `HeartbeatOptions`) —
 see 2A.8/2A.9 backlog entries.
+
+### Phase 2B.2 — Batch Replay
+
+| Service | Interface | Project | Notes |
+|---|---|---|---|
+| `ReplayOperationService` | `IReplayOperationService` | MSOSync.Metadata | Create/cancel replay operations; item enumeration |
+| `ReplayOperationQueryService` | `IReplayOperationQueryService` | MSOSync.Metadata | Detail + paginated items |
+| `ReplayWorker` | `BackgroundService` | MSOSync.Scheduler | Tick-based advance; uses IBatchCreator + IRoutingService |

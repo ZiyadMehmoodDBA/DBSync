@@ -49,6 +49,7 @@ protected override async Task ExecuteAsync(CancellationToken ct)
 | `ExportJobWorker` | MSOSync.App | 5s (fixed) | ✅ | ❌ (Task.Delay) | Job-polling loop — PeriodicTimer exempt |
 | `ExportCleanupWorker` | MSOSync.App | 1h (fixed) | ✅ | ❌ (Task.Delay) | Cleanup loop — PeriodicTimer exempt |
 | `RollingOperationWorker` | MSOSync.App | 15s (LifecycleOptions.RollingWorkerIntervalSeconds) | ✅ | ✅ | Advances wave-by-wave; drain → maintain → verify |
+| `ReplayWorker` | MSOSync.Scheduler | 10s (ReplayOptions.WorkerIntervalSeconds) | ✅ | ✅ | Advances BatchReplay operations; FailedDelivery resets to Retry, MissedData calls IBatchCreator |
 | `AdminBootstrapper` | MSOSync.App | One-shot | N/A | N/A | One-shot startup task — registry exempt |
 
 ## PeriodicTimer Exemptions
@@ -59,7 +60,7 @@ protected override async Task ExecuteAsync(CancellationToken ct)
 
 ## IWorkerStatusRegistry Compliance Status
 
-- ✅ **11/11 active workers** comply with registry pattern (SyncJob, PullJob, RetryJob, PurgeJob, HeartbeatWorker, ProbeWorker, ConnectivityEvaluator, DecommissionWorker, ExportJobWorker, ExportCleanupWorker, RollingOperationWorker)
+- ✅ **12/12 active workers** comply with registry pattern (SyncJob, PullJob, RetryJob, PurgeJob, HeartbeatWorker, ProbeWorker, ConnectivityEvaluator, DecommissionWorker, ExportJobWorker, ExportCleanupWorker, RollingOperationWorker, ReplayWorker)
 - N/A **1 one-shot worker** exempt: AdminBootstrapper (startup-only, no loop)
 
 ## AdminBootstrapper
