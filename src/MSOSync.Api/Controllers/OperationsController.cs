@@ -5,6 +5,8 @@ using MSOSync.Api.Dtos.Common;
 using MSOSync.Api.Validators;
 using MSOSync.Common.Exceptions;
 using MSOSync.Metadata.Operations;
+using MSOSync.Metadata.Operations.Timeline;
+using MSOSync.Metadata.Operations.Timeline.Dtos;
 using MSOSync.Metadata.Permissions;
 
 namespace MSOSync.Api.Controllers;
@@ -13,9 +15,10 @@ namespace MSOSync.Api.Controllers;
 [Route("api/v1/operations")]
 [Authorize(Policy = "ViewerOrAbove")]
 public sealed class OperationsController(
-    IOperationQueryService     queryService,
-    IOperationService          operationService,
-    IPermissionService         permissions,
+    IOperationQueryService      queryService,
+    IOperationService           operationService,
+    IPermissionService          permissions,
+    IOperationTimelineService   timelineSvc,
     OperationsPageSizeValidator pageSizeValidator) : ControllerBase
 {
     private string Actor => User.Identity?.Name
@@ -152,6 +155,27 @@ public sealed class OperationsController(
         var updated = await queryService.GetDetailAsync(id, ct);
         if (updated is null) return NotFound();
         return Ok(updated);
+    }
+
+    // GET /api/v1/operations/timeline?from=&to=&types=&limit=200
+    [HttpGet("timeline")]
+    [ProducesResponseType(typeof(OperationTimelineDto), 200)]
+    [ProducesResponseType(typeof(ProblemDetails), 400)]
+    public async Task<IActionResult> GetTimeline(
+        [FromQuery] DateTime  from,
+        [FromQuery] DateTime  to,
+        [FromQuery] string?   types  = null,
+        [FromQuery] int       limit  = 200,
+        CancellationToken ct = default)
+    {
+        if (from >= to)
+            return BadRequest(new ProblemDetails { Title = "from must be before to." });
+        if ((to - from).TotalDays > 30)
+            return BadRequest(new ProblemDetails { Title = "Range cannot exceed 30 days." });
+
+        var typeArray = SplitCsv(types);
+        var result    = await timelineSvc.GetTimelineAsync(from, to, typeArray, Math.Min(limit, 500), ct);
+        return Ok(result);
     }
 
     // ── Helpers ────────────────────────────────────────────────────────────────

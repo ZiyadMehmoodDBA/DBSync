@@ -22,6 +22,7 @@ using MSOSync.Metadata.Configuration;
 using MSOSync.Metadata.Notifications;
 using MSOSync.Metadata.Operations;
 using MSOSync.Metadata.Operations.Cluster;
+using MSOSync.Metadata.Operations.Timeline;
 using MSOSync.Metadata.Operations.Handlers;
 using MSOSync.Metadata.Operations.Replay;
 using MSOSync.Metadata.Operations.Rolling;
@@ -161,6 +162,7 @@ public static class MetadataServiceExtensions
         // Phase 2B.3 — Advanced Operations Analytics
         services.AddScoped<IClusterSummaryQueryService, ClusterSummaryQueryService>();
         services.AddScoped<IConfigurationComparisonService, ConfigurationComparisonService>();
+        services.AddScoped<IOperationTimelineService, OperationTimelineService>();
 
         // Epic 13 — Notifications
         services.AddScoped<INotificationService, NotificationService>();

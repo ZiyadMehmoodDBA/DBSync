@@ -59,6 +59,7 @@ export async function routeToCache(
         queryClient.invalidateQueries({ queryKey: ['rolling-operations'] }),
         queryClient.invalidateQueries({ queryKey: ['replay-operations'] }),
         queryClient.invalidateQueries({ queryKey: clusterKeys.summary }),
+        queryClient.invalidateQueries({ queryKey: ['operation-timeline'] }),
       ]);
       return;
     case OperationsEventType.WorkerStatusChanged:
