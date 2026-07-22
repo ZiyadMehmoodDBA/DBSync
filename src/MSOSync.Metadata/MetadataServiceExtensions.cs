@@ -22,6 +22,7 @@ using MSOSync.Metadata.Configuration;
 using MSOSync.Metadata.Notifications;
 using MSOSync.Metadata.Operations;
 using MSOSync.Metadata.Operations.Handlers;
+using MSOSync.Metadata.Operations.Replay;
 using MSOSync.Metadata.Operations.Rolling;
 using MSOSync.Metadata.OutgoingBatches;
 using MSOSync.Metadata.Overview;
@@ -149,6 +150,12 @@ public static class MetadataServiceExtensions
 
         // Epic 12C — Node Sync Scope
         services.AddScoped<INodeScopeService, NodeScopeService>();
+
+        // Phase 2B.2 — Batch Replay
+        services.Configure<MSOSync.Metadata.Options.ReplayOptions>(
+            configuration.GetSection(MSOSync.Metadata.Options.ReplayOptions.Section));
+        services.AddScoped<IReplayOperationService,      ReplayOperationService>();
+        services.AddScoped<IReplayOperationQueryService, ReplayOperationQueryService>();
 
         // Epic 13 — Notifications
         services.AddScoped<INotificationService, NotificationService>();
