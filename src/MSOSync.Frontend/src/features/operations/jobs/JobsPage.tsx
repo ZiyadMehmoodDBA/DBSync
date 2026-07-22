@@ -9,6 +9,8 @@ import { OperationStatusBadge } from './components/OperationStatusBadge';
 import { OperationProgressCell } from './components/OperationProgressCell';
 import { RollingOperationWizard } from './components/RollingOperationWizard';
 import { RollingOperationDetailPanel } from './components/RollingOperationDetailPanel';
+import { ReplayWizard } from './components/ReplayWizard';
+import { ReplayDetailPanel } from './components/ReplayDetailPanel';
 import { ConfirmDialog } from '@/shared/components/actions/ConfirmDialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -46,9 +48,10 @@ const TYPE_BADGE_COLORS: Record<string, string> = {
   Recovery:           'bg-teal-100 text-teal-800',
   RollingMaintenance: 'bg-cyan-100 text-cyan-800',
   RollingUpgrade:     'bg-indigo-100 text-indigo-800',
+  BatchReplay:        'bg-indigo-100 text-indigo-800',
 };
 
-const ALL_TYPES: OperationType[] = ['Export', 'Rollout', 'Decommission', 'RollingMaintenance', 'RollingUpgrade'];
+const ALL_TYPES: OperationType[] = ['Export', 'Rollout', 'Decommission', 'RollingMaintenance', 'RollingUpgrade', 'BatchReplay'];
 const ALL_STATUSES: OperationStatus[] = ['Pending', 'Running', 'Paused', 'Completed', 'Failed', 'Cancelled'];
 
 // --- Component ---
@@ -61,6 +64,8 @@ export function JobsPage() {
   const [cancelTarget, setCancelTarget] = useState<string | null>(null);
   const [wizardOpen, setWizardOpen] = useState(false);
   const [detailOperationId, setDetailOperationId] = useState<string | null>(null);
+  const [replayWizardOpen, setReplayWizardOpen] = useState(false);
+  const [replayDetailId, setReplayDetailId]     = useState<string | null>(null);
   const canManageLifecycle = useHasPermission(PermissionKeys.ManageNodeLifecycle);
   const [cursor, setCursor] = useState<string | undefined>(undefined);
   const [rows, setRows] = useState<OperationDto[]>([]);
@@ -248,9 +253,14 @@ export function JobsPage() {
           </p>
         </div>
         {canManageLifecycle && (
-          <Button variant="outline" size="sm" onClick={() => setWizardOpen(true)}>
-            New Rolling Operation
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => setWizardOpen(true)}>
+              New Rolling Operation
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setReplayWizardOpen(true)}>
+              New Replay
+            </Button>
+          </div>
         )}
       </div>
 
@@ -312,6 +322,8 @@ export function JobsPage() {
           if (!op) return;
           if (op.operationType === 'RollingMaintenance' || op.operationType === 'RollingUpgrade') {
             setDetailOperationId(op.operationId);
+          } else if (op.operationType === 'BatchReplay') {
+            setReplayDetailId(op.operationId);
           } else if (op.correlationId) {
             navigate(`/operations/activity?correlationId=${encodeURIComponent(op.correlationId)}`);
           }
@@ -357,6 +369,13 @@ export function JobsPage() {
         <RollingOperationDetailPanel
           operationId={detailOperationId}
           onClose={() => setDetailOperationId(null)}
+        />
+      )}
+      <ReplayWizard open={replayWizardOpen} onOpenChange={setReplayWizardOpen} />
+      {replayDetailId && (
+        <ReplayDetailPanel
+          operationId={replayDetailId}
+          onClose={() => setReplayDetailId(null)}
         />
       )}
     </div>

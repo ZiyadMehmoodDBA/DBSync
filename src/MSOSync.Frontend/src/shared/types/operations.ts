@@ -1,6 +1,6 @@
 export type OperationStatus = 'Pending' | 'Running' | 'Paused' | 'Completed' | 'Failed' | 'Cancelled';
 export type OperationResult = 'Success' | 'PartialSuccess' | 'Failure' | 'Cancelled';
-export type OperationType = 'Export' | 'Rollout' | 'Decommission' | 'Recovery' | 'RollingMaintenance' | 'RollingUpgrade';
+export type OperationType = 'Export' | 'Rollout' | 'Decommission' | 'Recovery' | 'RollingMaintenance' | 'RollingUpgrade' | 'BatchReplay';
 
 export interface OperationDto {
   operationId: string;
