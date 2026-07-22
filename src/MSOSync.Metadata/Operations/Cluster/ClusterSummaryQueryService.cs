@@ -9,23 +9,22 @@ public sealed class ClusterSummaryQueryService(AppDbContext db) : IClusterSummar
 {
     public async Task<ClusterSummaryDto> GetSummaryAsync(CancellationToken ct = default)
     {
-        var nodeStatesTask  = QueryNodeStatesAsync(ct);
-        var opCountsTask    = QueryOperationCountsAsync(ct);
-        var activeOpsTask   = QueryActiveOperationsAsync(ct);
-        var rollingTask     = QueryRollingOperationsAsync(ct);
-        var replayTask      = QueryReplayOperationsAsync(ct);
-        var lifecycleTask   = QueryRecentNodeChangesAsync(ct);
-
-        await Task.WhenAll(nodeStatesTask, opCountsTask, activeOpsTask,
-                           rollingTask, replayTask, lifecycleTask);
+        // Run sequentially — EF Core DbContext is not thread-safe and does not
+        // support concurrent async operations on the same instance.
+        var nodeCounts      = await QueryNodeStatesAsync(ct);
+        var opCounts        = await QueryOperationCountsAsync(ct);
+        var activeOps       = await QueryActiveOperationsAsync(ct);
+        var rollingOps      = await QueryRollingOperationsAsync(ct);
+        var replayOps       = await QueryReplayOperationsAsync(ct);
+        var lifecycleEvents = await QueryRecentNodeChangesAsync(ct);
 
         return new ClusterSummaryDto(
-            await nodeStatesTask,
-            await opCountsTask,
-            await activeOpsTask,
-            await rollingTask,
-            await replayTask,
-            await lifecycleTask);
+            nodeCounts,
+            opCounts,
+            activeOps,
+            rollingOps,
+            replayOps,
+            lifecycleEvents);
     }
 
     private async Task<NodeStateCountsDto> QueryNodeStatesAsync(CancellationToken ct)
