@@ -1,8 +1,7 @@
 # Phase 2B.3 — Advanced Operations Analytics Design
 
-**Status:** Approved  
-**Date:** 2026-07-22  
-**Spec author:** AI + CTO review
+**Status:** Approved (with minor revisions incorporated)
+**Date:** 2026-07-22
 
 ---
 
@@ -21,7 +20,7 @@ Four operator-facing analytics modules built entirely on existing infrastructure
 | Audit Explorer | Enhancement to `/operations/activity` | Multi-value filtering, saved filters via preferences, entity history tab |
 | Operations Timeline | `/operations/timeline` | Recharts Gantt of concurrent operations by time range |
 
-**No new database migration.** All modules read from existing tables (`sync_operation`, `sync_node`, `sync_rolling_operation`, `sync_rolling_item`, `sync_replay_request`, `sync_configuration_template_version`, `sync_audit`).
+**No new database migration.** All modules read from existing tables (`sync_operation`, `sync_node`, `sync_rolling_operation`, `sync_rolling_item`, `sync_replay_request`, `sync_configuration_template_version`, `sync_audit`, `sync_node_lifecycle_history`).
 
 ---
 
@@ -33,6 +32,19 @@ Four operator-facing analytics modules built entirely on existing infrastructure
 - All work commits directly to `main`.
 - `ICurrentTenantAccessor` auto-populates `TenantId`; all new queries must be tenant-scoped.
 - Project `MSOSync.Metadata` must not reference `MSOSync.Batch` or `MSOSync.Routing`.
+- All new query methods: `AsNoTracking()`, projection directly to DTO, no lazy loading, no `Include()` unless required. These are read-only analytics endpoints.
+- All timestamps are UTC internally; conversion to local time is frontend-only.
+
+---
+
+## Authorization Table
+
+| Module | Required Permission |
+|---|---|
+| Cluster Dashboard | `ViewerOrAbove` policy |
+| Configuration Comparison | `ViewerOrAbove` policy + `ManageConfigurations` permission |
+| Audit Explorer | `ViewerOrAbove` policy |
+| Operations Timeline | `ViewerOrAbove` policy |
 
 ---
 
@@ -41,6 +53,8 @@ Four operator-facing analytics modules built entirely on existing infrastructure
 ### Purpose
 
 Single-screen command center for maintenance windows. Aggregates active operations, rolling wave state, replay progress, and recent node lifecycle changes. Auto-refreshes via SignalR.
+
+`ClusterSummaryQueryService` is an **aggregator**, not a repository. It fires parallel sub-queries and assembles a single response. It must never grow to mix business logic with data access — if it exceeds ~150 lines, extract sub-query helpers.
 
 ### Backend
 
@@ -67,7 +81,7 @@ public sealed record ClusterSummaryDto(
     OperationCountsDto                       OperationCounts,
     IReadOnlyList<ActiveOperationSummaryDto> ActiveOperations,
     IReadOnlyList<RollingWaveSummaryDto>     ActiveRollingOps,
-    IReadOnlyList<ReplayProgressDto>         ActiveReplays,
+    IReadOnlyList<ReplayOperationSummaryDto> ActiveReplays,
     IReadOnlyList<NodeStateChangeDto>        RecentNodeChanges);
 
 public sealed record NodeStateCountsDto(
@@ -78,8 +92,8 @@ public sealed record OperationCountsDto(
 
 public sealed record ActiveOperationSummaryDto(
     Guid    OperationId,
-    string  Type,
-    string  Status,
+    string  Type,      // serialized as string; internally OperationType enum
+    string  Status,    // serialized as string; internally OperationStatus enum
     string? NodeId,
     int?    ProgressPercent,
     string? ProgressMessage,
@@ -95,7 +109,8 @@ public sealed record RollingWaveSummaryDto(
     int    NodesTotal,
     int    NodesFailed);
 
-public sealed record ReplayProgressDto(
+// Previously named ReplayProgressDto — renamed to ReplayOperationSummaryDto
+public sealed record ReplayOperationSummaryDto(
     Guid   OperationId,
     string ReplayMode,   // "FailedDelivery" | "MissedData" | "Both"
     string Status,
@@ -112,17 +127,16 @@ public sealed record NodeStateChangeDto(
 ```
 
 **Service implementation:**
-`ClusterSummaryQueryService` performs 6 queries in parallel:
-1. `sync_node` — count by `lifecycle_state` (Active/Maintenance/Draining/Offline/Failed)
-2. `sync_operation` — count Running + Pending; count Completed/Failed where `completed_at >= today UTC`
-3. `sync_operation` WHERE `status IN ('Pending','Running')` — all active ops (limit 50)
-4. `sync_rolling_operation` + `sync_rolling_item` WHERE `status IN ('Pending','Running')` — wave summary (limit 10)
-5. `sync_replay_request` WHERE `status IN ('Pending','Running')` — replay progress via item counts (limit 10)
-6. `sync_node_lifecycle_history` ORDER BY `occurred_at DESC` LIMIT 20 — recent state changes
+`ClusterSummaryQueryService` fires 6 queries via `Task.WhenAll`:
 
-Use `Task.WhenAll` for parallelism. All queries tenant-scoped via EF global filters.
+1. **NodeQuery** — `sync_node` — count by `status` column (maps `Active`→Active, `Maintenance`→Maintenance, `Draining`→Draining, `Decommissioning`+`Decommissioned`→Offline, `Offline`→Offline, `Failed`→Failed). Note: `SyncNode.Status` stores the lifecycle state string per Epic 12B.1.
+2. **OperationQuery** — `sync_operation` — count Running + Pending; count Completed/Failed where `completed_at >= UTC today midnight`.
+3. **ActiveOpsQuery** — `sync_operation` WHERE `status IN ('Pending','Running')` ORDER BY `started_at DESC` LIMIT 50.
+4. **RollingQuery** — `sync_rolling_operation` WHERE `status IN ('Pending','Running')` — join `sync_rolling_item` for done/total/failed counts. LIMIT 10.
+5. **ReplayQuery** — `sync_replay_request` WHERE `status IN ('Pending','Running')` — join `sync_replay_item` for counts. LIMIT 10.
+6. **LifecycleQuery** — `sync_node_lifecycle_history` WHERE `occurred_at >= UTC NOW - 15 minutes` ORDER BY `occurred_at DESC` LIMIT 50.
 
-**Node lifecycle state values** (from Epic 12B.1): `Active`, `Maintenance`, `Draining`, `Decommissioning`, `Decommissioned`, `Offline`, `Failed` — map Decommissioning/Decommissioned to `Offline` bucket for display simplicity.
+All queries tenant-scoped via EF global filters. All `AsNoTracking()`, project directly to DTO.
 
 **Controller:**
 ```csharp
@@ -148,8 +162,7 @@ public sealed class ClusterController(IClusterSummaryQueryService svc) : Control
 - `src/MSOSync.Frontend/src/shared/types/cluster.ts`
 - `src/MSOSync.Frontend/src/features/operations/cluster/__tests__/ClusterPage.test.tsx`
 
-**Layout (4 panels in 2×2 grid):**
-
+**Layout (4 panels in 2×2 grid + event strip):**
 ```
 ┌──────────────────────────┬──────────────────────────────────────────┐
 │  Node State Distribution │  Active Operations (scrollable list)     │
@@ -161,24 +174,23 @@ public sealed class ClusterController(IClusterSummaryQueryService svc) : Control
 │  Wave progress bars      │  Item progress bars                      │
 │  nodes done/total/failed │  items done/total/failed                 │
 └──────────────────────────┴──────────────────────────────────────────┘
-│  Recent Node State Changes (horizontal event strip, newest left)    │
+│  Recent Node State Changes (horizontal event strip, newest left,    │
+│  shows last 15 min of lifecycle transitions)                        │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
-**Query:**
+**Cache policy:**
 ```typescript
-// cluster.ts
-export const clusterKeys = {
-  summary: ['cluster', 'summary'] as const,
-};
-export async function getClusterSummary(): Promise<ClusterSummaryDto> { ... }
+staleTime: 10_000,    // 10s
+gcTime:    60_000,    // 60s
+refetchInterval: 15_000,
 ```
 
-**Hook:** `useClusterSummary` — `useQuery` with `staleTime: 10_000`, `refetchInterval: 15_000`. SignalR `OperationChanged` and `NodeLifecycleChanged` events call `queryClient.invalidateQueries(clusterKeys.summary)`.
+**SignalR:** `OperationChanged` and `NodeLifecycleChanged` events call `queryClient.invalidateQueries(clusterKeys.summary)`. No payload broadcasting — invalidation only.
 
 **Route:** `/operations/cluster` — add to router and left-nav under Operations section after Jobs.
 
-**Unit tests:** Mock `getClusterSummary`. Assert: node state badges render, active ops list renders, empty state ("No active operations") renders.
+**Unit tests:** Mock `getClusterSummary`. Assert: node state badges render, active ops list renders, empty state ("No active operations") renders, node change strip renders last 15 min header.
 
 ---
 
@@ -191,16 +203,30 @@ Side-by-side diff view of two template versions. Accessible from version history
 ### Backend
 
 **New files:**
+- `src/MSOSync.Metadata/Configuration/JsonDiffEngine.cs` — internal static class, pure diff algorithm
 - `src/MSOSync.Metadata/Configuration/IConfigurationComparisonService.cs`
-- `src/MSOSync.Metadata/Configuration/ConfigurationComparisonService.cs`
+- `src/MSOSync.Metadata/Configuration/ConfigurationComparisonService.cs` — delegates diff to `JsonDiffEngine`
 - `src/MSOSync.Metadata/Configuration/Dtos/ConfigVersionDiffDto.cs`
 - Register in `MetadataServiceExtensions.cs`
+
+**Separation of concerns:**
+```
+ConfigurationComparisonService
+  → loads versions from DB
+  → delegates to JsonDiffEngine.Diff(json1, json2)
+  → returns ConfigVersionDiffDto
+
+JsonDiffEngine (internal static)
+  → FlattenJson(JsonElement) → Dictionary<string, string>
+  → Diff(json1, json2) → IReadOnlyList<DiffEntryDto>
+  → reusable by rollout preview, node override comparison, drift analysis
+```
 
 **New endpoint on existing `ConfigurationTemplateController`:**
 ```
 GET /api/v1/configuration/templates/{id}/compare?v1={versionNumber}&v2={versionNumber}
-Authorization: ViewerOrAbove + ManageConfigurations
 ```
+**API contract:** Returns `400` if `v1 == v2` (identical versions). Returns `404` if either version does not exist for the given template.
 
 **Response DTO:**
 ```csharp
@@ -223,30 +249,20 @@ public sealed record DiffEntryDto(
     string? NewValue);
 ```
 
-**Service implementation:**
-`ConfigurationComparisonService.CompareAsync(Guid templateId, int v1, int v2, CancellationToken ct)`:
-1. Load both `SyncConfigurationTemplateVersion` rows; throw `NotFoundException` if either missing.
-2. Parse both `ConfigJson` as `JsonDocument`.
-3. Flatten JSON to dot-notation key-value pairs (e.g., `"database.host"` = `"server01"`). Recurse into objects; arrays treated as atomic values (serialize to compact JSON).
-4. Produce `DiffEntryDto` per key:
-   - In V1 but not V2 → `Removed`
-   - In V2 but not V1 → `Added`
-   - In both, same value → `Unchanged`
-   - In both, different value → `Changed`
-5. Sort: Changed first, then Added, then Removed, then Unchanged.
-6. Return `HasChanges = entries.Any(e => e.ChangeType != "Unchanged")`.
+**`JsonDiffEngine` algorithm:**
+1. Flatten both `JsonDocument`s to `Dictionary<string, string>` using dot-notation keys (e.g., `"database.host"`). Recurse into objects. Arrays are atomic — serialize to compact JSON string. Do not attempt deep array diffs.
+2. Produce `DiffEntryDto` per key: `Removed` (in V1 only), `Added` (in V2 only), `Changed` (both, different value), `Unchanged` (both, same value).
+3. Sort order: Changed first, then Added, then Removed, then Unchanged.
+4. Return `HasChanges = entries.Any(e => e.ChangeType != "Unchanged")`.
 
 **Inject into `ConfigurationTemplateController`:**
 ```csharp
 [HttpGet("{id:guid}/compare")]
 [ProducesResponseType(typeof(ConfigVersionDiffDto), 200)]
-[ProducesResponseType(400)]
-[ProducesResponseType(404)]
+[ProducesResponseType(typeof(ProblemDetails), 400)]
+[ProducesResponseType(typeof(ProblemDetails), 404)]
 public async Task<IActionResult> Compare(
-    Guid id,
-    [FromQuery] int v1,
-    [FromQuery] int v2,
-    CancellationToken ct)
+    Guid id, [FromQuery] int v1, [FromQuery] int v2, CancellationToken ct)
 {
     await authz.EnsurePermissionAsync(SystemPermissions.ManageConfigurations, ct);
     if (v1 == v2) return BadRequest(new ProblemDetails { Title = "v1 and v2 must differ." });
@@ -255,7 +271,7 @@ public async Task<IActionResult> Compare(
 }
 ```
 
-**Unit tests** (`MSOSync.MetadataTests`): added, removed, changed, unchanged, nested object keys, empty configs.
+**Unit tests** (`MSOSync.MetadataTests`): added keys, removed keys, changed values, unchanged, nested object flattening, array as atomic, empty configs, `v1 == v2` handled at controller, missing version throws `NotFoundException`.
 
 ### Frontend
 
@@ -267,27 +283,25 @@ public async Task<IActionResult> Compare(
 
 **Trigger:** "Compare versions" button added to existing TemplatesPage version history drawer.
 
-**Panel layout (slide-out drawer):**
+**Panel layout (slide-out):**
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │ Compare Versions — Template: "Production DB Config"         │
 │ [Version dropdown v1 ▼]  ←→  [Version dropdown v2 ▼]       │
-├────────────────┬────────────────────────────────────────────┤
-│ Key            │ Change  │ Old Value         │ New Value     │
-│ database.host  │ Changed │ server01          │ server02      │
-│ database.port  │ Added   │ —                 │ 5432          │
-│ cache.ttl      │ Removed │ 300               │ —             │
-│ app.name       │ ─       │ MyApp             │ MyApp         │
-└────────────────┴─────────────────────────────────────────────┘
+├────────────────┬──────────┬───────────────┬─────────────────┤
+│ Key            │ Change   │ Old Value     │ New Value       │
+│ database.host  │ Changed  │ server01      │ server02        │ ← yellow
+│ database.port  │ Added    │ —             │ 5432            │ ← green
+│ cache.ttl      │ Removed  │ 300           │ —               │ ← red
+│ app.name       │ ─        │ MyApp         │ MyApp           │ ← default
+└────────────────┴──────────┴───────────────┴─────────────────┘
 ```
 
-Color coding: Changed = yellow row, Added = green row, Removed = red row, Unchanged = default.
+Unchanged rows hidden by default with a "Show X unchanged" toggle.
 
 **Hook:** `useConfigComparison(templateId, v1, v2)` — `useQuery` enabled when both v1 and v2 are selected and differ.
 
-**Unchanged rows hidden by default** with a "Show X unchanged" toggle.
-
-**Tests:** Diff renders correctly, empty diff shows "No differences found", version picker updates query.
+**Tests:** Diff renders correctly, empty diff shows "No differences found", version picker updates query, same-version selection shows disabled state.
 
 ---
 
@@ -301,7 +315,7 @@ Enhances the existing `/operations/activity` Audit tab with multi-value filter c
 
 **Modified files:**
 - `src/MSOSync.Metadata/Audit/AuditFilter.cs` — add multi-value fields
-- `src/MSOSync.Metadata/Audit/AuditFilterValidator.cs` — extend validator
+- `src/MSOSync.Metadata/Audit/AuditFilterValidator.cs` — extend validator with array size limits
 - `src/MSOSync.Metadata/Audit/IAuditQueryService.cs` — add `GetEntityHistoryAsync`
 - `src/MSOSync.Metadata/Audit/AuditQueryService.cs` — implement multi-value + entity history
 - `src/MSOSync.Api/Controllers/AuditController.cs` — add entity history endpoint
@@ -317,10 +331,10 @@ public sealed class AuditFilter
     public string?   Username          { get; set; }
     public string?   ActionName        { get; set; }
     // New multi-value fields (take precedence when non-empty)
-    public string[]? Usernames         { get; set; }
-    public string[]? ActionNames       { get; set; }
-    public string[]? EntityTypes       { get; set; }
-    public string[]? Sources           { get; set; }
+    public string[]? Usernames         { get; set; }  // OR within group
+    public string[]? ActionNames       { get; set; }  // OR within group
+    public string[]? EntityTypes       { get; set; }  // OR within group
+    public string[]? Sources           { get; set; }  // OR within group
     // Existing
     public DateTime? From              { get; set; }
     public DateTime? To                { get; set; }
@@ -330,17 +344,25 @@ public sealed class AuditFilter
 }
 ```
 
+**Filter size limits (in `AuditFilterValidator`):**
+- `Usernames` ≤ 10 items
+- `ActionNames` ≤ 10 items
+- `EntityTypes` ≤ 10 items
+- `Sources` ≤ 10 items
+- Combined total filter values ≤ 40 (prevents enormous SQL `IN (...)` clauses)
+- `pageSize` 1–200
+
 **Query logic in `AuditQueryService`:**
 ```
-effectiveUsernames  = Usernames?.Length > 0 ? Usernames : (Username != null ? [Username] : null)
-effectiveActions    = ActionNames?.Length > 0 ? ActionNames : (ActionName != null ? [ActionName] : null)
-effectiveEntityTypes = EntityTypes
-effectiveSources    = Sources
+effectiveUsernames   = Usernames?.Length > 0  ? Usernames  : (Username   != null ? [Username]   : null)
+effectiveActions     = ActionNames?.Length > 0 ? ActionNames : (ActionName != null ? [ActionName] : null)
+effectiveEntityTypes = EntityTypes  // null = all
+effectiveSources     = Sources      // null = all
 
-WHERE (effectiveUsernames is null OR username IN effectiveUsernames)
-  AND (effectiveActions   is null OR action_name IN effectiveActions)
-  AND (effectiveEntityTypes is null OR entity_type IN effectiveEntityTypes)
-  AND (effectiveSources   is null OR source IN effectiveSources)
+WHERE (effectiveUsernames   is null OR username     IN effectiveUsernames)
+  AND (effectiveActions     is null OR action_name  IN effectiveActions)
+  AND (effectiveEntityTypes is null OR entity_type  IN effectiveEntityTypes)
+  AND (effectiveSources     is null OR source       IN effectiveSources)
   AND (From is null OR occurred_at >= From)
   AND (To   is null OR occurred_at <= To)
 ```
@@ -352,8 +374,7 @@ Task<CursorPageResult<AuditEventDto>> GetEntityHistoryAsync(
     string? cursor, int pageSize,
     CancellationToken ct);
 ```
-
-Queries: `WHERE entity_type = @entityType AND entity_id = @entityId ORDER BY occurred_at DESC`.
+Query: `WHERE entity_type = @entityType AND entity_id = @entityId ORDER BY occurred_at DESC`.
 
 **New endpoint on `AuditController`:**
 ```csharp
@@ -370,9 +391,7 @@ public async Task<IActionResult> GetEntityHistory(
 }
 ```
 
-**Saved filters:** No new backend endpoint. Stored via existing `PUT /api/v1/preferences/audit.savedFilters` with value `[{ name, filter }]`. Frontend reads `GET /api/v1/preferences` → `audit.savedFilters` key.
-
-**`AuditFilterValidator` extension:** validate `EntityTypes` array ≤ 10 items, `Usernames` array ≤ 10 items, `ActionNames` array ≤ 10 items, `Sources` array ≤ 10 items, `pageSize` 1–200.
+**Saved filters:** Stored via existing `PUT /api/v1/preferences/audit.savedFilters` with value `Array<{ name: string; filter: AuditFilterParams }>`. Frontend reads `GET /api/v1/preferences` → `audit.savedFilters` key. No new backend needed.
 
 ### Frontend
 
@@ -382,17 +401,16 @@ public async Task<IActionResult> GetEntityHistory(
 - `src/MSOSync.Frontend/src/shared/hooks/useAudit.ts` — extend hook params
 
 **New files:**
-- `src/MSOSync.Frontend/src/features/operations/activity/components/AuditFilterBar.tsx` — multi-select chip bar
-- `src/MSOSync.Frontend/src/features/operations/activity/components/SavedFiltersPanel.tsx` — saved filter list
-- `src/MSOSync.Frontend/src/features/operations/activity/components/EntityHistoryTab.tsx` — entity type + ID pickers + grid
+- `src/MSOSync.Frontend/src/features/operations/activity/components/AuditFilterBar.tsx`
+- `src/MSOSync.Frontend/src/features/operations/activity/components/SavedFiltersPanel.tsx`
+- `src/MSOSync.Frontend/src/features/operations/activity/components/EntityHistoryTab.tsx`
+- `src/MSOSync.Frontend/src/features/operations/activity/components/__tests__/AuditFilterBar.test.tsx`
 
 **Filter bar layout:**
 ```
 [Entity Types ▼ ×Node ×Channel]  [Actions ▼ ×NODE_APPROVED]  [Usernames ▼]  [Sources ▼]
 [From: ──────]  [To: ──────]  [Save Filter]  [Saved ▼]  [Clear All]
 ```
-
-Each multi-select opens a `<select multiple>` dropdown populated with known values (EntityTypes and ActionNames are static enum-like lists; Usernames fetched from `GET /api/v1/users`).
 
 **Entity History tab:**
 ```
@@ -402,10 +420,12 @@ Entity Type: [dropdown]  Entity ID: [text input]  [Load]
 
 **Saved filter persistence:**
 ```typescript
-// Save: PUT /api/v1/preferences/audit.savedFilters
+// Save:  PUT /api/v1/preferences/audit.savedFilters
 // Value: Array<{ name: string; filter: AuditFilterParams }>
-// Load: GET /api/v1/preferences → ['audit.savedFilters']
+// Load:  GET /api/v1/preferences → ['audit.savedFilters']
 ```
+
+**SignalR:** No SignalR integration — audit is not real-time. Manual refresh button only.
 
 ---
 
@@ -413,7 +433,7 @@ Entity Type: [dropdown]  Entity ID: [text input]  [Load]
 
 ### Purpose
 
-Gantt-style view of operations by time range. Operators use it to understand operation overlap, duration, and sequencing. Click a bar to open the existing detail panel.
+Gantt-style view of operations by time range. Operators use it to understand operation overlap, duration, and sequencing. Click a bar to open the existing detail panel. All timestamps are UTC.
 
 ### Backend
 
@@ -425,7 +445,7 @@ Gantt-style view of operations by time range. Operators use it to understand ope
 
 **New endpoint on existing `OperationsController`:**
 ```
-GET /api/v1/operations/timeline?from={ISO}&to={ISO}&types[]={csv}&limit=200
+GET /api/v1/operations/timeline?from={ISO-UTC}&to={ISO-UTC}&types[]={csv}&limit=200
 Authorization: ViewerOrAbove
 ```
 
@@ -436,35 +456,39 @@ namespace MSOSync.Metadata.Operations.Timeline.Dtos;
 
 public sealed record OperationTimelineDto(
     IReadOnlyList<OperationTimelineItemDto> Items,
-    DateTime                                From,
-    DateTime                                To);
+    DateTime  From,
+    DateTime  To,
+    bool      HasMore,
+    int       ReturnedCount);
 
 public sealed record OperationTimelineItemDto(
     Guid      OperationId,
-    string    Type,
-    string    Status,
+    string    Type,    // serialized as string
+    string    Status,  // serialized as string
     string?   NodeId,
     string?   Label,
     DateTime  StartedAt,
-    DateTime? CompletedAt,
+    DateTime? CompletedAt,  // null = still running
     int?      ProgressPercent);
 ```
+
+**`HasMore`:** `true` when the total number of matching rows exceeds `limit`. Signals to frontend that the timeline is truncated.
 
 **Service implementation:**
 `OperationTimelineService.GetTimelineAsync(DateTime from, DateTime to, string[]? types, int limit, CancellationToken ct)`:
 - Query `sync_operation` WHERE `started_at >= from AND started_at <= to`
 - If `types` non-null: AND `operation_type IN types`
-- ORDER BY `started_at ASC`
-- LIMIT `limit` (max 500, default 200)
-- Return `OperationTimelineItemDto` for each row
+- ORDER BY `started_at ASC, operation_id ASC` (secondary sort for deterministic ordering)
+- Fetch `limit + 1` rows; if count > limit, set `HasMore = true`, return only `limit` rows
 - `Label` = `ProgressMessage ?? Summary ?? Type`
+- All timestamps UTC. `AsNoTracking()`, project to DTO.
 
-**Validation:** `from` must be before `to`; max range 30 days; `limit` 1–500; `types` must be valid OperationType values.
+**Validation in endpoint:**
+- `from` must be before `to`; max range 30 days; `limit` 1–500 (default 200)
+- `types` values must be valid operation type strings
 
 **Inject into `OperationsController`:**
 ```csharp
-// Constructor: add IOperationTimelineService timelineSvc
-
 [HttpGet("timeline")]
 [ProducesResponseType(typeof(OperationTimelineDto), 200)]
 [ProducesResponseType(typeof(ProblemDetails), 400)]
@@ -494,46 +518,43 @@ public async Task<IActionResult> GetTimeline(
 
 **Layout:**
 ```
-[From: ──] [To: ──] [Types: ▼ Export Rollout Replay ×] [Refresh]
-─────────────────────────────────────────────────────────────────
-Gantt chart (Recharts ComposedChart):
-  Y axis: operation type groups (Export / Rollout / BatchReplay / ...)
-  X axis: time (hours/days depending on range)
-  Bars: each operation as a horizontal bar from StartedAt → CompletedAt
-        (for in-progress ops: bar extends to "now")
-  Color: by Status (Running=blue, Completed=green, Failed=red, Cancelled=grey)
-  Tooltip: OperationId, NodeId, Label, Duration, Status
-─────────────────────────────────────────────────────────────────
-Click bar → open existing RollingOperationDetailPanel or ReplayDetailPanel
+[From: ──UTC──] [To: ──UTC──] [Types: ▼ Export Rollout Replay ×] [Refresh]
+─────────────────────────────────────────────────────────────────────────────
+Gantt chart (Recharts ComposedChart, layout="vertical"):
+  Y axis: operation type groups (Export / RollingMaintenance / BatchReplay / ...)
+  X axis: time in ms (domain=[minStartMs, max(endMs, nowMs)])
+  Bars: custom <shape> renders a <rect> from x0=startedAt to x1=completedAt ?? now
+  Color by Status: Running=blue, Completed=green, Failed=red, Cancelled=grey
+  Tooltip: OperationId, NodeId, Label, Duration, Status (all in UTC)
+─────────────────────────────────────────────────────────────────────────────
+[⚠ Showing 200 of 347 operations — narrow range or add type filters to see all]
+─────────────────────────────────────────────────────────────────────────────
+Click bar → open RollingOperationDetailPanel | ReplayDetailPanel
             (fallback: navigate to /operations/jobs?id={operationId})
 ```
 
-**Gantt implementation approach:**
-Use `recharts` `BarChart` in horizontal layout:
-- `layout="vertical"` with custom `Bar` shape renderer
-- Each data point: `{ y: groupLabel, x0: startMs, x1: endMs ?? nowMs, ...meta }`
-- Custom `shape` prop renders a `<rect>` positioned by `x0`/`x1` within the chart domain
+**`HasMore` banner:** Shown when `response.hasMore === true`. Instructs operator to narrow range or filter by type.
 
-**Default date range:** Last 24 hours. Max selectable range: 30 days.
+**Default date range:** Last 24 hours (UTC). Max selectable: 30 days.
+
+**SignalR:** `OperationChanged` invalidates `timelineKeys.list(from, to, types)`. No payload broadcasting.
 
 **Route:** `/operations/timeline` — add to router and left-nav under Operations section.
 
-**Tests:** Timeline renders bars for mock data, empty state renders ("No operations in this range"), date range picker updates query, clicking bar opens detail panel.
+**Tests:** Bars render for mock data, empty state renders ("No operations in this range"), date range picker updates query, `HasMore` banner shown when `hasMore: true`, click handler calls detail panel.
 
 ---
 
 ## Service Registration
 
-Add to `MetadataServiceExtensions.cs`:
+Add to `MetadataServiceExtensions.cs` (Phase 2B.3 block):
 ```csharp
 // Phase 2B.3 — Advanced Operations Analytics
 services.AddScoped<IClusterSummaryQueryService, ClusterSummaryQueryService>();
 services.AddScoped<IConfigurationComparisonService, ConfigurationComparisonService>();
 services.AddScoped<IOperationTimelineService, OperationTimelineService>();
-// IAuditQueryService already registered; extend impl with new methods
+// IAuditQueryService: existing registration, impl extended with new methods
 ```
-
-No new `IOptions<T>` needed — no configurable parameters for these modules.
 
 ---
 
@@ -541,29 +562,33 @@ No new `IOptions<T>` needed — no configurable parameters for these modules.
 
 ### Backend unit tests
 
-| Test class | Project | Count |
+| Test class | Project | Approx. tests |
 |---|---|---|
-| `ClusterSummaryQueryServiceTests` | `MSOSync.MetadataTests` | ~8 tests |
-| `ConfigurationComparisonServiceTests` | `MSOSync.MetadataTests` | ~8 tests |
-| `OperationTimelineServiceTests` | `MSOSync.MetadataTests` | ~6 tests |
-| `AuditQueryServiceMultiFilterTests` | `MSOSync.MetadataTests` | ~6 tests |
+| `ClusterSummaryQueryServiceTests` | `MSOSync.MetadataTests` | ~8 |
+| `ConfigurationComparisonServiceTests` | `MSOSync.MetadataTests` | ~8 |
+| `JsonDiffEngineTests` | `MSOSync.MetadataTests` | ~6 |
+| `OperationTimelineServiceTests` | `MSOSync.MetadataTests` | ~6 |
+| `AuditQueryServiceMultiFilterTests` | `MSOSync.MetadataTests` | ~6 |
 
 All use `TestDbContext.Create()` (SQLite in-memory).
 
 ### Backend integration tests
 
-| Test class | File |
-|---|---|
-| `ClusterApiTests` | `tests/MSOSync.IntegrationTests/Operations/ClusterApiTests.cs` |
-| `ConfigCompareApiTests` | `tests/MSOSync.IntegrationTests/Configuration/ConfigCompareApiTests.cs` |
-| `AuditExplorerApiTests` | `tests/MSOSync.IntegrationTests/Operations/AuditExplorerApiTests.cs` |
-| `OperationTimelineApiTests` | `tests/MSOSync.IntegrationTests/Operations/OperationTimelineApiTests.cs` |
+| Test class | File | Notes |
+|---|---|---|
+| `ClusterApiTests` | `tests/MSOSync.IntegrationTests/Operations/ClusterApiTests.cs` | Includes tenant isolation test |
+| `ConfigCompareApiTests` | `tests/MSOSync.IntegrationTests/Configuration/ConfigCompareApiTests.cs` | Includes tenant isolation test |
+| `AuditExplorerApiTests` | `tests/MSOSync.IntegrationTests/Operations/AuditExplorerApiTests.cs` | Includes tenant isolation test |
+| `OperationTimelineApiTests` | `tests/MSOSync.IntegrationTests/Operations/OperationTimelineApiTests.cs` | Includes tenant isolation test |
 
-All use `[Collection("Lifecycle")]` + `LifecycleFixture`. Environmental failures (no SQL Server) are acceptable; build must pass.
+All use `[Collection("Lifecycle")]` + `LifecycleFixture`. Environmental failures (no SQL Server) acceptable; build must pass.
+
+**Tenant isolation test pattern (required for all 4 modules):**
+Each integration test file must include a test verifying that Tenant A data does not appear in Tenant B's response. Pattern: seed two tenant scopes (SystemTenant + a second tenant), query as Tenant A, assert Tenant B's records are absent.
 
 ### Frontend tests (React Testing Library + Vitest + MSW)
 
-| Test file | Tests |
+| Test file | Approx. tests |
 |---|---|
 | `ClusterPage.test.tsx` | ~5 |
 | `ConfigComparePanel.test.tsx` | ~5 |
@@ -579,3 +604,8 @@ All use `[Collection("Lifecycle")]` + `LifecycleFixture`. Environmental failures
 3. `npm run build` in `src/MSOSync.Frontend` — 0 TypeScript errors.
 4. `docs/architecture/service-responsibility-map.md` updated with new services.
 5. `docs/architecture/test-infrastructure.md` updated with new test counts.
+6. **Performance targets** (verified via integration test stopwatch assertions):
+   - `GET /api/v1/cluster/summary` — p95 < 250 ms under typical load (< 1000 nodes, < 50 active ops)
+   - `GET /api/v1/operations/timeline` — p95 < 300 ms for 30-day range
+   - `GET /api/v1/audit` with multi-value filters — cursor pagination maintained, first page < 200 ms
+   - `GET /api/v1/configuration/templates/{id}/compare` — < 100 ms for typical template sizes (≤ 100 keys)
