@@ -27,12 +27,12 @@ Spec: `docs/superpowers/specs/2026-07-21-phase-2B-2-replay-design.md`
 
 | # | Status | Task file | Deliverable |
 |---|---|---|---|
-| 1 | [ ] | [Task 1 — Persistence + M034](2026-07-22-phase-2B-2-task-1-persistence.md) | `SyncReplayRequest`/`SyncReplayItem` entities + configs + DbSets, M034 migration, enum additions |
-| 2 | [ ] | [Task 2 — Metadata services](2026-07-22-phase-2B-2-task-2-services.md) | `ReplayOptions`, `IReplayOperationService` + impl, `IReplayOperationQueryService` + impl, register in extensions |
-| 3 | [ ] | [Task 3 — Worker](2026-07-22-phase-2B-2-task-3-worker.md) | `ReplayWorker` (FailedDelivery + MissedData advance), SchedulerTests |
-| 4 | [ ] | [Task 4 — API controller](2026-07-22-phase-2B-2-task-4-controller.md) | `ReplayController`, DTOs, validator, AppTests |
-| 5 | [ ] | [Task 5 — Frontend](2026-07-22-phase-2B-2-task-5-frontend.md) | `ReplayWizard`, `ReplayDetailPanel`, types/api/hooks, JobsPage wiring |
-| 6 | [ ] | [Task 6 — Integration + docs](2026-07-22-phase-2B-2-task-6-integration-docs.md) | Integration tests (API + M034 migration), docs updates, final gate |
+| 1 | ✅ | [Task 1 — Persistence + M034](2026-07-22-phase-2B-2-task-1-persistence.md) | `SyncReplayRequest`/`SyncReplayItem` entities + configs + DbSets, M034 migration, enum additions |
+| 2 | ✅ | [Task 2 — Metadata services](2026-07-22-phase-2B-2-task-2-services.md) | `ReplayOptions`, `IReplayOperationService` + impl, `IReplayOperationQueryService` + impl, register in extensions |
+| 3 | ✅ | [Task 3 — Worker](2026-07-22-phase-2B-2-task-3-worker.md) | `ReplayWorker` (FailedDelivery + MissedData advance), SchedulerTests |
+| 4 | ✅ | [Task 4 — API controller](2026-07-22-phase-2B-2-task-4-controller.md) | `ReplayController`, DTOs, validator, AppTests |
+| 5 | ✅ | [Task 5 — Frontend](2026-07-22-phase-2B-2-task-5-frontend.md) | `ReplayWizard`, `ReplayDetailPanel`, types/api/hooks, JobsPage wiring |
+| 6 | ✅ | [Task 6 — Integration + docs](2026-07-22-phase-2B-2-task-6-integration-docs.md) | Integration tests (API + M034 migration), docs updates, final gate |
 
 Tasks 1→3 are sequential. Task 4 after 2. Task 5 after 4. Task 6 last.
 
