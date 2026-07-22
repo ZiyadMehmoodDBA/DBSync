@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using MSOSync.Api.Dtos.Audit;
 using MSOSync.Api.Dtos.Common;
 using MSOSync.Common.Exceptions;
+using MSOSync.Common.Pagination;
 using MSOSync.Metadata.Audit;
 using MSOSync.Metadata.Export;
 
@@ -70,6 +71,19 @@ public sealed class AuditController(
             isJson ? "application/json" : "text/csv",
             isJson ? $"audit-{date}.json" : $"audit-{date}.csv",
             (rows, ms) => exportAudit.WriteAsync("audit", format, rows, ms, ct));
+    }
+
+    // GET /api/v1/audit/entity/{objectName}?cursor=&pageSize=50
+    [HttpGet("entity/{objectName}")]
+    [ProducesResponseType(typeof(CursorPageResult<AuditDto>), 200)]
+    public async Task<IActionResult> GetEntityHistory(
+        string  objectName,
+        [FromQuery] string? cursor,
+        [FromQuery] int     pageSize = 50,
+        CancellationToken ct = default)
+    {
+        var result = await audit.GetEntityHistoryAsync(objectName, cursor, pageSize, ct);
+        return Ok(result);
     }
 
     // GET /api/v1/audit/correlation/{correlationId}
