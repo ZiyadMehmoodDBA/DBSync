@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using MSOSync.Api.Authorization;
 using MSOSync.Api.Dtos.Configuration;
 using MSOSync.Metadata.Configuration;
+using MSOSync.Metadata.Configuration.Dtos;
 using MSOSync.Metadata.Permissions;
 
 namespace MSOSync.Api.Controllers;
@@ -13,10 +14,11 @@ namespace MSOSync.Api.Controllers;
 [Route("api/v1/configuration/templates")]
 [Authorize(Policy = "ViewerOrAbove")]
 public sealed class ConfigurationTemplateController(
-    IConfigurationTemplateService templateSvc,
-    INodeAuthorizationService authz,
+    IConfigurationTemplateService    templateSvc,
+    INodeAuthorizationService        authz,
+    IConfigurationComparisonService  comparisonSvc,
     IValidator<CreateTemplateRequest> createValidator,
-    IValidator<UpdateDraftRequest> updateValidator) : ControllerBase
+    IValidator<UpdateDraftRequest>   updateValidator) : ControllerBase
 {
     private Guid ActorGuid => ClaimsToGuid(User.FindFirstValue("userId"));
 
@@ -140,5 +142,21 @@ public sealed class ConfigurationTemplateController(
         var ver1 = await templateSvc.GetVersionAsync(id, v1, ct);
         var ver2 = await templateSvc.GetVersionAsync(id, v2, ct);
         return Ok(new TemplateVersionDiffResponse(ver1, ver2));
+    }
+
+    [HttpGet("{id:guid}/compare")]
+    [ProducesResponseType(typeof(ConfigVersionDiffDto), 200)]
+    [ProducesResponseType(typeof(ProblemDetails), 400)]
+    [ProducesResponseType(typeof(ProblemDetails), 404)]
+    public async Task<IActionResult> Compare(
+        Guid id,
+        [FromQuery] int v1,
+        [FromQuery] int v2,
+        CancellationToken ct)
+    {
+        await authz.EnsurePermissionAsync(SystemPermissions.ManageConfigurations, ct);
+        if (v1 == v2) return BadRequest(new ProblemDetails { Title = "v1 and v2 must differ." });
+        var diff = await comparisonSvc.CompareAsync(id, v1, v2, ct);
+        return Ok(diff);
     }
 }

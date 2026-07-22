@@ -12,11 +12,14 @@ import { getErrorMessage } from '../../shared/utils/error';
 import { useTemplates } from './hooks';
 import { useArchiveTemplate, usePublishTemplate } from './mutations';
 import type { TemplateSummaryDto } from './types';
+import { ConfigComparePanel } from './components/ConfigComparePanel';
 
 export function TemplatesPage() {
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [search, setSearch] = useState('');
   const [archiveTarget, setArchiveTarget] = useState<TemplateSummaryDto | null>(null);
+  const [compareTemplateId, setCompareTemplateId] = useState<string | null>(null);
+  const [compareVersions, setCompareVersions] = useState<{ versionNumber: number; label: string }[]>([]);
 
   const { data: templates = [], isLoading } = useTemplates(statusFilter || undefined);
   const archiveMutation = useArchiveTemplate();
@@ -108,6 +111,25 @@ export function TemplatesPage() {
                     Publish
                   </Button>
                 )}
+                {(t.currentPublishedVersion != null || t.latestDraftVersion != null) && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      const versions: { versionNumber: number; label: string }[] = [];
+                      if (t.currentPublishedVersion != null) {
+                        versions.push({ versionNumber: t.currentPublishedVersion, label: `v${t.currentPublishedVersion} (Published)` });
+                      }
+                      if (t.latestDraftVersion != null && t.latestDraftVersion !== t.currentPublishedVersion) {
+                        versions.push({ versionNumber: t.latestDraftVersion, label: `v${t.latestDraftVersion} (Draft)` });
+                      }
+                      setCompareTemplateId(t.id);
+                      setCompareVersions(versions);
+                    }}
+                  >
+                    Compare versions
+                  </Button>
+                )}
                 {t.status !== 'Archived' && (
                   <Button
                     size="sm"
@@ -133,6 +155,14 @@ export function TemplatesPage() {
           loading={archiveMutation.isPending}
           onConfirm={() => void handleArchive()}
           onOpenChange={(open) => { if (!open) setArchiveTarget(null); }}
+        />
+      )}
+
+      {compareTemplateId && (
+        <ConfigComparePanel
+          templateId={compareTemplateId}
+          availableVersions={compareVersions}
+          onClose={() => setCompareTemplateId(null)}
         />
       )}
     </div>

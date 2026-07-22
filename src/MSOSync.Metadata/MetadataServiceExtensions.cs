@@ -160,6 +160,7 @@ public static class MetadataServiceExtensions
 
         // Phase 2B.3 — Advanced Operations Analytics
         services.AddScoped<IClusterSummaryQueryService, ClusterSummaryQueryService>();
+        services.AddScoped<IConfigurationComparisonService, ConfigurationComparisonService>();
 
         // Epic 13 — Notifications
         services.AddScoped<INotificationService, NotificationService>();
