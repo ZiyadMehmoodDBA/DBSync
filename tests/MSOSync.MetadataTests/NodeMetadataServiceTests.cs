@@ -2,7 +2,9 @@ using FluentAssertions;
 using MediatR;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Options;
 using Moq;
+using MSOSync.Common.Caching;
 using MSOSync.Metadata.Services;
 using MSOSync.Persistence;
 using MSOSync.Persistence.Entities;
@@ -16,8 +18,10 @@ public sealed class NodeMetadataServiceTests
     private static (NodeMetadataService Svc, AppDbContext Db) CreateService(
         Mock<IMediator>? mediatorMock = null)
     {
-        var db = TestDbContext.Create();
-        var cache = new MemoryCache(new MemoryCacheOptions());
+        var db        = TestDbContext.Create();
+        var memCache  = new MemoryCache(new MemoryCacheOptions());
+        var cacheOpts = Options.Create(new CacheOptions { DefaultExpiry = TimeSpan.FromMinutes(5) });
+        ICacheService cache = new InMemoryCacheService(memCache, cacheOpts);
         var mediator = (mediatorMock ?? new Mock<IMediator>()).Object;
         var hasher = new BCryptPasswordHasher();
         var nodeSecurity = new NodeSecurityService(db, hasher);

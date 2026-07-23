@@ -1,6 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
+using MSOSync.Common.Caching;
 using MSOSync.Common.Exceptions;
 using MSOSync.Metadata.Dtos;
 using MSOSync.Metadata.Events;
@@ -12,13 +12,9 @@ namespace MSOSync.Metadata.Services;
 
 public sealed class RouterMetadataService(
     AppDbContext db,
-    IMemoryCache cache,
+    ICacheService cache,
     IMediator mediator) : IRouterMetadataService
 {
-    private static readonly MemoryCacheEntryOptions CacheOptions = new()
-    {
-        AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(60)
-    };
 
     public async Task<IReadOnlyList<RouterDto>> GetRoutersAsync(CancellationToken ct = default)
     {
@@ -28,16 +24,15 @@ public sealed class RouterMetadataService(
 
     public async Task<RouterDto?> GetRouterAsync(string routerId, CancellationToken ct = default)
     {
-        var cacheKey = $"metadata:router:{routerId}";
-        if (cache.TryGetValue<RouterDto>(cacheKey, out var cached))
-            return cached;
+        var cached = await cache.GetAsync<RouterDto>(CacheKeyHelper.Router(routerId), ct);
+        if (cached is not null) return cached;
 
         var router = await db.Routers.AsNoTracking()
             .FirstOrDefaultAsync(r => r.RouterId == routerId, ct);
         if (router == null) return null;
 
         var dto = MapRouter(router);
-        cache.Set(cacheKey, dto, CacheOptions);
+        await cache.SetAsync(CacheKeyHelper.Router(routerId), dto, TimeSpan.FromSeconds(60), ct);
         return dto;
     }
 
@@ -86,7 +81,7 @@ public sealed class RouterMetadataService(
         router.RouterType = req.RouterType;
 
         await db.SaveChangesAsync(ct);
-        cache.Remove($"metadata:router:{routerId}");
+        await cache.RemoveAsync(CacheKeyHelper.Router(routerId), ct);
         await mediator.Publish(new RouterMetadataChangedEvent(routerId, "UPDATED"), ct);
         return MapRouter(router);
     }
@@ -98,7 +93,7 @@ public sealed class RouterMetadataService(
 
         db.Routers.Remove(router);
         await db.SaveChangesAsync(ct);
-        cache.Remove($"metadata:router:{routerId}");
+        await cache.RemoveAsync(CacheKeyHelper.Router(routerId), ct);
         await mediator.Publish(new RouterMetadataChangedEvent(routerId, "DELETED"), ct);
     }
 

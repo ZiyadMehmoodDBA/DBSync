@@ -33,7 +33,7 @@ public sealed class OverviewRefreshedPublisher(
 
     private async Task InvalidateAndNotifyAsync(CancellationToken ct)
     {
-        cache.Invalidate();
+        await cache.InvalidateAsync(ct);
         await hub.Clients.Group("operators")
             .SendAsync("OverviewRefreshed", null, ct);
     }

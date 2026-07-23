@@ -1,31 +1,32 @@
-using Microsoft.Extensions.Caching.Memory;
+using MSOSync.Common.Caching;
 
 namespace MSOSync.Metadata.Overview;
 
-public sealed class OverviewSnapshotCache(IMemoryCache cache)
+public sealed class OverviewSnapshotCache(ICacheService cache)
 {
-    private const string Key = "overview_snapshot";
     private static readonly TimeSpan Ttl = TimeSpan.FromSeconds(5);
     private readonly SemaphoreSlim _refreshLock = new(1, 1);
 
-    public void Invalidate()
-        => cache.Remove(Key);
+    public async Task InvalidateAsync(CancellationToken ct = default)
+        => await cache.RemoveAsync(CacheKeyHelper.OverviewSnapshot(), ct);
 
     public async Task<OverviewDto> GetOrCreateAsync(
         Func<CancellationToken, Task<OverviewDto>> factory, CancellationToken ct)
     {
-        if (cache.TryGetValue(Key, out OverviewDto? dto) && dto is not null)
+        var dto = await cache.GetAsync<OverviewDto>(CacheKeyHelper.OverviewSnapshot(), ct);
+        if (dto is not null)
             return dto;
 
         await _refreshLock.WaitAsync(ct);
         try
         {
             // Double-check after acquiring lock
-            if (cache.TryGetValue(Key, out dto) && dto is not null)
+            dto = await cache.GetAsync<OverviewDto>(CacheKeyHelper.OverviewSnapshot(), ct);
+            if (dto is not null)
                 return dto;
 
             dto = await factory(ct);
-            cache.Set(Key, dto, Ttl);
+            await cache.SetAsync(CacheKeyHelper.OverviewSnapshot(), dto, Ttl, ct);
             return dto;
         }
         finally

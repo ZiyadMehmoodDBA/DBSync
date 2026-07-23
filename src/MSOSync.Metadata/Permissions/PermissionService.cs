@@ -1,20 +1,16 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
 using MSOSync.Common;
+using MSOSync.Common.Caching;
 using MSOSync.Common.Exceptions;
 using MSOSync.Persistence;
 using MSOSync.Persistence.Entities;
 
 namespace MSOSync.Metadata.Permissions;
 
-public sealed class PermissionService(AppDbContext db, IMemoryCache cache, IMediator mediator, ICurrentUserService currentUser)
+public sealed class PermissionService(AppDbContext db, ICacheService cache, IMediator mediator, ICurrentUserService currentUser)
     : IPermissionService
 {
-    private static readonly MemoryCacheEntryOptions CacheOptions =
-        new MemoryCacheEntryOptions().SetAbsoluteExpiration(TimeSpan.FromSeconds(60));
-
-    private string CacheKey(string roleName) => $"permissions:{roleName}";
 
     // ── Queries ──────────────────────────────────────────────────────────────
 
@@ -31,7 +27,8 @@ public sealed class PermissionService(AppDbContext db, IMemoryCache cache, IMedi
         ).FirstOrDefaultAsync(ct) ?? "VIEWER";
 
         // Try cache first
-        if (cache.TryGetValue(CacheKey(roleName), out IReadOnlyList<string>? cached) && cached is not null)
+        var cached = await cache.GetAsync<IReadOnlyList<string>>(CacheKeyHelper.Permissions(roleName), ct);
+        if (cached is not null)
             return new EffectivePermissionsDto(roleName, cached, DateTimeOffset.UtcNow);
 
         var permissions = await db.RolePermissions.AsNoTracking()
@@ -39,7 +36,7 @@ public sealed class PermissionService(AppDbContext db, IMemoryCache cache, IMedi
             .Select(rp => rp.PermissionKey)
             .ToListAsync(ct);
 
-        cache.Set(CacheKey(roleName), (IReadOnlyList<string>)permissions, CacheOptions);
+        await cache.SetAsync(CacheKeyHelper.Permissions(roleName), (IReadOnlyList<string>)permissions, TimeSpan.FromSeconds(60), ct);
         return new EffectivePermissionsDto(roleName, permissions, DateTimeOffset.UtcNow);
     }
 
@@ -100,7 +97,7 @@ public sealed class PermissionService(AppDbContext db, IMemoryCache cache, IMedi
         }
         WriteAudit("GRANT_PERMISSION", roleName, permissionKey);
         await db.SaveChangesAsync(ct);
-        cache.Remove(CacheKey(roleName));
+        await cache.RemoveAsync(CacheKeyHelper.Permissions(roleName), ct);
         await mediator.Publish(new PermissionChangedNotification(roleName, "Grant", DateTimeOffset.UtcNow), ct);
     }
 
@@ -121,7 +118,7 @@ public sealed class PermissionService(AppDbContext db, IMemoryCache cache, IMedi
 
         WriteAudit("REVOKE_PERMISSION", roleName, permissionKey);
         await db.SaveChangesAsync(ct);
-        cache.Remove(CacheKey(roleName));
+        await cache.RemoveAsync(CacheKeyHelper.Permissions(roleName), ct);
         await mediator.Publish(new PermissionChangedNotification(roleName, "Revoke", DateTimeOffset.UtcNow), ct);
     }
 
@@ -142,7 +139,7 @@ public sealed class PermissionService(AppDbContext db, IMemoryCache cache, IMedi
 
         WriteAudit("RESET_ROLE", roleName, "defaults");
         await db.SaveChangesAsync(ct);
-        cache.Remove(CacheKey(roleName));
+        await cache.RemoveAsync(CacheKeyHelper.Permissions(roleName), ct);
         await mediator.Publish(new PermissionChangedNotification(roleName, "Reset", DateTimeOffset.UtcNow), ct);
     }
 
@@ -167,7 +164,7 @@ public sealed class PermissionService(AppDbContext db, IMemoryCache cache, IMedi
 
         WriteAudit("COPY_PERMISSIONS", targetRole, $"from:{sourceRole}");
         await db.SaveChangesAsync(ct);
-        cache.Remove(CacheKey(targetRole));
+        await cache.RemoveAsync(CacheKeyHelper.Permissions(targetRole), ct);
         await mediator.Publish(new PermissionChangedNotification(targetRole, "Copy", DateTimeOffset.UtcNow), ct);
     }
 

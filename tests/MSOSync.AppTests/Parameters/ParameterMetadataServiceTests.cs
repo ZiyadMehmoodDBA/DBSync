@@ -1,8 +1,10 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Options;
 using Moq;
 using MSOSync.Common;
+using MSOSync.Common.Caching;
 using MSOSync.Metadata.Audit;
 using MSOSync.Metadata.Events;
 using MSOSync.Metadata.Services;
@@ -15,7 +17,8 @@ namespace MSOSync.AppTests.Parameters;
 public sealed class ParameterMetadataServiceTests : IDisposable
 {
     private readonly AppDbContext _db;
-    private readonly IMemoryCache _cache;
+    private readonly MemoryCache _memCache;
+    private readonly ICacheService _cache;
     private readonly Mock<IMediator> _mediator;
     private readonly Mock<ICurrentUserService> _currentUser;
     private readonly Mock<IAuditService> _auditSvc;
@@ -25,8 +28,10 @@ public sealed class ParameterMetadataServiceTests : IDisposable
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
-        _db = new AppDbContext(options);
-        _cache = new MemoryCache(new MemoryCacheOptions());
+        _db       = new AppDbContext(options);
+        _memCache = new MemoryCache(new MemoryCacheOptions());
+        var cacheOpts = Options.Create(new CacheOptions { DefaultExpiry = TimeSpan.FromMinutes(5) });
+        _cache    = new InMemoryCacheService(_memCache, cacheOpts);
 
         _mediator = new Mock<IMediator>();
         _mediator
@@ -127,6 +132,6 @@ public sealed class ParameterMetadataServiceTests : IDisposable
     public void Dispose()
     {
         _db.Dispose();
-        _cache.Dispose();
+        _memCache.Dispose();
     }
 }

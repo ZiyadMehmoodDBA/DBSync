@@ -1,21 +1,16 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
+using MSOSync.Common.Caching;
 using MSOSync.Persistence;
 
 namespace MSOSync.Metadata.Metrics;
 
-public sealed class MetricsQueryService(AppDbContext db, IMemoryCache cache)
+public sealed class MetricsQueryService(AppDbContext db, ICacheService cache)
     : IMetricsQueryService
 {
-    private static readonly MemoryCacheEntryOptions CacheOptions = new()
-    {
-        AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(30)
-    };
-
     public async Task<MetricsSummaryDto> GetSummaryAsync(CancellationToken ct)
     {
-        if (cache.TryGetValue("metrics:summary:v1", out MetricsSummaryDto? cached))
-            return cached!;
+        var cached = await cache.GetAsync<MetricsSummaryDto>(CacheKeyHelper.MetricsSummary(), ct);
+        if (cached is not null) return cached;
 
         var cutoff = DateTime.UtcNow.AddHours(-24);
 
@@ -61,14 +56,14 @@ public sealed class MetricsQueryService(AppDbContext db, IMemoryCache cache)
             throughput,
             DateTime.UtcNow);
 
-        cache.Set("metrics:summary:v1", result, CacheOptions);
+        await cache.SetAsync(CacheKeyHelper.MetricsSummary(), result, TimeSpan.FromSeconds(30), ct);
         return result;
     }
 
     public async Task<IReadOnlyList<NodeMetricsDto>> GetNodeMetricsAsync(CancellationToken ct)
     {
-        if (cache.TryGetValue("metrics:nodes:v1", out IReadOnlyList<NodeMetricsDto>? cached))
-            return cached!;
+        var cached = await cache.GetAsync<IReadOnlyList<NodeMetricsDto>>(CacheKeyHelper.MetricsNodes(), ct);
+        if (cached is not null) return cached;
 
         var cutoff = DateTime.UtcNow.AddHours(-24);
 
@@ -124,14 +119,14 @@ public sealed class MetricsQueryService(AppDbContext db, IMemoryCache cache)
                 n.LastHeartbeat);
         }).ToList();
 
-        cache.Set("metrics:nodes:v1", (IReadOnlyList<NodeMetricsDto>)result, CacheOptions);
+        await cache.SetAsync(CacheKeyHelper.MetricsNodes(), (IReadOnlyList<NodeMetricsDto>)result, TimeSpan.FromSeconds(30), ct);
         return result;
     }
 
     public async Task<IReadOnlyList<ChannelMetricsDto>> GetChannelMetricsAsync(CancellationToken ct)
     {
-        if (cache.TryGetValue("metrics:channels:v1", out IReadOnlyList<ChannelMetricsDto>? cached))
-            return cached!;
+        var cached = await cache.GetAsync<IReadOnlyList<ChannelMetricsDto>>(CacheKeyHelper.MetricsChannels(), ct);
+        if (cached is not null) return cached;
 
         var cutoff = DateTime.UtcNow.AddHours(-24);
 
@@ -189,7 +184,7 @@ public sealed class MetricsQueryService(AppDbContext db, IMemoryCache cache)
         .OrderBy(x => x.ChannelId)
         .ToList();
 
-        cache.Set("metrics:channels:v1", (IReadOnlyList<ChannelMetricsDto>)result, CacheOptions);
+        await cache.SetAsync(CacheKeyHelper.MetricsChannels(), (IReadOnlyList<ChannelMetricsDto>)result, TimeSpan.FromSeconds(30), ct);
         return result;
     }
 

@@ -14,6 +14,7 @@ using MSOSync.Common.Tenancy;
 using MSOSync.Common.Workers;
 using MSOSync.Batch;
 using MSOSync.Common;
+using MSOSync.Common.Caching;
 using MSOSync.Engine;
 using MSOSync.Event;
 using MSOSync.Metadata;
@@ -80,6 +81,7 @@ try
 
     builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
     builder.Services.AddProblemDetails();
+    builder.Services.AddCacheService(builder.Configuration);
     builder.Services.AddMetadata(builder.Configuration);
     builder.Services.AddSingleton<IClock, SystemClock>();
     builder.Services.AddTriggerEngine(builder.Configuration);

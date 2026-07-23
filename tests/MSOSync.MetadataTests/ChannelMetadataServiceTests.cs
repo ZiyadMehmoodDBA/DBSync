@@ -1,7 +1,9 @@
 using FluentAssertions;
 using MediatR;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Options;
 using Moq;
+using MSOSync.Common.Caching;
 using MSOSync.Common.Exceptions;
 using MSOSync.Metadata.Dtos;
 using MSOSync.Metadata.Services;
@@ -16,7 +18,9 @@ public sealed class ChannelMetadataServiceTests
     private static ChannelMetadataService CreateService(out AppDbContext db)
     {
         db = TestDbContext.Create();
-        var cache = new MemoryCache(new MemoryCacheOptions());
+        var memCache  = new MemoryCache(new MemoryCacheOptions());
+        var cacheOpts = Options.Create(new CacheOptions { DefaultExpiry = TimeSpan.FromMinutes(5) });
+        ICacheService cache = new InMemoryCacheService(memCache, cacheOpts);
         var mediator = new Mock<IMediator>().Object;
         return new ChannelMetadataService(db, cache, mediator);
     }

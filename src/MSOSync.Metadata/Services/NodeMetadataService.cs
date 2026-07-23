@@ -1,7 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
+using MSOSync.Common.Caching;
 using MSOSync.Common.Exceptions;
 using MSOSync.Metadata.Common;
 using MSOSync.Metadata.Dtos;
@@ -15,16 +15,11 @@ namespace MSOSync.Metadata.Services;
 
 public sealed class NodeMetadataService(
     AppDbContext db,
-    IMemoryCache cache,
+    ICacheService cache,
     IMediator mediator,
     NodeSecurityService nodeSecurity,
     IDataProtectionProvider dataProtection) : INodeMetadataService
 {
-    private static readonly MemoryCacheEntryOptions CacheOptions = new()
-    {
-        AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(60)
-    };
-
     private readonly IDataProtector _protector = dataProtection.CreateProtector("NodeDbConnection");
 
     public async Task<IReadOnlyList<NodeDto>> GetNodesAsync(CancellationToken ct = default)
@@ -49,16 +44,15 @@ public sealed class NodeMetadataService(
 
     public async Task<NodeDto?> GetNodeAsync(string nodeId, CancellationToken ct = default)
     {
-        var cacheKey = $"metadata:node:{nodeId}";
-        if (cache.TryGetValue<NodeDto>(cacheKey, out var cached))
-            return cached;
+        var cached = await cache.GetAsync<NodeDto>(CacheKeyHelper.Node(nodeId), ct);
+        if (cached is not null) return cached;
 
         var node = await db.Nodes.AsNoTracking()
             .FirstOrDefaultAsync(n => n.NodeId == nodeId, ct);
         if (node == null) return null;
 
         var dto = MapNode(node);
-        cache.Set(cacheKey, dto, CacheOptions);
+        await cache.SetAsync(CacheKeyHelper.Node(nodeId), dto, TimeSpan.FromSeconds(60), ct);
         return dto;
     }
 
@@ -78,7 +72,7 @@ public sealed class NodeMetadataService(
         node.HeartbeatInterval = req.HeartbeatInterval;
 
         await db.SaveChangesAsync(ct);
-        cache.Remove($"metadata:node:{nodeId}");
+        await cache.RemoveAsync(CacheKeyHelper.Node(nodeId), ct);
         await mediator.Publish(new NodeMetadataChangedEvent(nodeId, "UPDATED"), ct);
         return MapNode(node);
     }
@@ -119,7 +113,7 @@ public sealed class NodeMetadataService(
         await db.Nodes
             .Where(n => n.NodeId == nodeId)
             .ExecuteUpdateAsync(s => s.SetProperty(n => n.LastHeartbeat, heartbeatTime), ct);
-        cache.Remove($"metadata:node:{nodeId}");
+        await cache.RemoveAsync(CacheKeyHelper.Node(nodeId), ct);
     }
 
     public async Task<CreateNodeResult> CreateNodeAsync(CreateNodeRequest req, CancellationToken ct = default)

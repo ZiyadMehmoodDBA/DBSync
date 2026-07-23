@@ -1,17 +1,15 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
+using MSOSync.Common.Caching;
 using MSOSync.Persistence;
 using MSOSync.Persistence.Entities;
 
 namespace MSOSync.Metadata.Topology;
 
-public sealed class TopologyQueryService(AppDbContext db, IMemoryCache cache)
+public sealed class TopologyQueryService(AppDbContext db, ICacheService cache)
     : ITopologyQueryService
 {
-    private static readonly MemoryCacheEntryOptions CacheOptions = new()
-    {
-        AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(60)
-    };
+    private const int GraphTtlSeconds  = 60;
+    private const int GroupsTtlSeconds = 60;
 
     // Worst-of-members rule: Unreachable > Degraded > Unknown > Reachable; empty → Unknown
     private static ConnectivityStatus AggregateConnectivity(
@@ -39,11 +37,11 @@ public sealed class TopologyQueryService(AppDbContext db, IMemoryCache cache)
     }
 
     // ── GetTopologyGraphAsync ─────────────────────────────────────────────────
-    // 4 DB round-trips; result cached for 60 seconds under "topology:graph"
+    // 4 DB round-trips; result cached for 60 seconds
     public async Task<TopologyGraphDto> GetTopologyGraphAsync(CancellationToken ct)
     {
-        if (cache.TryGetValue("topology:graph", out TopologyGraphDto? cached))
-            return cached!;
+        var cached = await cache.GetAsync<TopologyGraphDto>(CacheKeyHelper.TopologyGraph(), ct);
+        if (cached is not null) return cached;
 
         // Round-trip 1: all node groups
         var groups = await db.NodeGroups.AsNoTracking()
@@ -119,7 +117,7 @@ public sealed class TopologyQueryService(AppDbContext db, IMemoryCache cache)
             nodeDtos, edgeDtos,
             new TopologyGraphMetaDto(groups.Count, totalNodes, onlineNodes, DateTimeOffset.UtcNow));
 
-        cache.Set("topology:graph", result, CacheOptions);
+        await cache.SetAsync(CacheKeyHelper.TopologyGraph(), result, TimeSpan.FromSeconds(GraphTtlSeconds), ct);
         return result;
     }
 
@@ -150,11 +148,11 @@ public sealed class TopologyQueryService(AppDbContext db, IMemoryCache cache)
     }
 
     // ── GetGroupsAsync ────────────────────────────────────────────────────────
-    // Result cached for 60 seconds under "topology:groups:v1"
+    // Result cached for 60 seconds
     public async Task<IReadOnlyList<TopologyGroupDto>> GetGroupsAsync(CancellationToken ct)
     {
-        if (cache.TryGetValue("topology:groups:v1", out IReadOnlyList<TopologyGroupDto>? cached))
-            return cached!;
+        var cached = await cache.GetAsync<IReadOnlyList<TopologyGroupDto>>(CacheKeyHelper.TopologyGroups(), ct);
+        if (cached is not null) return cached;
 
         var groups = await db.NodeGroups.AsNoTracking()
             .Select(g => new { g.GroupId, g.GroupName })
@@ -167,7 +165,7 @@ public sealed class TopologyQueryService(AppDbContext db, IMemoryCache cache)
         var nodesByGroup = nodes.GroupBy(n => n.GroupId)
             .ToDictionary(g => g.Key, g => g.Select(x => x.ConnectivityStatus).ToList());
 
-        var result = groups.Select(g =>
+        var result = (IReadOnlyList<TopologyGroupDto>)groups.Select(g =>
         {
             var statuses = nodesByGroup.TryGetValue(g.GroupId, out var s)
                 ? (IReadOnlyList<ConnectivityStatus>)s
@@ -175,7 +173,7 @@ public sealed class TopologyQueryService(AppDbContext db, IMemoryCache cache)
             return BuildGroupDto(g.GroupId, g.GroupName, statuses);
         }).ToList();
 
-        cache.Set("topology:groups:v1", (IReadOnlyList<TopologyGroupDto>)result, CacheOptions);
+        await cache.SetAsync(CacheKeyHelper.TopologyGroups(), result, TimeSpan.FromSeconds(GroupsTtlSeconds), ct);
         return result;
     }
 
@@ -216,7 +214,7 @@ public sealed class TopologyQueryService(AppDbContext db, IMemoryCache cache)
             })
             .ToListAsync(ct);
 
-        var nodes = rows.Select(n =>
+        return rows.Select(n =>
             new TopologyGroupNodeDto(
                 n.NodeId,
                 n.LifecycleState,
@@ -225,7 +223,5 @@ public sealed class TopologyQueryService(AppDbContext db, IMemoryCache cache)
                 n.LastProbeLatencyMs,
                 n.LifecycleState == NodeLifecycleState.Active && !n.MaintenanceMode)
         ).ToList();
-
-        return nodes;
     }
 }

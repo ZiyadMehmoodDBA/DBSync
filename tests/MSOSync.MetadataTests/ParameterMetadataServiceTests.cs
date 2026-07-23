@@ -1,8 +1,10 @@
 using FluentAssertions;
 using MediatR;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Options;
 using Moq;
 using MSOSync.Common;
+using MSOSync.Common.Caching;
 using MSOSync.Common.Exceptions;
 using MSOSync.Metadata.Audit;
 using MSOSync.Metadata.Events;
@@ -22,7 +24,9 @@ public sealed class ParameterMetadataServiceTests
         Mock<IAuditService>? auditMock = null)
     {
         db = TestDbContext.Create();
-        var cache = new MemoryCache(new MemoryCacheOptions());
+        var memCache  = new MemoryCache(new MemoryCacheOptions());
+        var cacheOpts = Options.Create(new CacheOptions { DefaultExpiry = TimeSpan.FromMinutes(5) });
+        ICacheService cache = new InMemoryCacheService(memCache, cacheOpts);
         var mediator = (mediatorMock ?? new Mock<IMediator>()).Object;
         var user = (userMock ?? new Mock<ICurrentUserService>()).Object;
         var audit = (auditMock ?? new Mock<IAuditService>()).Object;

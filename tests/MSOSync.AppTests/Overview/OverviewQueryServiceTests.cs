@@ -4,8 +4,10 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Moq;
 using MSOSync.App.Workers;
+using MSOSync.Common.Caching;
 using MSOSync.Metadata.Overview;
 using MSOSync.Persistence;
 using MSOSync.Persistence.Entities;
@@ -17,7 +19,8 @@ namespace MSOSync.AppTests.Overview;
 public sealed class OverviewQueryServiceTests : IDisposable
 {
     private readonly AppDbContext _db;
-    private readonly IMemoryCache _cache;
+    private readonly MemoryCache _memCache;
+    private readonly ICacheService _cache;
     private readonly WorkerStatusRegistry _registry;
     private readonly OverviewSnapshotCache _snapshotCache;
     private readonly IHostEnvironment _env;
@@ -27,8 +30,10 @@ public sealed class OverviewQueryServiceTests : IDisposable
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
-        _db = new AppDbContext(options);
-        _cache = new MemoryCache(new MemoryCacheOptions());
+        _db       = new AppDbContext(options);
+        _memCache = new MemoryCache(new MemoryCacheOptions());
+        var cacheOpts = Options.Create(new CacheOptions { DefaultExpiry = TimeSpan.FromMinutes(5) });
+        _cache        = new InMemoryCacheService(_memCache, cacheOpts);
         _snapshotCache = new OverviewSnapshotCache(_cache);
 
         var scopeFactory = new Mock<IServiceScopeFactory>();
@@ -119,13 +124,13 @@ public sealed class OverviewQueryServiceTests : IDisposable
         Assert.Same(first, second);
     }
 
-    // Test 5: Cache is invalidated after Invalidate() — second call returns new instance
+    // Test 5: Cache is invalidated after InvalidateAsync() — second call returns new instance
     [Fact]
     public async Task GetAsync_AfterInvalidate_ReturnsNewInstance()
     {
         var svc = CreateService();
         var first = await svc.GetAsync(CancellationToken.None);
-        _snapshotCache.Invalidate();
+        await _snapshotCache.InvalidateAsync();
         var second = await svc.GetAsync(CancellationToken.None);
 
         Assert.NotSame(first, second);
@@ -192,7 +197,7 @@ public sealed class OverviewQueryServiceTests : IDisposable
     public void Dispose()
     {
         _db.Dispose();
-        _cache.Dispose();
+        _memCache.Dispose();
     }
 }
 

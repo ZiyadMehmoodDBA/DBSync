@@ -1,7 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
 using MSOSync.Common;
+using MSOSync.Common.Caching;
 using MSOSync.Common.Exceptions;
 using MSOSync.Metadata.Audit;
 using MSOSync.Metadata.Descriptors;
@@ -15,16 +15,12 @@ namespace MSOSync.Metadata.Services;
 
 public sealed class ParameterMetadataService(
     AppDbContext db,
-    IMemoryCache cache,
+    ICacheService cache,
     IMediator mediator,
     ICurrentUserService currentUserService,
     IAuditService auditService) : IParameterMetadataService
 {
     private const string SecretMask = "*****";
-    private static readonly MemoryCacheEntryOptions CacheOptions = new()
-    {
-        AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(60)
-    };
 
     public async Task<IReadOnlyList<ParameterDto>> GetParametersAsync(string? category = null, CancellationToken ct = default)
     {
@@ -38,16 +34,15 @@ public sealed class ParameterMetadataService(
 
     public async Task<ParameterDto?> GetParameterAsync(string name, CancellationToken ct = default)
     {
-        var cacheKey = $"metadata:parameter:{name}";
-        if (cache.TryGetValue<ParameterDto>(cacheKey, out var cached))
-            return cached;
+        var cached = await cache.GetAsync<ParameterDto>(CacheKeyHelper.Parameter(name), ct);
+        if (cached is not null) return cached;
 
         var param = await db.Parameters.AsNoTracking()
             .FirstOrDefaultAsync(p => p.ParameterName == name && p.TenantId == null, ct);
         if (param == null) return null;
 
         var dto = Map(param);
-        cache.Set(cacheKey, dto, CacheOptions);
+        await cache.SetAsync(CacheKeyHelper.Parameter(name), dto, TimeSpan.FromSeconds(60), ct);
         return dto;
     }
 
@@ -73,7 +68,7 @@ public sealed class ParameterMetadataService(
 
         await db.SaveChangesAsync(ct);
 
-        cache.Remove($"metadata:parameter:{name}");
+        await cache.RemoveAsync(CacheKeyHelper.Parameter(name), ct);
 
         await auditService.WriteAsync(
             "PARAMETER_UPDATED",

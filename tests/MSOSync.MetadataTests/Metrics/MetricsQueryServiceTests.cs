@@ -1,5 +1,7 @@
 using FluentAssertions;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Options;
+using MSOSync.Common.Caching;
 using MSOSync.Metadata.Metrics;
 using MSOSync.Persistence;
 using MSOSync.Persistence.Entities;
@@ -10,17 +12,20 @@ namespace MSOSync.MetadataTests.Metrics;
 public sealed class MetricsQueryServiceTests : IDisposable
 {
     private readonly AppDbContext        _db;
-    private readonly IMemoryCache        _cache;
+    private readonly MemoryCache         _memCache;
+    private readonly ICacheService       _cache;
     private readonly MetricsQueryService _sut;
 
     public MetricsQueryServiceTests()
     {
-        _db    = TestDbContext.Create();
-        _cache = new MemoryCache(new MemoryCacheOptions());
-        _sut   = new MetricsQueryService(_db, _cache);
+        _db       = TestDbContext.Create();
+        _memCache = new MemoryCache(new MemoryCacheOptions());
+        var opts  = Options.Create(new CacheOptions { DefaultExpiry = TimeSpan.FromMinutes(5) });
+        _cache    = new InMemoryCacheService(_memCache, opts);
+        _sut      = new MetricsQueryService(_db, _cache);
     }
 
-    public void Dispose() { _db.Dispose(); _cache.Dispose(); }
+    public void Dispose() { _db.Dispose(); _memCache.Dispose(); }
 
     // ── Helpers ─────────────────────────────────────────────────────────────
 

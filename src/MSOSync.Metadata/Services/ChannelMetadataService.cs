@@ -1,6 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
+using MSOSync.Common.Caching;
 using MSOSync.Common.Exceptions;
 using MSOSync.Metadata.Dtos;
 using MSOSync.Metadata.Events;
@@ -12,13 +12,9 @@ namespace MSOSync.Metadata.Services;
 
 public sealed class ChannelMetadataService(
     AppDbContext db,
-    IMemoryCache cache,
+    ICacheService cache,
     IMediator mediator) : IChannelMetadataService
 {
-    private static readonly MemoryCacheEntryOptions CacheOptions = new()
-    {
-        AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(60)
-    };
 
     public async Task<IReadOnlyList<ChannelDto>> GetChannelsAsync(CancellationToken ct = default)
     {
@@ -28,16 +24,15 @@ public sealed class ChannelMetadataService(
 
     public async Task<ChannelDto?> GetChannelAsync(string channelId, CancellationToken ct = default)
     {
-        var cacheKey = $"metadata:channel:{channelId}";
-        if (cache.TryGetValue<ChannelDto>(cacheKey, out var cached))
-            return cached;
+        var cached = await cache.GetAsync<ChannelDto>(CacheKeyHelper.Channel(channelId), ct);
+        if (cached is not null) return cached;
 
         var channel = await db.Channels.AsNoTracking()
             .FirstOrDefaultAsync(c => c.ChannelId == channelId, ct);
         if (channel == null) return null;
 
         var dto = MapChannel(channel);
-        cache.Set(cacheKey, dto, CacheOptions);
+        await cache.SetAsync(CacheKeyHelper.Channel(channelId), dto, TimeSpan.FromSeconds(60), ct);
         return dto;
     }
 
@@ -72,7 +67,7 @@ public sealed class ChannelMetadataService(
         channel.MaxDataSize = req.MaxDataSize;
 
         await db.SaveChangesAsync(ct);
-        cache.Remove($"metadata:channel:{channelId}");
+        await cache.RemoveAsync(CacheKeyHelper.Channel(channelId), ct);
         await mediator.Publish(new ChannelMetadataChangedEvent(channelId, "UPDATED"), ct);
         return MapChannel(channel);
     }
@@ -84,7 +79,7 @@ public sealed class ChannelMetadataService(
 
         db.Channels.Remove(channel);
         await db.SaveChangesAsync(ct);
-        cache.Remove($"metadata:channel:{channelId}");
+        await cache.RemoveAsync(CacheKeyHelper.Channel(channelId), ct);
         await mediator.Publish(new ChannelMetadataChangedEvent(channelId, "DELETED"), ct);
     }
 

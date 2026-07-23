@@ -1,5 +1,7 @@
 using FluentAssertions;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Options;
+using MSOSync.Common.Caching;
 using MSOSync.Metadata.Topology;
 using MSOSync.Persistence;
 using MSOSync.Persistence.Entities;
@@ -11,9 +13,11 @@ public sealed class TopologyQueryServiceTests
 {
     private static TopologyQueryService Make(out Microsoft.EntityFrameworkCore.DbContext db)
     {
-        var ctx   = TestDbContext.Create();
-        var cache = new MemoryCache(new MemoryCacheOptions());
-        db = ctx;
+        var ctx      = TestDbContext.Create();
+        db           = ctx;
+        var memCache = new MemoryCache(new MemoryCacheOptions());
+        var opts     = Options.Create(new CacheOptions { DefaultExpiry = TimeSpan.FromMinutes(5) });
+        ICacheService cache = new InMemoryCacheService(memCache, opts);
         return new TopologyQueryService(ctx, cache);
     }
 

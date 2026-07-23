@@ -1,8 +1,10 @@
 using FluentAssertions;
 using MediatR;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Options;
 using Moq;
 using MSOSync.Common;
+using MSOSync.Common.Caching;
 using MSOSync.Common.Exceptions;
 using MSOSync.Metadata.Permissions;
 using MSOSync.Persistence;
@@ -14,15 +16,18 @@ namespace MSOSync.MetadataTests.Permissions;
 public sealed class PermissionServiceTests : IDisposable
 {
     private readonly AppDbContext               _db;
-    private readonly IMemoryCache               _cache;
+    private readonly MemoryCache                _memCache;
+    private readonly ICacheService              _cache;
     private readonly Mock<IMediator>            _mediator = new();
     private readonly Mock<ICurrentUserService>  _currentUser = new();
     private readonly PermissionService          _sut;
 
     public PermissionServiceTests()
     {
-        _db    = TestDbContext.Create();
-        _cache = new MemoryCache(new MemoryCacheOptions());
+        _db       = TestDbContext.Create();
+        _memCache = new MemoryCache(new MemoryCacheOptions());
+        var cacheOpts = Options.Create(new CacheOptions { DefaultExpiry = TimeSpan.FromMinutes(5) });
+        _cache    = new InMemoryCacheService(_memCache, cacheOpts);
 
         // Seed roles
         _db.Roles.AddRange(
@@ -227,10 +232,12 @@ public sealed class PermissionServiceTests : IDisposable
     {
         // Prime the cache
         await _sut.GetEffectivePermissionsAsync("alice");
-        _cache.TryGetValue("permissions:VIEWER", out _).Should().BeTrue();
+        var before = await _cache.GetAsync<IReadOnlyList<string>>(CacheKeyHelper.Permissions("VIEWER"));
+        before.Should().NotBeNull(); // cache was primed
 
         await _sut.GrantPermissionAsync("VIEWER", "EXPORT_DATA");
 
-        _cache.TryGetValue("permissions:VIEWER", out _).Should().BeFalse();
+        var after = await _cache.GetAsync<IReadOnlyList<string>>(CacheKeyHelper.Permissions("VIEWER"));
+        after.Should().BeNull(); // cache was evicted
     }
 }

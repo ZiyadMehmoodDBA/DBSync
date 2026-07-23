@@ -1,6 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
+using MSOSync.Common.Caching;
 using MSOSync.Common.Exceptions;
 using MSOSync.Metadata.Dtos;
 using MSOSync.Metadata.Events;
@@ -12,13 +12,9 @@ namespace MSOSync.Metadata.Services;
 
 public sealed class TriggerMetadataService(
     AppDbContext db,
-    IMemoryCache cache,
+    ICacheService cache,
     IMediator mediator) : ITriggerMetadataService
 {
-    private static readonly MemoryCacheEntryOptions CacheOptions = new()
-    {
-        AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(60)
-    };
 
     public async Task<IReadOnlyList<TriggerDto>> GetTriggersAsync(CancellationToken ct = default)
     {
@@ -28,16 +24,15 @@ public sealed class TriggerMetadataService(
 
     public async Task<TriggerDto?> GetTriggerAsync(string triggerId, CancellationToken ct = default)
     {
-        var cacheKey = $"metadata:trigger:{triggerId}";
-        if (cache.TryGetValue<TriggerDto>(cacheKey, out var cached))
-            return cached;
+        var cached = await cache.GetAsync<TriggerDto>(CacheKeyHelper.Trigger(triggerId), ct);
+        if (cached is not null) return cached;
 
         var trigger = await db.Triggers.AsNoTracking()
             .FirstOrDefaultAsync(t => t.TriggerId == triggerId, ct);
         if (trigger == null) return null;
 
         var dto = MapTrigger(trigger);
-        cache.Set(cacheKey, dto, CacheOptions);
+        await cache.SetAsync(CacheKeyHelper.Trigger(triggerId), dto, TimeSpan.FromSeconds(60), ct);
         return dto;
     }
 
@@ -100,7 +95,7 @@ public sealed class TriggerMetadataService(
         });
 
         await db.SaveChangesAsync(ct);
-        cache.Remove($"metadata:trigger:{triggerId}");
+        await cache.RemoveAsync(CacheKeyHelper.Trigger(triggerId), ct);
         await mediator.Publish(new TriggerMetadataChangedEvent(triggerId, "UPDATED"), ct);
         return MapTrigger(trigger);
     }
@@ -117,7 +112,7 @@ public sealed class TriggerMetadataService(
         db.Triggers.Remove(trigger);
 
         await db.SaveChangesAsync(ct);
-        cache.Remove($"metadata:trigger:{triggerId}");
+        await cache.RemoveAsync(CacheKeyHelper.Trigger(triggerId), ct);
         await mediator.Publish(new TriggerMetadataChangedEvent(triggerId, "DELETED"), ct);
     }
 
@@ -128,7 +123,7 @@ public sealed class TriggerMetadataService(
 
         trigger.Enabled = true;
         await db.SaveChangesAsync(ct);
-        cache.Remove($"metadata:trigger:{triggerId}");
+        await cache.RemoveAsync(CacheKeyHelper.Trigger(triggerId), ct);
         await mediator.Publish(new TriggerMetadataChangedEvent(triggerId, "ENABLED"), ct);
     }
 
@@ -139,7 +134,7 @@ public sealed class TriggerMetadataService(
 
         trigger.Enabled = false;
         await db.SaveChangesAsync(ct);
-        cache.Remove($"metadata:trigger:{triggerId}");
+        await cache.RemoveAsync(CacheKeyHelper.Trigger(triggerId), ct);
         await mediator.Publish(new TriggerMetadataChangedEvent(triggerId, "DISABLED"), ct);
     }
 
