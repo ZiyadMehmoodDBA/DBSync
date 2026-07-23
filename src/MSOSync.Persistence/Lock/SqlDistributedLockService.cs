@@ -3,7 +3,7 @@ using MSOSync.Common.Locks;
 
 namespace MSOSync.Persistence.Lock;
 
-public sealed class SqlDistributedLockService(AppDbContext db) : IDistributedLockService
+internal sealed class SqlDistributedLockService(AppDbContext db) : IDistributedLockService
 {
     private static readonly string Schema =
         Environment.GetEnvironmentVariable("MSOSYNC_SCHEMA") ?? "msosync";
