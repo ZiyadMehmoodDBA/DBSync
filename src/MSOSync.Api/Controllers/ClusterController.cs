@@ -6,6 +6,8 @@ using MSOSync.Metadata.Operations.Cluster;
 using MSOSync.Metadata.Operations.Cluster.Dtos;
 using MSOSync.Metadata.Operations.Cluster.HealthTrends;
 using MSOSync.Metadata.Operations.Cluster.HealthTrends.Dtos;
+using MSOSync.Metadata.Operations.Cluster.Recovery;
+using MSOSync.Metadata.Operations.Cluster.Recovery.Dtos;
 
 namespace MSOSync.Api.Controllers;
 
@@ -15,7 +17,8 @@ namespace MSOSync.Api.Controllers;
 public sealed class ClusterController(
     IClusterSummaryQueryService        summary,
     IClusterHealthTrendService         healthTrends,
-    IValidator<GetHealthTrendsRequest> healthTrendsValidator) : ControllerBase
+    IValidator<GetHealthTrendsRequest> healthTrendsValidator,
+    IRecoveryDashboardQueryService     recovery) : ControllerBase
 {
     [HttpGet("summary")]
     [ProducesResponseType(typeof(ClusterSummaryDto), 200)]
@@ -30,4 +33,9 @@ public sealed class ClusterController(
         await healthTrendsValidator.ValidateAndThrowAsync(req, ct);
         return Ok(await healthTrends.GetTrendsAsync(req.Window, req.NodeId, ct));
     }
+
+    [HttpGet("recovery")]
+    [ProducesResponseType(typeof(RecoveryDashboardDto), 200)]
+    public async Task<IActionResult> GetRecovery(CancellationToken ct)
+        => Ok(await recovery.GetRecoveryDashboardAsync(ct));
 }

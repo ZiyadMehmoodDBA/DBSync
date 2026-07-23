@@ -84,3 +84,40 @@ export interface ClusterHealthTrendDto {
   buckets: HealthBucketDto[];
   nodeProbeStats: NodeProbeStatsDto[];
 }
+
+// Phase 2B.4 — Recovery Dashboard
+export interface ReplayOpRefDto {
+  operationId: string;
+  status: string;
+  itemsDone: number;
+  itemsTotal: number;
+}
+
+export interface ActiveRecoveryDto {
+  nodeId: string;
+  failureDetectedAt: string | null;
+  recoveryStartedAt: string;
+  elapsedMinutes: number;
+  associatedReplayOps: ReplayOpRefDto[];
+}
+
+export interface CompletedRecoveryDto {
+  nodeId: string;
+  failureDetectedAt: string | null;
+  recoveryStartedAt: string;
+  restoredAt: string;
+  rtoMinutes: number;
+}
+
+export interface RecoverySummaryDto {
+  activeCount: number;
+  avgRtoMinutes: number | null;
+  maxRtoMinutes: number | null;
+  completedLast30Days: number;
+}
+
+export interface RecoveryDashboardDto {
+  summary: RecoverySummaryDto;
+  activeRecoveries: ActiveRecoveryDto[];
+  recentCompletedRecoveries: CompletedRecoveryDto[];
+}

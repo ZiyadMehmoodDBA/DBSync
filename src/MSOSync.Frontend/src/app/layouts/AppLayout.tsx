@@ -27,6 +27,7 @@ import {
   Monitor,
   Calendar,
   TrendingUp,
+  ShieldAlert,
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Separator } from '../../components/ui/separator';
@@ -59,6 +60,7 @@ const NAV_GROUPS: { heading: string | null; items: NavItem[] }[] = [
       { label: 'Jobs',          path: '/operations/jobs',          icon: Briefcase },
       { label: 'Cluster',        path: '/operations/cluster',              icon: Monitor },
       { label: 'Health Trends', path: '/operations/cluster/health-trends', icon: TrendingUp },
+      { label: 'Recovery',     path: '/operations/cluster/recovery',      icon: ShieldAlert },
       { label: 'Health',        path: '/operations/health',               icon: HeartPulse },
       { label: 'Activity',      path: '/operations/activity',      icon: Activity,    requiredPermission: PermissionKeys.ViewAudit },
       { label: 'Timeline',      path: '/operations/timeline',      icon: Calendar },

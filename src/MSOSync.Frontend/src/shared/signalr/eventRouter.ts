@@ -33,6 +33,7 @@ export async function routeToCache(
         queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] }),
         queryClient.invalidateQueries({ queryKey: clusterKeys.summary }),
         queryClient.invalidateQueries({ queryKey: ['cluster', 'health-trends'] }),
+        queryClient.invalidateQueries({ queryKey: clusterKeys.recovery }),
       ]);
       return;
     case OperationsEventType.NodeMaintenanceChanged:
