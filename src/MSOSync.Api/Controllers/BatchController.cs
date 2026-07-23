@@ -1,11 +1,13 @@
 using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using MSOSync.Api.Dtos.Batches;
 using MSOSync.Api.Dtos.Common;
 using MSOSync.Api.Validators;
 using MSOSync.Batch;
 using MSOSync.Common;
+using MSOSync.Common.Locks;
 using MSOSync.Metadata.Export;
 using MSOSync.Metadata.OutgoingBatches;
 using MSOSync.Persistence.Lock;
@@ -15,14 +17,15 @@ namespace MSOSync.Api.Controllers;
 [ApiController]
 [Route("api/v1/batches")]
 public sealed class BatchController(
-    IOutgoingBatchQueryService batchQuery,
-    IBatchStateMachine stateMachine,
-    RetryProcessor retryProcessor,
-    ICurrentUserService currentUser,
-    IDatabaseLockProvider lockProvider,
+    IOutgoingBatchQueryService              batchQuery,
+    IBatchStateMachine                      stateMachine,
+    RetryProcessor                          retryProcessor,
+    ICurrentUserService                     currentUser,
+    IDistributedLockService                 lockService,
+    IOptions<DistributedLockOptions>        lockOptions,
     IExportService<OutgoingBatchExportFilter> exporter,
-    IExportAuditService exportAudit,
-    OutgoingBatchExportFilterValidator exportFilterValidator) : ControllerBase
+    IExportAuditService                     exportAudit,
+    OutgoingBatchExportFilterValidator      exportFilterValidator) : ControllerBase
 {
     [HttpGet]
     [Authorize]
@@ -86,16 +89,16 @@ public sealed class BatchController(
     [ProducesResponseType(typeof(CodeMessageResponse), 409)]
     public async Task<IActionResult> RetryAll(CancellationToken ct)
     {
-        var lease = await lockProvider.TryAcquireAsync(LockNames.RetryEngine, ct);
-        if (lease == null)
+        var owner = $"{Environment.MachineName}:{Environment.ProcessId}";
+        await using var handle = await lockService.TryAcquireAsync(
+            LockNames.RetryEngine, owner, lockOptions.Value.DefaultExpiry, ct);
+
+        if (handle == null)
             return Conflict(new CodeMessageResponse(
                 "LOCK_UNAVAILABLE", "Retry engine is currently running. Try again shortly."));
 
-        await using (lease)
-        {
-            var count = await retryProcessor.ProcessAsync(ct);
-            return Ok(new RetryAllResponse(count, DateTime.UtcNow, currentUser.GetCurrentUsername()));
-        }
+        var count = await retryProcessor.ProcessAsync(ct);
+        return Ok(new RetryAllResponse(count, DateTime.UtcNow, currentUser.GetCurrentUsername()));
     }
 
     [HttpGet("export")]

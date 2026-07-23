@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using MSOSync.Common.Locks;
 using MSOSync.Common.Workers;
 using MSOSync.Engine;
 using MSOSync.Persistence.Lock;
@@ -36,12 +37,16 @@ public sealed class SyncJob(
         registry.RecordTickStart(nameof(SyncJob));
         try
         {
-            await using var scope = scopeFactory.CreateAsyncScope();
-            var lockProvider = scope.ServiceProvider.GetRequiredService<IDatabaseLockProvider>();
-            var engine       = scope.ServiceProvider.GetRequiredService<SyncEngine>();
+            await using var scope       = scopeFactory.CreateAsyncScope();
+            var lockService = scope.ServiceProvider.GetRequiredService<IDistributedLockService>();
+            var lockOptions = scope.ServiceProvider.GetRequiredService<IOptions<DistributedLockOptions>>();
+            var engine      = scope.ServiceProvider.GetRequiredService<SyncEngine>();
 
-            await using var lease = await lockProvider.TryAcquireAsync(LockNames.SyncEngine, ct);
-            if (lease == null)
+            var owner = $"{Environment.MachineName}:{Environment.ProcessId}";
+            await using var handle = await lockService.TryAcquireAsync(
+                LockNames.SyncEngine, owner, lockOptions.Value.DefaultExpiry, ct);
+
+            if (handle == null)
             {
                 logger.LogDebug("SyncJob: lock held by another instance, skipping tick");
                 registry.RecordTickComplete(nameof(SyncJob));

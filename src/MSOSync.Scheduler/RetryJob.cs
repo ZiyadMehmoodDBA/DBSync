@@ -1,7 +1,9 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using MSOSync.Batch;
+using MSOSync.Common.Locks;
 using MSOSync.Common.Workers;
 using MSOSync.Persistence.Lock;
 
@@ -34,12 +36,16 @@ public sealed class RetryJob(
         registry.RecordTickStart(nameof(RetryJob));
         try
         {
-            await using var scope        = scopeFactory.CreateAsyncScope();
-            var lockProvider = scope.ServiceProvider.GetRequiredService<IDatabaseLockProvider>();
-            var processor    = scope.ServiceProvider.GetRequiredService<RetryProcessor>();
+            await using var scope       = scopeFactory.CreateAsyncScope();
+            var lockService = scope.ServiceProvider.GetRequiredService<IDistributedLockService>();
+            var lockOptions = scope.ServiceProvider.GetRequiredService<IOptions<DistributedLockOptions>>();
+            var processor   = scope.ServiceProvider.GetRequiredService<RetryProcessor>();
 
-            await using var lease = await lockProvider.TryAcquireAsync(LockNames.RetryEngine, ct);
-            if (lease == null)
+            var owner = $"{Environment.MachineName}:{Environment.ProcessId}";
+            await using var handle = await lockService.TryAcquireAsync(
+                LockNames.RetryEngine, owner, lockOptions.Value.DefaultExpiry, ct);
+
+            if (handle == null)
             {
                 logger.LogDebug("RetryJob: lock held, skipping");
                 registry.RecordTickComplete(nameof(RetryJob));

@@ -9,7 +9,7 @@ public sealed class LockAdminService(AppDbContext db) : ILockAdminService
     {
         return await db.Locks.AsNoTracking()
             .OrderBy(l => l.LockName)
-            .Select(l => new LockDto(l.LockName, l.LockOwner, l.LockTime))
+            .Select(l => new LockDto(l.LockName, l.LockOwner, l.LockTime, l.LockExpiry))
             .ToListAsync(ct);
     }
 
