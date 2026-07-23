@@ -14,6 +14,7 @@
     <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" />
     <PackageReference Include="Moq" />
     <PackageReference Include="Testcontainers.MsSql" />
+    <PackageReference Include="Testcontainers.Redis" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\MSOSync.Persistence\MSOSync.Persistence.csproj" />

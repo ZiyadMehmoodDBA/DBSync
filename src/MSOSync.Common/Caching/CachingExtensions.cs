@@ -1,5 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using StackExchange.Redis;
 
 namespace MSOSync.Common.Caching;
 
@@ -33,14 +35,22 @@ public static class CachingExtensions
         return services;
     }
 
-    // Partial method — filled in by Task 2 when RedisCacheService exists.
-    // Declared as a separate private method so Task 2 can replace the body
-    // without touching the public method signature.
     private static void RegisterRedis(IServiceCollection services)
     {
-        // Task 2 replaces this body with Redis registration.
-        // For Task 1, this path is unreachable when Provider=Memory (the default).
-        throw new InvalidOperationException(
-            "Redis provider is not yet wired. Add RedisCacheService (Task 2) first.");
+        services.AddSingleton<IConnectionMultiplexer>(sp =>
+        {
+            var opts = sp.GetRequiredService<IOptions<CacheOptions>>().Value;
+
+            if (string.IsNullOrWhiteSpace(opts.RedisConnectionString))
+                throw new InvalidOperationException(
+                    "Cache:RedisConnectionString must be set when Cache:Provider is \"Redis\".");
+
+            return ConnectionMultiplexer.Connect(opts.RedisConnectionString);
+        });
+
+        services.AddSingleton<ICacheService, RedisCacheService>();
+
+        services.AddHealthChecks()
+            .AddCheck<RedisCacheHealthCheck>("redis-cache");
     }
 }
