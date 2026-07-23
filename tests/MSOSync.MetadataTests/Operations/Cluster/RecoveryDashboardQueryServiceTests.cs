@@ -162,4 +162,109 @@ public sealed class RecoveryDashboardQueryServiceTests : IDisposable
         active.AssociatedReplayOps[0].ItemsTotal.Should().Be(2);
         active.AssociatedReplayOps[0].ItemsDone.Should().Be(1);
     }
+
+    /// <summary>
+    /// Bug 1 regression: a StandardSync operation that has an associated SyncReplayRequest row
+    /// must NOT be counted as a replay op — only BatchReplay operations qualify.
+    /// </summary>
+    [Fact]
+    public async Task GetRecoveryDashboardAsync_NonBatchReplayOperation_ExcludedFromReplayOps()
+    {
+        var tenantId      = Guid.Empty;
+        var recoveryStart = DateTimeOffset.UtcNow.AddHours(-2);
+
+        _db.Nodes.Add(new SyncNode { NodeId = "replay-filter-node", GroupId = "grp", SyncUrl = "http://rf.local", LifecycleState = NodeLifecycleState.Recovery, TenantId = tenantId });
+        _db.NodeLifecycleHistories.Add(new SyncNodeLifecycleHistory { NodeId = "replay-filter-node", FromState = NodeLifecycleState.Active, ToState = NodeLifecycleState.Recovery, Trigger = LifecycleTrigger.System, Actor = "system", OccurredAt = recoveryStart, TenantId = tenantId });
+
+        // Valid BatchReplay operation — should appear in results
+        var validOpId = Guid.NewGuid();
+        _db.Operations.Add(new SyncOperation
+        {
+            OperationId   = validOpId,
+            OperationType = "BatchReplay",
+            Status        = "Completed",
+            Source        = "Worker",
+            StartedAt     = recoveryStart.AddMinutes(5).UtcDateTime,
+            TenantId      = tenantId,
+        });
+        _db.ReplayRequests.Add(new SyncReplayRequest
+        {
+            ReplayId    = Guid.NewGuid(),
+            OperationId = validOpId,
+            NodeId      = "replay-filter-node",
+            ReplayMode  = "FailedDelivery",
+            FromTime    = recoveryStart.UtcDateTime,
+            ToTime      = recoveryStart.AddHours(1).UtcDateTime,
+            TenantId    = tenantId,
+        });
+
+        // Non-BatchReplay operation that also has a SyncReplayRequest row — must be excluded
+        var spuriousOpId = Guid.NewGuid();
+        _db.Operations.Add(new SyncOperation
+        {
+            OperationId   = spuriousOpId,
+            OperationType = "StandardSync",
+            Status        = "Completed",
+            Source        = "Worker",
+            StartedAt     = recoveryStart.AddMinutes(10).UtcDateTime,
+            TenantId      = tenantId,
+        });
+        _db.ReplayRequests.Add(new SyncReplayRequest
+        {
+            ReplayId    = Guid.NewGuid(),
+            OperationId = spuriousOpId,
+            NodeId      = "replay-filter-node",
+            ReplayMode  = "MissedData",
+            FromTime    = recoveryStart.UtcDateTime,
+            ToTime      = recoveryStart.AddHours(1).UtcDateTime,
+            TenantId    = tenantId,
+        });
+
+        await _db.SaveChangesAsync();
+
+        var result = await _svc.GetRecoveryDashboardAsync(default);
+
+        var active = result.ActiveRecoveries.FirstOrDefault(r => r.NodeId == "replay-filter-node");
+        active.Should().NotBeNull();
+        active!.AssociatedReplayOps.Should().HaveCount(1, "only BatchReplay ops should be included");
+        active.AssociatedReplayOps[0].OperationId.Should().Be(validOpId);
+    }
+
+    /// <summary>
+    /// Bug 2 regression: a Draining→Active transition must NOT be counted as a completed recovery.
+    /// Only Recovery→Active transitions qualify.
+    /// </summary>
+    [Fact]
+    public async Task GetRecoveryDashboardAsync_NonRecoveryToActiveTransition_NotCountedAsCompletedRecovery()
+    {
+        var tenantId   = Guid.Empty;
+        var exitedAt   = DateTimeOffset.UtcNow.AddDays(-1);
+
+        // Node that went Draining→Active — should NOT appear in completed recoveries
+        _db.Nodes.Add(new SyncNode
+        {
+            NodeId         = "draining-node",
+            GroupId        = "grp",
+            SyncUrl        = "http://drain.local",
+            LifecycleState = NodeLifecycleState.Active,
+            TenantId       = tenantId,
+        });
+        _db.NodeLifecycleHistories.Add(new SyncNodeLifecycleHistory
+        {
+            NodeId     = "draining-node",
+            FromState  = NodeLifecycleState.Draining,
+            ToState    = NodeLifecycleState.Active,
+            Trigger    = LifecycleTrigger.Manual,
+            Actor      = "admin",
+            OccurredAt = exitedAt,
+            TenantId   = tenantId,
+        });
+        await _db.SaveChangesAsync();
+
+        var result = await _svc.GetRecoveryDashboardAsync(default);
+
+        result.RecentCompletedRecoveries.Should().NotContain(r => r.NodeId == "draining-node",
+            "Draining→Active transitions must not be treated as completed recoveries");
+        result.Summary.CompletedLast30Days.Should().Be(0);
+    }
 }

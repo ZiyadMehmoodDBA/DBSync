@@ -58,9 +58,10 @@ public sealed class RecoveryDashboardQueryService(AppDbContext db) : IRecoveryDa
             var thirtyDaysAgo = DateTime.UtcNow.AddDays(-30);
             var replayOps = await db.Operations
                 .AsNoTracking()
+                .Where(o => o.OperationType == "BatchReplay" && o.StartedAt >= thirtyDaysAgo)
                 .Join(db.ReplayRequests, o => o.OperationId, r => r.OperationId,
                       (o, r) => new { o.OperationId, r.NodeId, o.Status, o.StartedAt })
-                .Where(x => recoveryNodeIds.Contains(x.NodeId) && x.StartedAt >= thirtyDaysAgo)
+                .Where(x => recoveryNodeIds.Contains(x.NodeId))
                 .ToListAsync(ct);
 
             replayOpInfos.AddRange(replayOps.Select(x =>
@@ -111,7 +112,7 @@ public sealed class RecoveryDashboardQueryService(AppDbContext db) : IRecoveryDa
         var thirtyDaysAgoDO = DateTimeOffset.UtcNow.AddDays(-30);
         var activeTransitions = await db.NodeLifecycleHistories
             .AsNoTracking()
-            .Where(h => h.ToState == NodeLifecycleState.Active && h.OccurredAt >= thirtyDaysAgoDO)
+            .Where(h => h.FromState == NodeLifecycleState.Recovery && h.ToState == NodeLifecycleState.Active && h.OccurredAt >= thirtyDaysAgoDO)
             .Select(h => new { h.NodeId, RestoredAt = h.OccurredAt })
             .ToListAsync(ct);
 
