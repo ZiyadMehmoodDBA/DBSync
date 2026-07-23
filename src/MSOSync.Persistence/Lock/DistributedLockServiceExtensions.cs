@@ -13,8 +13,19 @@ public static class DistributedLockServiceExtensions
         services.Configure<DistributedLockOptions>(
             configuration.GetSection(DistributedLockOptions.SectionName));
 
-        // Redis branch added in Task 3 once RedisDistributedLockService exists.
-        services.AddScoped<IDistributedLockService, SqlDistributedLockService>();
+        var provider = configuration
+            .GetSection(DistributedLockOptions.SectionName)["Provider"] ?? "Sql";
+
+        if (provider.Equals("Redis", StringComparison.OrdinalIgnoreCase))
+        {
+            // IConnectionMultiplexer must already be registered by the caller
+            // (e.g., via AddSingleton<IConnectionMultiplexer>(...) in Phase 2D.1 Redis setup).
+            services.AddScoped<IDistributedLockService, RedisDistributedLockService>();
+        }
+        else
+        {
+            services.AddScoped<IDistributedLockService, SqlDistributedLockService>();
+        }
 
         return services;
     }
