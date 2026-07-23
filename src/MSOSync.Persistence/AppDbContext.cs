@@ -65,6 +65,7 @@ public class AppDbContext : DbContext
     public DbSet<SyncNotification>     Notifications     => Set<SyncNotification>();
     public DbSet<SyncUserNotification> UserNotifications => Set<SyncUserNotification>();
     public DbSet<SyncPlugin>           Plugins           => Set<SyncPlugin>();
+    public DbSet<SyncMarketplaceCache> MarketplaceCache  => Set<SyncMarketplaceCache>();
     public DbSet<Tenant>               Tenants           => Set<Tenant>();
     public DbSet<TenantMembership>     TenantMemberships => Set<TenantMembership>();
 
