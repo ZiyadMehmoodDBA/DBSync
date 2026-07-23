@@ -121,3 +121,36 @@ export interface RecoveryDashboardDto {
   activeRecoveries: ActiveRecoveryDto[];
   recentCompletedRecoveries: CompletedRecoveryDto[];
 }
+
+// Phase 2B.4 — Cluster Diagnostics
+export interface RuntimeStatsDto {
+  statId: number;
+  heapUsedMb: number | null;
+  heapMaxMb: number | null;
+  cpuPercent: number | null;
+  threadCount: number | null;
+  gcCount: number | null;
+  uptimeHours: number | null;
+  capturedAt: string;
+}
+
+export interface ActiveLockDto {
+  lockName: string;
+  lockOwner: string;
+  ageSeconds: number;
+  isStale: boolean;
+}
+
+export interface SlowOperationDto {
+  operationId: string;
+  operationType: string;
+  status: string;
+  durationMinutes: number;
+  progressPercent: number | null;
+}
+
+export interface ClusterDiagnosticsDto {
+  runtimeStats: RuntimeStatsDto[];
+  activeLocks: ActiveLockDto[];
+  slowOperations: SlowOperationDto[];
+}

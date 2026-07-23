@@ -23,6 +23,7 @@ using MSOSync.Metadata.Notifications;
 using MSOSync.Metadata.Operations;
 using MSOSync.Metadata.Operations.Cluster;
 using MSOSync.Metadata.Operations.Cluster.HealthTrends;
+using MSOSync.Metadata.Operations.Cluster.Diagnostics;
 using MSOSync.Metadata.Operations.Cluster.Recovery;
 using MSOSync.Metadata.Operations.Timeline;
 using MSOSync.Metadata.Operations.Handlers;
@@ -167,8 +168,9 @@ public static class MetadataServiceExtensions
         services.AddScoped<IOperationTimelineService, OperationTimelineService>();
 
         // Phase 2B.4 — Cluster Health, Recovery, Diagnostics
-        services.AddScoped<IClusterHealthTrendService,     ClusterHealthTrendService>();
-        services.AddScoped<IRecoveryDashboardQueryService, RecoveryDashboardQueryService>(); // Task 2
+        services.AddScoped<IClusterHealthTrendService,      ClusterHealthTrendService>();
+        services.AddScoped<IRecoveryDashboardQueryService,  RecoveryDashboardQueryService>();  // Task 2
+        services.AddScoped<IClusterDiagnosticsQueryService, ClusterDiagnosticsQueryService>(); // Task 3
 
         // Epic 13 — Notifications
         services.AddScoped<INotificationService, NotificationService>();

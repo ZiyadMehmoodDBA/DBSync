@@ -1,11 +1,12 @@
 import client from './client';
-import type { ClusterSummaryDto, ClusterHealthTrendDto, RecoveryDashboardDto } from '../types/cluster';
+import type { ClusterSummaryDto, ClusterHealthTrendDto, RecoveryDashboardDto, ClusterDiagnosticsDto } from '../types/cluster';
 
 export const clusterKeys = {
   summary:      ['cluster', 'summary']                                              as const,
   healthTrends: (window: string, nodeId?: string) =>
                   ['cluster', 'health-trends', window, nodeId ?? null]              as const,
   recovery:     ['cluster', 'recovery']                                             as const,
+  diagnostics:  ['cluster', 'diagnostics']                                          as const,
 } as const;
 
 export async function getClusterSummary(options?: { signal?: AbortSignal }): Promise<ClusterSummaryDto> {
@@ -26,5 +27,10 @@ export async function getHealthTrends(
 
 export async function getRecoveryDashboard(options?: { signal?: AbortSignal }): Promise<RecoveryDashboardDto> {
   const { data } = await client.get<RecoveryDashboardDto>('/cluster/recovery', options);
+  return data;
+}
+
+export async function getClusterDiagnostics(options?: { signal?: AbortSignal }): Promise<ClusterDiagnosticsDto> {
+  const { data } = await client.get<ClusterDiagnosticsDto>('/cluster/diagnostics', options);
   return data;
 }

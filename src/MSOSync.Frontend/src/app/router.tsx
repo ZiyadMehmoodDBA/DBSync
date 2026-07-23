@@ -46,6 +46,7 @@ import { PluginsPage } from '../features/plugins/PluginsPage';
 import ClusterPage from '../features/operations/cluster/ClusterPage';
 import HealthTrendsPage from '../features/operations/cluster/HealthTrendsPage';
 import RecoveryDashboardPage from '../features/operations/cluster/RecoveryDashboardPage';
+import ClusterDiagnosticsPage from '../features/operations/cluster/ClusterDiagnosticsPage';
 import TimelinePage from '../features/operations/timeline/TimelinePage';
 
 function RoleBasedRedirect() {
@@ -86,6 +87,7 @@ export const router = createBrowserRouter([
               { path: 'operations/cluster',                    element: <ClusterPage /> },
               { path: 'operations/cluster/health-trends',    element: <HealthTrendsPage /> },
               { path: 'operations/cluster/recovery',         element: <RecoveryDashboardPage /> },
+              { path: 'operations/cluster/diagnostics',      element: <ClusterDiagnosticsPage /> },
               { path: 'operations/health',                   element: <HealthPage /> },
               {
                 path: 'operations/activity',
