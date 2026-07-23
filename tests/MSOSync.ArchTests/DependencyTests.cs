@@ -63,4 +63,40 @@ public class DependencyTests
             "Domain modules must not depend on MSOSync.Api or MSOSync.App. " +
             "Failing types: " + string.Join(", ", result.FailingTypeNames ?? []));
     }
+
+    [Fact]
+    public void Metadata_MustNotDirectlyReferenceStackExchangeRedis()
+    {
+        var outputDir = Path.GetDirectoryName(typeof(DependencyTests).Assembly.Location)!;
+        var path = Path.Combine(outputDir, "MSOSync.Metadata.dll");
+        if (File.Exists(path)) Assembly.LoadFrom(path);
+
+        var result = Types.InNamespace("MSOSync.Metadata")
+            .ShouldNot()
+            .HaveDependencyOn("StackExchange.Redis")
+            .GetResult();
+
+        Assert.True(result.IsSuccessful,
+            "MSOSync.Metadata must not reference StackExchange.Redis directly. " +
+            "All Redis code must go through ICacheService in MSOSync.Common. " +
+            "Failing types: " + string.Join(", ", result.FailingTypeNames ?? []));
+    }
+
+    [Fact]
+    public void Api_MustNotDirectlyReferenceStackExchangeRedis()
+    {
+        var outputDir = Path.GetDirectoryName(typeof(DependencyTests).Assembly.Location)!;
+        var path = Path.Combine(outputDir, "MSOSync.Api.dll");
+        if (File.Exists(path)) Assembly.LoadFrom(path);
+
+        var result = Types.InNamespace("MSOSync.Api")
+            .ShouldNot()
+            .HaveDependencyOn("StackExchange.Redis")
+            .GetResult();
+
+        Assert.True(result.IsSuccessful,
+            "MSOSync.Api must not reference StackExchange.Redis directly. " +
+            "All Redis code must go through ICacheService in MSOSync.Common. " +
+            "Failing types: " + string.Join(", ", result.FailingTypeNames ?? []));
+    }
 }
