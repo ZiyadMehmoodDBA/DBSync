@@ -131,3 +131,16 @@ New controller endpoints (no new controllers):
 - `GET /api/v1/audit?Usernames=&ActionNames=&ObjectNames=` → `AuditController` (extended)
 - `GET /api/v1/audit/entity/{objectName}` → `AuditController` (new endpoint)
 - `GET /api/v1/operations/timeline?from=&to=&types=&limit=` → `OperationsController` (extended)
+
+### Phase 2B.4 — Cluster Health, Recovery, Diagnostics
+
+| Service | Interface | Project | Notes |
+|---|---|---|---|
+| `ClusterHealthTrendService` | `IClusterHealthTrendService` | MSOSync.Metadata | Aggregates `SyncNodeConnectivityHistory` into time-bucketed trends; window params: 1h/6h/24h/7d; per-node UptimePct and ConsecutiveProbeFailures |
+| `RecoveryDashboardQueryService` | `IRecoveryDashboardQueryService` | MSOSync.Metadata | Correlates `SyncNodeLifecycleHistory` + `SyncNodeConnectivityHistory` + `SyncOperation/ReplayItem` for RTO tracking; active and completed recoveries |
+| `ClusterDiagnosticsQueryService` | `IClusterDiagnosticsQueryService` | MSOSync.Metadata | Queries `SyncRuntimeStats` (TOP 50, desc), `SyncLock` (active + stale detection), `SyncOperation` Running/Pending (TOP 20, asc) |
+
+New controller endpoints (on existing `ClusterController`):
+- `GET /api/v1/cluster/health-trends?window=&nodeId=` → `ClusterController`
+- `GET /api/v1/cluster/recovery` → `ClusterController`
+- `GET /api/v1/cluster/diagnostics` → `ClusterController`
