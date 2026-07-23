@@ -31,7 +31,7 @@ public static class PersistenceServiceExtensions
         services.AddScoped<GetNodeSecurityQuery>();
         services.AddScoped<GetUserByUsernameQuery>();
 
-        services.AddScoped<IDatabaseLockProvider, DatabaseLockProvider>();
+        services.AddDistributedLocks(configuration);
 
         // Tenancy repositories (internal types — registered here to stay within the assembly)
         services.AddScoped<IHybridLookupService, HybridLookupService>();

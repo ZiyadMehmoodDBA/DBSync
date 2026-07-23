@@ -12,6 +12,7 @@
     <PackageReference Include="FluentAssertions" />
     <PackageReference Include="Moq" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />
+    <PackageReference Include="Testcontainers.MsSql" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\MSOSync.Common\MSOSync.Common.csproj" />

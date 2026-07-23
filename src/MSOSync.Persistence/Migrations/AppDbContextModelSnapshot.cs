@@ -652,6 +652,10 @@ namespace MSOSync.Persistence.Migrations
                         .HasColumnType("datetime2(7)")
                         .HasColumnName("lock_time");
 
+                    b.Property<DateTime?>("LockExpiry")
+                        .HasColumnType("datetime2(7)")
+                        .HasColumnName("lock_expiry");
+
                     b.HasKey("LockName");
 
                     b.ToTable("sync_lock", "msosync");

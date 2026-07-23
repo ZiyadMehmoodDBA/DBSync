@@ -17,6 +17,7 @@ public sealed class SyncLockConfiguration : IEntityTypeConfiguration<SyncLock>
         builder.Property(e => e.LockName).HasColumnName("lock_name").HasColumnType("varchar(50)").HasMaxLength(50).IsUnicode(false);
         builder.Property(e => e.LockOwner).HasColumnName("lock_owner").HasColumnType("varchar(50)").HasMaxLength(50).IsUnicode(false);
         builder.Property(e => e.LockTime).HasColumnName("lock_time").HasColumnType("datetime2(7)");
+        builder.Property(e => e.LockExpiry).HasColumnName("lock_expiry").HasColumnType("datetime2(7)");
 
         // M031 — lock scope (0 = Platform, 1 = Tenant)
         builder.Property(e => e.Scope)
