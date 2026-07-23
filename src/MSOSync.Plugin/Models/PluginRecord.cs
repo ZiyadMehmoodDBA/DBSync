@@ -10,6 +10,11 @@ public sealed class PluginRecord
     public DateTime InstalledAt   { get; set; }
     public DateTime LastSeenAt    { get; set; }
     public string?  LastError     { get; set; }
-    public string?  ManifestHash  { get; set; }
-    public string?  HostVersion   { get; set; }
+    public string?  ManifestHash       { get; set; }
+    public string?  HostVersion        { get; set; }
+    // 2C.1 packaging additions:
+    public string?  PackageHash        { get; set; }
+    public string?  SignedBy           { get; set; }
+    public string?  SignatureAlgorithm { get; set; }
+    public bool     IsPackageInstall   { get; set; }
 }

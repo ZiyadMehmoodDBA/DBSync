@@ -13,6 +13,11 @@ public sealed class SyncPlugin
     public DateTime InstalledAt   { get; set; }
     public DateTime LastSeenAt    { get; set; }
     public string?  LastError     { get; set; }
-    public string?  ManifestHash  { get; set; }
-    public string?  HostVersion   { get; set; }
+    public string?  ManifestHash       { get; set; }
+    public string?  HostVersion        { get; set; }
+    // 2C.1 packaging additions:
+    public string?  PackageHash        { get; set; }   // SHA-256 of the .msopkg file
+    public string?  SignedBy           { get; set; }   // publicKeyId from signature block, null if unsigned
+    public string?  SignatureAlgorithm { get; set; }   // "RSA-PSS-SHA256" or null if unsigned
+    public bool     IsPackageInstall   { get; set; }   // true = installed via .msopkg, false = directory-based
 }

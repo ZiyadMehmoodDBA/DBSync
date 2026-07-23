@@ -61,5 +61,26 @@ public sealed class SyncPluginConfiguration : IEntityTypeConfiguration<SyncPlugi
             .HasColumnName("host_version")
             .HasColumnType("nvarchar(50)")
             .HasMaxLength(50);
+
+        // 2C.1 packaging additions:
+        builder.Property(e => e.PackageHash)
+            .HasColumnName("package_hash")
+            .HasColumnType("nvarchar(64)")
+            .HasMaxLength(64);
+
+        builder.Property(e => e.SignedBy)
+            .HasColumnName("signed_by")
+            .HasColumnType("nvarchar(200)")
+            .HasMaxLength(200);
+
+        builder.Property(e => e.SignatureAlgorithm)
+            .HasColumnName("signature_algorithm")
+            .HasColumnType("nvarchar(50)")
+            .HasMaxLength(50);
+
+        builder.Property(e => e.IsPackageInstall)
+            .HasColumnName("is_package_install")
+            .HasColumnType("bit")
+            .HasDefaultValue(false);
     }
 }

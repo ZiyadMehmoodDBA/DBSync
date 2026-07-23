@@ -1610,6 +1610,86 @@ namespace MSOSync.Persistence.Migrations
                     b.ToTable("sync_permission", "msosync");
                 });
 
+            modelBuilder.Entity("MSOSync.Persistence.Entities.SyncPlugin", b =>
+                {
+                    b.Property<string>("PluginId")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("plugin_id");
+
+                    b.Property<string>("PluginName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("plugin_name");
+
+                    b.Property<string>("PluginVersion")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("plugin_version");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("status");
+
+                    b.Property<bool>("Enabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true)
+                        .HasColumnName("enabled");
+
+                    b.Property<DateTime>("InstalledAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("installed_at");
+
+                    b.Property<DateTime>("LastSeenAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("last_seen_at");
+
+                    b.Property<string>("LastError")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)")
+                        .HasColumnName("last_error");
+
+                    b.Property<string>("ManifestHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)")
+                        .HasColumnName("manifest_hash");
+
+                    b.Property<string>("HostVersion")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("host_version");
+
+                    b.Property<string>("PackageHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)")
+                        .HasColumnName("package_hash");
+
+                    b.Property<string>("SignedBy")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("signed_by");
+
+                    b.Property<string>("SignatureAlgorithm")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("signature_algorithm");
+
+                    b.Property<bool>("IsPackageInstall")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_package_install");
+
+                    b.HasKey("PluginId");
+
+                    b.ToTable("sync_plugin", "msosync");
+                });
+
             modelBuilder.Entity("MSOSync.Persistence.Entities.SyncRegistrationRequest", b =>
                 {
                     b.Property<long>("RequestId")
