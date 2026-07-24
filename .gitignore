@@ -39,3 +39,6 @@ Thumbs.db
 # Code coverage output
 coverage-baseline/
 coverage/
+
+# NuGet local packages
+.nuget-local/
