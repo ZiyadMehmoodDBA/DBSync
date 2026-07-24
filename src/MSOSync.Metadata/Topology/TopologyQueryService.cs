@@ -1,15 +1,27 @@
 using Microsoft.EntityFrameworkCore;
-using MSOSync.Common.Caching;
+using Microsoft.Extensions.Caching.Memory;
+using MSOSync.Common.Pagination;
+using MSOSync.Metadata.Pagination;
 using MSOSync.Persistence;
 using MSOSync.Persistence.Entities;
 
 namespace MSOSync.Metadata.Topology;
 
-public sealed class TopologyQueryService(AppDbContext db, ICacheService cache)
+public sealed class TopologyQueryService(AppDbContext db, IMemoryCache cache, CursorSigner cursorSigner)
     : ITopologyQueryService
 {
     private const int GraphTtlSeconds  = 60;
     private const int GroupsTtlSeconds = 60;
+
+    private static readonly MemoryCacheEntryOptions CacheOptions = new()
+    {
+        AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(GraphTtlSeconds)
+    };
+
+    private static readonly MemoryCacheEntryOptions GroupsCacheOptions = new()
+    {
+        AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(GroupsTtlSeconds)
+    };
 
     // Worst-of-members rule: Unreachable > Degraded > Unknown > Reachable; empty → Unknown
     private static ConnectivityStatus AggregateConnectivity(
@@ -36,44 +48,68 @@ public sealed class TopologyQueryService(AppDbContext db, ICacheService cache)
             AggregateConnectivity(memberStatuses));
     }
 
-    // ── GetTopologyGraphAsync ─────────────────────────────────────────────────
-    // 4 DB round-trips; result cached for 60 seconds
-    public async Task<TopologyGraphDto> GetTopologyGraphAsync(CancellationToken ct)
+    // ── GetTopologyGraphAsync (with optional nodeIdFilter) ────────────────────────
+    public async Task<TopologyGraphDto> GetTopologyGraphAsync(
+        string[]? nodeIdFilter, CancellationToken ct)
     {
-        var cached = await cache.GetAsync<TopologyGraphDto>(CacheKeyHelper.TopologyGraph(), ct);
-        if (cached is not null) return cached;
+        // Only cache the unfiltered full-graph result
+        bool useCache = nodeIdFilter is null or { Length: 0 };
+        const string cacheKey = "topology:graph";
 
-        // Round-trip 1: all node groups
-        var groups = await db.NodeGroups.AsNoTracking()
-            .Select(g => new { g.GroupId, g.GroupName })
-            .ToListAsync(ct);
+        if (useCache && cache.TryGetValue(cacheKey, out TopologyGraphDto? cached))
+            return cached!;
 
-        // Round-trip 2: all nodes — connectivity status and group membership
-        var nodes = await db.Nodes.AsNoTracking()
+        // Round-trip 1: groups (optionally filtered by nodeIdFilter)
+        List<string>? filteredGroupIds = null;
+        if (!useCache)
+        {
+            filteredGroupIds = await db.Nodes.AsNoTracking()
+                .Where(n => nodeIdFilter!.Contains(n.NodeId))
+                .Select(n => n.GroupId)
+                .Distinct()
+                .ToListAsync(ct);
+        }
+
+        var groupsQ = db.NodeGroups.AsNoTracking()
+            .Select(g => new { g.GroupId, g.GroupName });
+        if (filteredGroupIds is not null)
+            groupsQ = groupsQ.Where(g => filteredGroupIds.Contains(g.GroupId));
+        var groups = await groupsQ.ToListAsync(ct);
+
+        // Round-trip 2: node connectivity status per group (projection-only)
+        var memberDataQ = db.Nodes.AsNoTracking();
+        if (filteredGroupIds is not null)
+            memberDataQ = memberDataQ.Where(n => filteredGroupIds.Contains(n.GroupId));
+
+        var memberData = await memberDataQ
             .Select(n => new { n.GroupId, n.ConnectivityStatus })
             .ToListAsync(ct);
 
-        // Round-trip 3: all routers
-        var routers = await db.Routers.AsNoTracking()
-            .Select(r => new { r.RouterId, r.SourceNodeGroup, r.TargetNodeGroup, r.Enabled })
-            .ToListAsync(ct);
+        // Round-trip 3: routers
+        var routersQ = db.Routers.AsNoTracking()
+            .Select(r => new { r.RouterId, r.SourceNodeGroup, r.TargetNodeGroup, r.Enabled });
+        if (filteredGroupIds is not null)
+            routersQ = routersQ.Where(r =>
+                filteredGroupIds.Contains(r.SourceNodeGroup) ||
+                filteredGroupIds.Contains(r.TargetNodeGroup));
+        var routers = await routersQ.ToListAsync(ct);
 
         // Round-trip 4: TriggerRouter JOIN Trigger → (TriggerId, RouterId, ChannelId)
+        var routerIds = routers.Select(r => r.RouterId).ToList();
         var joinRows = await db.TriggerRouters.AsNoTracking()
+            .Where(tr => routerIds.Contains(tr.RouterId))
             .Join(db.Triggers,
                   tr => tr.TriggerId,
                   t  => t.TriggerId,
                   (tr, t) => new { tr.TriggerId, tr.RouterId, t.ChannelId })
             .ToListAsync(ct);
 
-        // Per-router channel lists for edge ChannelIds
+        // Build dictionaries in C# (bounded by number of groups/routers, not node count)
         var channelsByRouter = joinRows
             .GroupBy(x => x.RouterId)
-            .ToDictionary(
-                g => g.Key,
-                g => (IReadOnlyList<string>)g.Select(x => x.ChannelId).Distinct().ToList());
+            .ToDictionary(g => g.Key,
+                          g => (IReadOnlyList<string>)g.Select(x => x.ChannelId).Distinct().ToList());
 
-        // Per-group (source) trigger+channel counts
         var routerSourceByRouterId = routers.ToDictionary(r => r.RouterId, r => r.SourceNodeGroup);
         var statsByGroup = joinRows
             .Where(x => routerSourceByRouterId.ContainsKey(x.RouterId))
@@ -83,24 +119,18 @@ public sealed class TopologyQueryService(AppDbContext db, ICacheService cache)
                 g => (TriggerCount: g.Select(x => x.TriggerId).Distinct().Count(),
                       ChannelCount: g.Select(x => x.ChannelId).Distinct().Count()));
 
-        var nodesByGroup = nodes.GroupBy(n => n.GroupId)
+        var statusByGroup = memberData
+            .GroupBy(n => n.GroupId)
             .ToDictionary(g => g.Key, g => g.Select(x => x.ConnectivityStatus).ToList());
 
         var nodeDtos = groups.Select(g =>
         {
-            var statuses = nodesByGroup.TryGetValue(g.GroupId, out var s)
-                ? (IReadOnlyList<ConnectivityStatus>)s
-                : [];
-            var (trigCount, chanCount) = statsByGroup.TryGetValue(g.GroupId, out var gs)
-                ? gs : (0, 0);
+            var statuses = statusByGroup.TryGetValue(g.GroupId, out var s)
+                ? (IReadOnlyList<ConnectivityStatus>)s : [];
+            var (trigCount, chanCount) = statsByGroup.TryGetValue(g.GroupId, out var gs) ? gs : (0, 0);
             return new TopologyGraphNodeDto(
-                $"group:{g.GroupId}",
-                g.GroupId,
-                g.GroupName ?? g.GroupId,
-                AggregateConnectivity(statuses),
-                statuses.Count,
-                trigCount,
-                chanCount);
+                $"group:{g.GroupId}", g.GroupId, g.GroupName ?? g.GroupId,
+                AggregateConnectivity(statuses), statuses.Count, trigCount, chanCount);
         }).ToList();
 
         var edgeDtos = routers.Select(r => new TopologyGraphEdgeDto(
@@ -117,7 +147,9 @@ public sealed class TopologyQueryService(AppDbContext db, ICacheService cache)
             nodeDtos, edgeDtos,
             new TopologyGraphMetaDto(groups.Count, totalNodes, onlineNodes, DateTimeOffset.UtcNow));
 
-        await cache.SetAsync(CacheKeyHelper.TopologyGraph(), result, TimeSpan.FromSeconds(GraphTtlSeconds), ct);
+        if (useCache)
+            cache.Set(cacheKey, result, CacheOptions);
+
         return result;
     }
 
@@ -151,8 +183,9 @@ public sealed class TopologyQueryService(AppDbContext db, ICacheService cache)
     // Result cached for 60 seconds
     public async Task<IReadOnlyList<TopologyGroupDto>> GetGroupsAsync(CancellationToken ct)
     {
-        var cached = await cache.GetAsync<IReadOnlyList<TopologyGroupDto>>(CacheKeyHelper.TopologyGroups(), ct);
-        if (cached is not null) return cached;
+        const string cacheKey = "topology:groups";
+        if (cache.TryGetValue(cacheKey, out IReadOnlyList<TopologyGroupDto>? cachedGroups))
+            return cachedGroups!;
 
         var groups = await db.NodeGroups.AsNoTracking()
             .Select(g => new { g.GroupId, g.GroupName })
@@ -173,7 +206,7 @@ public sealed class TopologyQueryService(AppDbContext db, ICacheService cache)
             return BuildGroupDto(g.GroupId, g.GroupName, statuses);
         }).ToList();
 
-        await cache.SetAsync(CacheKeyHelper.TopologyGroups(), result, TimeSpan.FromSeconds(GroupsTtlSeconds), ct);
+        cache.Set(cacheKey, result, GroupsCacheOptions);
         return result;
     }
 
@@ -196,32 +229,42 @@ public sealed class TopologyQueryService(AppDbContext db, ICacheService cache)
         return BuildGroupDto(group.GroupId, group.GroupName, statuses);
     }
 
-    // ── GetGroupNodesAsync ────────────────────────────────────────────────────
-    // Not cached — direct DB query; returns empty list for unknown groupId
-    public async Task<IReadOnlyList<TopologyGroupNodeDto>> GetGroupNodesAsync(
-        string groupId, CancellationToken ct)
+    // ── GetGroupNodesAsync (cursor-paginated) ─────────────────────────────────
+    public async Task<CursorPageResult<TopologyGroupNodeDto>> GetGroupNodesAsync(
+        string groupId, string? cursor, int pageSize, CancellationToken ct)
     {
-        var rows = await db.Nodes.AsNoTracking()
+        pageSize = Math.Clamp(pageSize, 1, 500);
+
+        var q = db.Nodes.AsNoTracking()
             .Where(n => n.GroupId == groupId)
-            .Select(n => new
-            {
+            .OrderBy(n => n.NodeId);
+
+        if (cursor is not null)
+        {
+            // Throws ArgumentException if token is malformed or tampered — caller catches and returns 400
+            var (cursorNodeId, _) = cursorSigner.DecodeString(cursor);
+            if (!string.IsNullOrEmpty(cursorNodeId))
+                q = (IOrderedQueryable<SyncNode>)q.Where(n => n.NodeId.CompareTo(cursorNodeId) > 0);
+        }
+
+        var rows = await q
+            .Take(pageSize + 1)
+            .Select(n => new TopologyGroupNodeDto(
                 n.NodeId,
                 n.LifecycleState,
                 n.ConnectivityStatus,
                 n.LastHeartbeat,
                 n.LastProbeLatencyMs,
-                n.MaintenanceMode
-            })
+                n.LifecycleState == NodeLifecycleState.Active && !n.MaintenanceMode))
             .ToListAsync(ct);
 
-        return rows.Select(n =>
-            new TopologyGroupNodeDto(
-                n.NodeId,
-                n.LifecycleState,
-                n.ConnectivityStatus,
-                n.LastHeartbeat,
-                n.LastProbeLatencyMs,
-                n.LifecycleState == NodeLifecycleState.Active && !n.MaintenanceMode)
-        ).ToList();
+        var hasMore = rows.Count > pageSize;
+        if (hasMore) rows = rows.Take(pageSize).ToList();
+
+        string? nextCursor = hasMore
+            ? cursorSigner.EncodeString(rows[^1].NodeId, DateTime.UtcNow.Ticks)
+            : null;
+
+        return new CursorPageResult<TopologyGroupNodeDto>(rows.AsReadOnly(), nextCursor, hasMore, null);
     }
 }

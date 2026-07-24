@@ -6,24 +6,44 @@ using MSOSync.Persistence.Tenancy;
 namespace MSOSync.Metadata.Dashboard;
 
 public sealed class DashboardQueryService(
-    AppDbContext db,
-    IPlatformRepository<SyncAudit> auditRepo) : IDashboardQueryService
+    AppDbContext                    db,
+    IPlatformRepository<SyncAudit>  auditRepo,
+    DashboardSummaryCache           summaryCache) : IDashboardQueryService
 {
-    public async Task<DashboardSummaryDto> GetSummaryAsync(CancellationToken ct = default)
+    public Task<DashboardSummaryDto> GetSummaryAsync(CancellationToken ct = default)
+        => summaryCache.GetOrCreateAsync(BuildSummaryAsync, ct);
+
+    private async Task<DashboardSummaryDto> BuildSummaryAsync(CancellationToken ct)
     {
         var cutoff24h     = DateTime.UtcNow.AddHours(-24);
         var todayMidnight = DateTime.UtcNow.Date;
 
-        var totalNodes         = await db.Nodes.AsNoTracking().CountAsync(ct);
-        var reachableNodes     = await db.Nodes.AsNoTracking().CountAsync(n => n.ConnectivityStatus == ConnectivityStatus.Reachable,   ct);
-        var degradedNodes      = await db.Nodes.AsNoTracking().CountAsync(n => n.ConnectivityStatus == ConnectivityStatus.Degraded,    ct);
-        var unreachableNodes   = await db.Nodes.AsNoTracking().CountAsync(n => n.ConnectivityStatus == ConnectivityStatus.Unreachable, ct);
-        var unknownNodes       = await db.Nodes.AsNoTracking().CountAsync(n => n.ConnectivityStatus == ConnectivityStatus.Unknown,     ct);
-        var pendingEvents      = await db.DataEvents.AsNoTracking().LongCountAsync(e => !e.IsProcessed, ct);
-        var queueDepth         = await db.OutgoingBatches.AsNoTracking().LongCountAsync(b => b.Status != 2, ct);
-        var eventsToday        = await db.DataEvents.AsNoTracking().LongCountAsync(e => e.CreateTime >= todayMidnight, ct);
-        var transportErrors24h = await db.BatchErrors.AsNoTracking().LongCountAsync(e => e.CreateTime >= cutoff24h, ct);
+        // Single GROUP BY for node connectivity status — replaces 4 separate CountAsync calls.
+        // Covered by IX_sync_node_connectivity_status (M038).
+        var statusCounts = await db.Nodes.AsNoTracking()
+            .GroupBy(n => n.ConnectivityStatus)
+            .Select(g => new { Status = g.Key, Count = g.Count() })
+            .ToListAsync(ct);
 
+        var totalNodes       = statusCounts.Sum(x => x.Count);
+        var reachableNodes   = statusCounts.FirstOrDefault(x => x.Status == ConnectivityStatus.Reachable)?.Count   ?? 0;
+        var degradedNodes    = statusCounts.FirstOrDefault(x => x.Status == ConnectivityStatus.Degraded)?.Count    ?? 0;
+        var unreachableNodes = statusCounts.FirstOrDefault(x => x.Status == ConnectivityStatus.Unreachable)?.Count ?? 0;
+        var unknownNodes     = statusCounts.FirstOrDefault(x => x.Status == ConnectivityStatus.Unknown)?.Count     ?? 0;
+
+        var pendingEvents = await db.DataEvents.AsNoTracking()
+            .LongCountAsync(e => !e.IsProcessed, ct);
+
+        var queueDepth = await db.OutgoingBatches.AsNoTracking()
+            .LongCountAsync(b => b.Status != 2, ct);
+
+        var eventsToday = await db.DataEvents.AsNoTracking()
+            .LongCountAsync(e => e.CreateTime >= todayMidnight, ct);
+
+        var transportErrors24h = await db.BatchErrors.AsNoTracking()
+            .LongCountAsync(e => e.CreateTime >= cutoff24h, ct);
+
+        // GeneratedAt reflects when this snapshot was computed, not DateTime.UtcNow on every read.
         return new DashboardSummaryDto(
             totalNodes,
             reachableNodes,

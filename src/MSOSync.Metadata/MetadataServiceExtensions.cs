@@ -30,6 +30,7 @@ using MSOSync.Metadata.Operations.Handlers;
 using MSOSync.Metadata.Operations.Replay;
 using MSOSync.Metadata.Operations.Rolling;
 using MSOSync.Metadata.OutgoingBatches;
+using MSOSync.Metadata.Options;
 using MSOSync.Metadata.Overview;
 using MSOSync.Metadata.Pagination;
 
@@ -87,6 +88,8 @@ public static class MetadataServiceExtensions
         services.AddScoped<IValidator<AuditFilter>, AuditFilterValidator>();
 
         // Epic 9E — Dashboard Query Optimization
+        services.Configure<DashboardOptions>(configuration.GetSection(DashboardOptions.Section));
+        services.AddSingleton<DashboardSummaryCache>();
         services.AddScoped<IDashboardQueryService, DashboardQueryService>();
         services.AddScoped<IValidator<ActivityFilter>, ActivityFilterValidator>();
 

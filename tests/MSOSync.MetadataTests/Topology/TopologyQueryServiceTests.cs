@@ -1,7 +1,7 @@
 using FluentAssertions;
 using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.Options;
-using MSOSync.Common.Caching;
+using MSOSync.Common.Pagination;
+using MSOSync.Metadata.Pagination;
 using MSOSync.Metadata.Topology;
 using MSOSync.Persistence;
 using MSOSync.Persistence.Entities;
@@ -11,14 +11,13 @@ namespace MSOSync.MetadataTests.Topology;
 
 public sealed class TopologyQueryServiceTests
 {
-    private static TopologyQueryService Make(out Microsoft.EntityFrameworkCore.DbContext db)
+    private static ITopologyQueryService Make(out Microsoft.EntityFrameworkCore.DbContext db)
     {
         var ctx      = TestDbContext.Create();
         db           = ctx;
         var memCache = new MemoryCache(new MemoryCacheOptions());
-        var opts     = Options.Create(new CacheOptions { DefaultExpiry = TimeSpan.FromMinutes(5) });
-        ICacheService cache = new InMemoryCacheService(memCache, opts);
-        return new TopologyQueryService(ctx, cache);
+        var signer   = new CursorSigner(new byte[32]);
+        return new TopologyQueryService(ctx, memCache, signer);
     }
 
     private static SyncNodeGroup Group(string id, string? name = null) =>
@@ -248,7 +247,7 @@ public sealed class TopologyQueryServiceTests
         result.Should().BeNull();
     }
 
-    // ── GetGroupNodesAsync ───────────────────────────────────────────────────
+    // ── GetGroupNodesAsync (cursor-paginated) ────────────────────────────────
 
     [Fact]
     public async Task GetGroupNodes_ReturnsMemberNodes()
@@ -260,11 +259,11 @@ public sealed class TopologyQueryServiceTests
             Node("n2", "g1", ConnectivityStatus.Degraded));
         await db.SaveChangesAsync();
 
-        var result = await svc.GetGroupNodesAsync("g1", default);
+        var result = await svc.GetGroupNodesAsync("g1", null, 100, default);
 
-        result.Should().HaveCount(2);
-        result.Select(n => n.NodeId).Should().BeEquivalentTo(new[] { "n1", "n2" });
-        result.All(n => n.LifecycleState == NodeLifecycleState.Active).Should().BeTrue();
+        result.Items.Should().HaveCount(2);
+        result.Items.Select(n => n.NodeId).Should().BeEquivalentTo(new[] { "n1", "n2" });
+        result.Items.All(n => n.LifecycleState == NodeLifecycleState.Active).Should().BeTrue();
     }
 
     [Fact]
@@ -274,8 +273,8 @@ public sealed class TopologyQueryServiceTests
         db.Set<SyncNodeGroup>().Add(Group("g1"));
         await db.SaveChangesAsync();
 
-        var result = await svc.GetGroupNodesAsync("g1", default);
+        var result = await svc.GetGroupNodesAsync("g1", null, 100, default);
 
-        result.Should().BeEmpty();
+        result.Items.Should().BeEmpty();
     }
 }

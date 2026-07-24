@@ -29,19 +29,31 @@ public sealed class ClusterSummaryQueryService(AppDbContext db) : IClusterSummar
 
     private async Task<NodeStateCountsDto> QueryNodeStatesAsync(CancellationToken ct)
     {
-        var nodes = await db.Nodes
+        // Single GROUP BY query; returns at most ~(distinct states) * 2 rows regardless of node count
+        var groups = await db.Nodes
             .AsNoTracking()
-            .Select(n => new { n.LifecycleState, n.MaintenanceMode })
+            .GroupBy(n => new { n.LifecycleState, n.MaintenanceMode })
+            .Select(g => new
+            {
+                g.Key.LifecycleState,
+                g.Key.MaintenanceMode,
+                Count = g.Count()
+            })
             .ToListAsync(ct);
 
-        var total       = nodes.Count;
-        var maintenance = nodes.Count(n => n.MaintenanceMode);
-        var active      = nodes.Count(n => n.LifecycleState == NodeLifecycleState.Active && !n.MaintenanceMode);
-        var draining    = nodes.Count(n => n.LifecycleState == NodeLifecycleState.Draining);
-        var offline     = nodes.Count(n =>
-            !n.MaintenanceMode &&
-            n.LifecycleState != NodeLifecycleState.Active &&
-            n.LifecycleState != NodeLifecycleState.Draining);
+        var total       = groups.Sum(g => g.Count);
+        var maintenance = groups.Where(g => g.MaintenanceMode).Sum(g => g.Count);
+        var active      = groups
+            .Where(g => g.LifecycleState == NodeLifecycleState.Active && !g.MaintenanceMode)
+            .Sum(g => g.Count);
+        var draining    = groups
+            .Where(g => g.LifecycleState == NodeLifecycleState.Draining)
+            .Sum(g => g.Count);
+        var offline     = groups
+            .Where(g => !g.MaintenanceMode
+                     && g.LifecycleState != NodeLifecycleState.Active
+                     && g.LifecycleState != NodeLifecycleState.Draining)
+            .Sum(g => g.Count);
 
         return new NodeStateCountsDto(total, active, maintenance, draining, offline);
     }

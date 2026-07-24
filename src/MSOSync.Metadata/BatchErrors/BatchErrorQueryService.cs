@@ -74,15 +74,24 @@ public sealed class BatchErrorQueryService(
         if (from.HasValue)    baseQ = baseQ.Where(e => e.CreateTime >= from.Value);
         if (to.HasValue)      baseQ = baseQ.Where(e => e.CreateTime <= to.Value);
 
-        var infoTypes = classifier.GetConflictTypes(ErrorSeverity.Info);
-        var warnTypes = classifier.GetConflictTypes(ErrorSeverity.Warning);
-        var critTypes = classifier.GetConflictTypes(ErrorSeverity.Critical);
+        // Single GROUP BY conflict_type query — replaces 3 separate CountAsync calls.
+        var rawGroups = await baseQ
+            .GroupBy(e => e.ConflictType)
+            .Select(g => new { ConflictType = g.Key, Count = g.Count() })
+            .ToListAsync(ct);
 
-        int info = await baseQ.CountAsync(e => infoTypes.Contains(e.ConflictType), ct);
-        int warn = await baseQ.CountAsync(e => warnTypes.Contains(e.ConflictType), ct);
-        // Critical: null conflict_type is also Critical
-        int crit = await baseQ.CountAsync(
-            e => e.ConflictType == null || critTypes.Contains(e.ConflictType), ct);
+        // Classify in C# on a result set bounded by distinct conflict_type values (small).
+        int info = 0, warn = 0, crit = 0;
+        foreach (var group in rawGroups)
+        {
+            var sev = classifier.Classify(group.ConflictType);
+            switch (sev)
+            {
+                case ErrorSeverity.Info:     info += group.Count; break;
+                case ErrorSeverity.Warning:  warn += group.Count; break;
+                case ErrorSeverity.Critical: crit += group.Count; break;
+            }
+        }
 
         return new BatchErrorSummaryCountDto(info, warn, crit, info + warn + crit);
     }

@@ -1,4 +1,5 @@
 using FluentAssertions;
+using MSOSync.Common.Pagination;
 using MSOSync.Metadata.Topology;
 using MSOSync.Persistence;
 using System.Net;
@@ -112,11 +113,11 @@ public sealed class TopologyTests(TopologyFixture fixture)
     {
         var client = await AuthenticatedClientAsync();
 
-        var result = await client.GetFromJsonAsync<IReadOnlyList<TopologyGroupNodeDto>>(
+        var result = await client.GetFromJsonAsync<CursorPageResult<TopologyGroupNodeDto>>(
             "api/v1/topology/groups/group-hub/nodes");
 
-        result!.Should().HaveCount(2);
-        result!.Select(n => n.NodeId).Should().BeEquivalentTo(new[] { "hub-1", "hub-2" });
+        result!.Items.Should().HaveCount(2);
+        result!.Items.Select(n => n.NodeId).Should().BeEquivalentTo(new[] { "hub-1", "hub-2" });
     }
 
     [Fact]
@@ -124,10 +125,10 @@ public sealed class TopologyTests(TopologyFixture fixture)
     {
         var client = await AuthenticatedClientAsync();
 
-        var result = await client.GetFromJsonAsync<IReadOnlyList<TopologyGroupNodeDto>>(
+        var result = await client.GetFromJsonAsync<CursorPageResult<TopologyGroupNodeDto>>(
             "api/v1/topology/groups/group-empty/nodes");
 
-        result!.Should().BeEmpty();
+        result!.Items.Should().BeEmpty();
     }
 
     [Fact]
