@@ -2,15 +2,18 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using MSOSync.Api.Dtos.Common;
 using MSOSync.Api.Dtos.Nodes;
 using MSOSync.Common;
+using MSOSync.Common.Pagination;
 using MSOSync.Metadata.Common;
 using MSOSync.Metadata.Configuration;
 using MSOSync.Metadata.Dtos;
 using MSOSync.Metadata.Interfaces;
 using MSOSync.Metadata.Lifecycle;
 using MSOSync.Metadata.NodeManagement;
+using MSOSync.Metadata.Options;
 using MSOSync.Persistence.Entities;
 
 namespace MSOSync.Api.Controllers;
@@ -18,18 +21,29 @@ namespace MSOSync.Api.Controllers;
 [ApiController]
 [Route("api/v1/nodes")]
 public sealed class NodesController(
-    INodeMetadataService nodeService,
-    IClock               clock,
-    INodeLifecycleService lifecycleService,
-    HeartbeatProcessor heartbeatProcessor) : ControllerBase
+    INodeMetadataService        nodeService,
+    IClock                      clock,
+    INodeLifecycleService       lifecycleService,
+    HeartbeatProcessor          heartbeatProcessor,
+    IOptions<PaginationOptions> paginationOptions) : ControllerBase
 {
     [HttpGet]
     [Authorize]
     [ProducesResponseType(typeof(IReadOnlyList<NodeDto>), 200)]
+    [ProducesResponseType(typeof(NodeListGateResponse), 200)]
     public async Task<IActionResult> GetNodes(CancellationToken ct)
     {
-        var result = await nodeService.GetNodesAsync(ct);
-        return Ok(result);
+        var threshold = paginationOptions.Value.NodeListCursorThreshold;
+        var gate = await nodeService.GetNodesWithGateAsync(threshold, ct);
+
+        if (!gate.PaginationRequired)
+            return Ok(gate.Items);
+
+        return Ok(new NodeListGateResponse(
+            PaginationRequired: true,
+            Items: Array.Empty<NodeDto>(),
+            NextCursor: gate.NextCursor,
+            CursorEndpoint: "/api/v1/nodes/cursor"));
     }
 
     [HttpGet("paged")]
@@ -40,11 +54,44 @@ public sealed class NodesController(
         [FromQuery] int pageSize   = 50,
         CancellationToken ct = default)
     {
+        Response.Headers.Append("Deprecation", "true");
+        Response.Headers.Append("Link", "</api/v1/nodes/cursor>; rel=\"successor-version\"");
+
         pageSize = Math.Min(pageSize, 200);
         pageNumber = Math.Max(1, pageNumber);
         var result = await nodeService.GetNodesPagedAsync(pageNumber, pageSize, ct);
         var totalPages = (int)Math.Ceiling((double)result.TotalCount / result.PageSize);
         return Ok(new PagedResponse<NodeDto>(result.Items, result.TotalCount, result.Page, result.PageSize, totalPages));
+    }
+
+    [HttpGet("cursor")]
+    [Authorize]
+    [ProducesResponseType(typeof(CursorPageResult<NodeDto>), 200)]
+    [ProducesResponseType(400)]
+    public async Task<IActionResult> GetNodesCursor(
+        [FromQuery] string? cursor       = null,
+        [FromQuery] int     pageSize     = 50,
+        [FromQuery] bool    includeTotal = false,
+        CancellationToken ct = default)
+    {
+        pageSize = Math.Clamp(pageSize, 1, 200);
+
+        try
+        {
+            var result = await nodeService.GetNodesCursorAsync(
+                new NodeCursorFilter
+                {
+                    Cursor       = cursor,
+                    PageSize     = pageSize,
+                    IncludeTotal = includeTotal,
+                }, ct);
+
+            return Ok(result);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { error = "InvalidCursorToken", message = ex.Message });
+        }
     }
 
     [HttpGet("{nodeId}")]

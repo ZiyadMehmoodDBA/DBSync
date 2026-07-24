@@ -1,5 +1,7 @@
+using MSOSync.Common.Pagination;
 using MSOSync.Metadata.Common;
 using MSOSync.Metadata.Dtos;
+using MSOSync.Metadata.NodeManagement;
 
 namespace MSOSync.Metadata.Interfaces;
 
@@ -8,6 +10,8 @@ public interface INodeMetadataService
     Task<IReadOnlyList<NodeDto>> GetNodesAsync(CancellationToken ct = default);
     Task<PagedResult<NodeDto>> GetNodesPagedAsync(
         int pageNumber, int pageSize, CancellationToken ct = default);
+    Task<CursorPageResult<NodeDto>> GetNodesCursorAsync(NodeCursorFilter filter, CancellationToken ct = default);
+    Task<NodeListGateResult>        GetNodesWithGateAsync(int threshold, CancellationToken ct = default);
     Task<NodeDto?> GetNodeAsync(string nodeId, CancellationToken ct = default);
     Task<IReadOnlyList<NodeGroupDto>> GetNodeGroupsAsync(CancellationToken ct = default);
     Task<NodeDto> UpdateNodeAsync(string nodeId, UpdateNodeRequest req, CancellationToken ct = default);

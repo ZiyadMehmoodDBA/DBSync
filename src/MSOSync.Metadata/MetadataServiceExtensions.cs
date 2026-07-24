@@ -147,6 +147,10 @@ public static class MetadataServiceExtensions
         services.AddSingleton<OverviewSnapshotCache>();
         services.AddScoped<IOverviewQueryService, OverviewQueryService>();
 
+        // Phase 2D.4 — Pagination options
+        services.Configure<MSOSync.Metadata.Options.PaginationOptions>(
+            configuration.GetSection(MSOSync.Metadata.Options.PaginationOptions.Section));
+
         // Epic 12C.0 — Cursor HMAC signing
         services.AddSingleton<CursorSigner>();
 

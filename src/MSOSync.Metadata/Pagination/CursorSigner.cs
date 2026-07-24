@@ -39,4 +39,7 @@ public sealed class CursorSigner
 
     public string Encode(long id, long ticks) => CursorToken.Encode(id, ticks, _key);
     public (long Id, long Ticks) Decode(string token) => CursorToken.Decode(token, _key);
+
+    public string EncodeString(string id, long ticks) => CursorToken.EncodeString(id, ticks, _key);
+    public (string Id, long Ticks) DecodeString(string token) => CursorToken.DecodeString(token, _key);
 }

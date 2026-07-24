@@ -3,10 +3,13 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using MSOSync.Common.Caching;
 using MSOSync.Common.Exceptions;
+using MSOSync.Common.Pagination;
 using MSOSync.Metadata.Common;
 using MSOSync.Metadata.Dtos;
 using MSOSync.Metadata.Events;
 using MSOSync.Metadata.Interfaces;
+using MSOSync.Metadata.NodeManagement;
+using MSOSync.Metadata.Pagination;
 using MSOSync.Persistence;
 using MSOSync.Persistence.Entities;
 using MSOSync.Security;
@@ -18,7 +21,8 @@ public sealed class NodeMetadataService(
     ICacheService cache,
     IMediator mediator,
     NodeSecurityService nodeSecurity,
-    IDataProtectionProvider dataProtection) : INodeMetadataService
+    IDataProtectionProvider dataProtection,
+    CursorSigner cursorSigner) : INodeMetadataService
 {
     private readonly IDataProtector _protector = dataProtection.CreateProtector("NodeDbConnection");
 
@@ -40,6 +44,72 @@ public sealed class NodeMetadataService(
             .ToListAsync(ct);
         var items = nodes.Select(MapNode).ToList().AsReadOnly();
         return new PagedResult<NodeDto>(items, pageNumber, pageSize, total);
+    }
+
+    public async Task<CursorPageResult<NodeDto>> GetNodesCursorAsync(
+        NodeCursorFilter filter, CancellationToken ct = default)
+    {
+        var pageSize = filter.ClampedPageSize;
+        var q = db.Nodes.AsNoTracking().OrderBy(n => n.NodeId);
+
+        if (filter.Cursor is not null)
+        {
+            var (cursorNodeId, _) = cursorSigner.DecodeString(filter.Cursor);
+            if (!string.IsNullOrEmpty(cursorNodeId))
+            {
+                q = (IOrderedQueryable<SyncNode>)q.Where(n => n.NodeId.CompareTo(cursorNodeId) > 0);
+            }
+            // empty sentinel → no filter, start from first page
+        }
+
+        var rows = await q
+            .Take(pageSize + 1)
+            .Select(n => new NodeDto(
+                n.NodeId, n.GroupId, n.SyncUrl, n.LifecycleState,
+                n.RegistrationTime, n.LastHeartbeat, n.HeartbeatInterval,
+                n.LifecycleState == NodeLifecycleState.Active && !n.MaintenanceMode,
+                n.TransportMode, n.ConnectivityStatus, n.MaintenanceMode,
+                n.DbServer, n.DbName, n.DbAuthMode, n.DbUser,
+                n.DbPasswordEncrypted != null, n.AgentVersion))
+            .ToListAsync(ct);
+
+        var hasMore = rows.Count > pageSize;
+        if (hasMore) rows = rows.Take(pageSize).ToList();
+
+        string? nextCursor = hasMore
+            ? cursorSigner.EncodeString(rows[^1].NodeId, DateTime.UtcNow.Ticks)
+            : null;
+
+        int? totalCount = null;
+        if (filter.IncludeTotal)
+            totalCount = await db.Nodes.AsNoTracking().CountAsync(ct);
+
+        return new CursorPageResult<NodeDto>(rows.AsReadOnly(), nextCursor, hasMore, totalCount);
+    }
+
+    public async Task<NodeListGateResult> GetNodesWithGateAsync(
+        int threshold, CancellationToken ct = default)
+    {
+        var count = await db.Nodes.AsNoTracking().CountAsync(ct);
+
+        if (count < threshold)
+        {
+            var items = await db.Nodes.AsNoTracking()
+                .OrderBy(n => n.NodeId)
+                .Select(n => new NodeDto(
+                    n.NodeId, n.GroupId, n.SyncUrl, n.LifecycleState,
+                    n.RegistrationTime, n.LastHeartbeat, n.HeartbeatInterval,
+                    n.LifecycleState == NodeLifecycleState.Active && !n.MaintenanceMode,
+                    n.TransportMode, n.ConnectivityStatus, n.MaintenanceMode,
+                    n.DbServer, n.DbName, n.DbAuthMode, n.DbUser,
+                    n.DbPasswordEncrypted != null, n.AgentVersion))
+                .ToListAsync(ct);
+            return new NodeListGateResult(false, items.AsReadOnly(), null);
+        }
+
+        // Above threshold — encode a sentinel cursor so caller can start at /cursor page 1
+        var firstCursor = cursorSigner.EncodeString(string.Empty, 0L);
+        return new NodeListGateResult(true, null, firstCursor);
     }
 
     public async Task<NodeDto?> GetNodeAsync(string nodeId, CancellationToken ct = default)

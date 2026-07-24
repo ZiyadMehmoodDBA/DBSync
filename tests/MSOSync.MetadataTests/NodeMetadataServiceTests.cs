@@ -30,7 +30,8 @@ public sealed class NodeMetadataServiceTests
         protectorMock.Setup(p => p.Unprotect(It.IsAny<byte[]>())).Returns((byte[] b) => b);
         var dataProtectionMock = new Mock<IDataProtectionProvider>();
         dataProtectionMock.Setup(dp => dp.CreateProtector(It.IsAny<string>())).Returns(protectorMock.Object);
-        var svc = new NodeMetadataService(db, cache, mediator, nodeSecurity, dataProtectionMock.Object);
+        var cursorSigner = new MSOSync.Metadata.Pagination.CursorSigner(new byte[32]);
+        var svc = new NodeMetadataService(db, cache, mediator, nodeSecurity, dataProtectionMock.Object, cursorSigner);
         return (svc, db);
     }
 
