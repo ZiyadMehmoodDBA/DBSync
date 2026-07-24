@@ -144,6 +144,10 @@ try
     builder.Services.AddSingleton<MSOSync.Plugin.Abstractions.IPluginLoader,
         MSOSync.Plugin.Loading.PluginLoader>();
     builder.Services.AddPluginCoreInternals();
+
+    // Phase 2C.2 — Marketplace
+    builder.Services.AddMarketplace(builder.Configuration);
+
     builder.Services.AddPluginPackaging(builder.Configuration);
     builder.Services.AddSingleton<MSOSync.Plugin.Hosting.PluginHost>();
     builder.Services.AddSingleton<MSOSync.Plugin.Abstractions.IPluginHost>(sp =>
