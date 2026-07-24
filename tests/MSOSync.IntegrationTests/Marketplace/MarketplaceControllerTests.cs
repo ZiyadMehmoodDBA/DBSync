@@ -77,17 +77,16 @@ public sealed class MarketplaceControllerTests(MarketplaceFixture fx)
     [Fact]
     public async Task GetPlugin_UnknownPlugin_Returns404()
     {
-        // Fake handler returns 200 with no data → GetPluginAsync returns null → 404
-        // (The fake handler is set to return empty search result; for individual plugin
-        // it also returns {} which deserializes with defaults — but we expect 404 since
-        // the registry returns 200 {} which means RegistryPluginEntry with empty Id.)
-        // The controller returns 404 when entry is null. Since fake handler
-        // returns the search payload for any request, plugin detail will be null.
+        // Configure the fake handler to return 404 for plugin-detail requests,
+        // simulating a registry that doesn't have the requested plugin.
+        fx.FakeHandler!.SetPathResponse("plugins/no.such.plugin", HttpStatusCode.NotFound);
+
         var client = await fx.AdminClientAsync();
         var resp   = await client.GetAsync("/api/v1/marketplace/plugins/no.such.plugin");
-        // Either 404 (not found in registry) or 200 with an empty entry
-        // depending on deserialization; either is acceptable for this test.
-        ((int)resp.StatusCode).Should().BeOneOf(200, 404);
+
+        // Deterministic: MarketplaceService.FetchPluginAsync catches 404 and returns null.
+        // The controller returns 404 when entry is null.
+        resp.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]

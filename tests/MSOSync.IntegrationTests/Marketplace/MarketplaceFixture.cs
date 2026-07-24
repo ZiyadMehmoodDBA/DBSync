@@ -35,29 +35,56 @@ namespace MSOSync.IntegrationTests.Marketplace;
 /// <summary>
 /// Fake HTTP handler that captures and serves canned responses for the
 /// MarketplaceRegistry named client during integration tests.
+/// Supports per-path configuration to return different responses for different endpoints.
 /// </summary>
 public sealed class FakeRegistryHandler : HttpMessageHandler
 {
-    private HttpStatusCode _statusCode = HttpStatusCode.OK;
-    private string         _content    = "{}";
+    private HttpStatusCode _defaultStatusCode = HttpStatusCode.OK;
+    private string         _defaultContent    = "{}";
+    private readonly Dictionary<string, (HttpStatusCode, string)> _pathResponses = new();
     public int CallCount { get; private set; }
 
     public void SetResponse(HttpStatusCode status, object payload)
     {
-        _statusCode = status;
-        _content    = JsonSerializer.Serialize(payload, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+        _defaultStatusCode = status;
+        _defaultContent    = JsonSerializer.Serialize(payload, new JsonSerializerOptions(JsonSerializerDefaults.Web));
     }
 
     public void SetError(HttpStatusCode status) =>
-        (_statusCode, _content) = (status, "Not Found");
+        (_defaultStatusCode, _defaultContent) = (status, "Not Found");
+
+    /// <summary>Set a response for a specific path pattern (e.g., "plugins/some.id").</summary>
+    public void SetPathResponse(string pathPattern, HttpStatusCode status, object? payload = null)
+    {
+        var content = payload is not null
+            ? JsonSerializer.Serialize(payload, new JsonSerializerOptions(JsonSerializerDefaults.Web))
+            : "Not Found";
+        _pathResponses[pathPattern] = (status, content);
+    }
 
     protected override Task<HttpResponseMessage> SendAsync(
         HttpRequestMessage request, CancellationToken cancellationToken)
     {
         CallCount++;
-        var response = new HttpResponseMessage(_statusCode)
+
+        var path = request.RequestUri?.AbsolutePath ?? "";
+        var status = _defaultStatusCode;
+        var content = _defaultContent;
+
+        // Check if there's a configured response for this path
+        foreach (var (pattern, (patternStatus, patternContent)) in _pathResponses)
         {
-            Content = new StringContent(_content, Encoding.UTF8, "application/json"),
+            if (path.Contains(pattern, StringComparison.OrdinalIgnoreCase))
+            {
+                status = patternStatus;
+                content = patternContent;
+                break;
+            }
+        }
+
+        var response = new HttpResponseMessage(status)
+        {
+            Content = new StringContent(content, Encoding.UTF8, "application/json"),
         };
         return Task.FromResult(response);
     }
@@ -76,6 +103,11 @@ public sealed class MarketplaceFixture : WebApplicationFactory<Program>, IAsyncL
     public string AdminPassword { get; } = "AdminP@ss1!";
 
     /// <summary>
+    /// The fake registry handler — accessible for test configuration of per-path responses.
+    /// </summary>
+    public FakeRegistryHandler? FakeHandler { get; private set; }
+
+    /// <summary>
     /// Fixture with RegistryUrl configured — marketplace endpoints are active.
     /// </summary>
     public MarketplaceFixture() { }
@@ -87,8 +119,8 @@ public sealed class MarketplaceFixture : WebApplicationFactory<Program>, IAsyncL
 
     protected override IHost CreateHost(IHostBuilder builder)
     {
-        var fakeHandler = new FakeRegistryHandler();
-        fakeHandler.SetResponse(HttpStatusCode.OK,
+        FakeHandler = new FakeRegistryHandler();
+        FakeHandler.SetResponse(HttpStatusCode.OK,
             new { data = Array.Empty<object>(), total = 0, page = 1, pageSize = 20, totalPages = 0 });
 
         var testBuilder = WebApplication.CreateBuilder();
@@ -112,7 +144,7 @@ public sealed class MarketplaceFixture : WebApplicationFactory<Program>, IAsyncL
             ["Marketplace:RetryCount"]              = "1",
         });
 
-        RegisterCommonServices(testBuilder.Services, testBuilder.Configuration, fakeHandler);
+        RegisterCommonServices(testBuilder.Services, testBuilder.Configuration, FakeHandler);
 
         var app = testBuilder.Build();
         ConfigurePipeline(app);
