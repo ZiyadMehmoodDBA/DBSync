@@ -235,19 +235,20 @@ public sealed class TopologyQueryService(AppDbContext db, IMemoryCache cache, Cu
     {
         pageSize = Math.Clamp(pageSize, 1, 500);
 
-        var q = db.Nodes.AsNoTracking()
-            .Where(n => n.GroupId == groupId)
-            .OrderBy(n => n.NodeId);
+        // Apply all Where filters before OrderBy — no IOrderedQueryable cast needed
+        var query = db.Nodes.AsNoTracking()
+            .Where(n => n.GroupId == groupId);
 
         if (cursor is not null)
         {
             // Throws ArgumentException if token is malformed or tampered — caller catches and returns 400
             var (cursorNodeId, _) = cursorSigner.DecodeString(cursor);
             if (!string.IsNullOrEmpty(cursorNodeId))
-                q = (IOrderedQueryable<SyncNode>)q.Where(n => n.NodeId.CompareTo(cursorNodeId) > 0);
+                query = query.Where(n => string.Compare(n.NodeId, cursorNodeId) > 0);
         }
 
-        var rows = await q
+        var rows = await query
+            .OrderBy(n => n.NodeId)
             .Take(pageSize + 1)
             .Select(n => new TopologyGroupNodeDto(
                 n.NodeId,

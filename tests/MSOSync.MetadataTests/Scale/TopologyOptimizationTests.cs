@@ -1,6 +1,7 @@
 using FluentAssertions;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
+using MSOSync.Common.Caching;
 using MSOSync.Common.Pagination;
 using MSOSync.Metadata.BatchErrors;
 using MSOSync.Metadata.Dashboard;
@@ -55,7 +56,10 @@ public sealed class DashboardSummaryOptimizationTests
     private static (DashboardQueryService Svc, AppDbContext Db) Make()
     {
         var db      = TestDbContext.Create();
-        var cache   = new DashboardSummaryCache(new MemoryCache(new MemoryCacheOptions()),
+        ICacheService cacheService = new InMemoryCacheService(
+            new MemoryCache(new MemoryCacheOptions()),
+            Options.Create(new CacheOptions { DefaultExpiry = TimeSpan.FromMinutes(5) }));
+        var cache   = new DashboardSummaryCache(cacheService,
                           Options.Create(new DashboardOptions()));
         var auditRepo = new TestPlatformRepository<SyncAudit>(db);
         var svc     = new DashboardQueryService(db, auditRepo, cache);

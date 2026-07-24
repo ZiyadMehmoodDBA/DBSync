@@ -1,6 +1,7 @@
 using FluentAssertions;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
+using MSOSync.Common.Caching;
 using MSOSync.Metadata.Dashboard;
 using MSOSync.Metadata.Options;
 using MSOSync.Persistence;
@@ -17,8 +18,11 @@ public sealed class DashboardQueryServiceTests : IDisposable
     public DashboardQueryServiceTests()
     {
         _db = TestDbContext.Create();
-        var cache = new DashboardSummaryCache(
+        ICacheService cacheService = new InMemoryCacheService(
             new MemoryCache(new MemoryCacheOptions()),
+            Options.Create(new CacheOptions { DefaultExpiry = TimeSpan.FromMinutes(5) }));
+        var cache = new DashboardSummaryCache(
+            cacheService,
             Options.Create(new DashboardOptions()));
         _sut = new DashboardQueryService(_db, new TestPlatformRepository<SyncAudit>(_db), cache);
     }
