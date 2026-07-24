@@ -134,7 +134,7 @@ public sealed class MarketplaceController(
             return Ok(new MarketplaceInstallResult(
                 result.Success,
                 id,
-                result.InstalledVersion,
+                result.InstalledVersion ?? "",
                 RestartRequired: true,
                 result.ErrorMessage));
         }
@@ -190,7 +190,11 @@ public sealed class MarketplaceController(
         await bulkValidator.ValidateAndThrowAsync(request, ct);
 
         var manifests = await updateService.CheckAllAsync(ct);
-        var dtos      = manifests.Select(MapUpdateManifest).ToList();
+
+        var dtos = manifests
+            .Where(m => !request.UpdatesOnly || m.AvailableVersion != m.InstalledVersion)
+            .Select(MapUpdateManifest)
+            .ToList();
 
         return Ok(new BulkUpdateCheckResult(
             TotalChecked:     manifests.Count,
