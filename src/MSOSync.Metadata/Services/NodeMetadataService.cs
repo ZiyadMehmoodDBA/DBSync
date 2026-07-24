@@ -92,7 +92,7 @@ public sealed class NodeMetadataService(
     {
         var count = await db.Nodes.AsNoTracking().CountAsync(ct);
 
-        if (count <= threshold)
+        if (count < threshold)
         {
             var items = await db.Nodes.AsNoTracking()
                 .OrderBy(n => n.NodeId)
