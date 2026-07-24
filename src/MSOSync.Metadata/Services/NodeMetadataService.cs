@@ -92,7 +92,7 @@ public sealed class NodeMetadataService(
     {
         var count = await db.Nodes.AsNoTracking().CountAsync(ct);
 
-        if (count < threshold)
+        if (count <= threshold)
         {
             var items = await db.Nodes.AsNoTracking()
                 .OrderBy(n => n.NodeId)
@@ -107,7 +107,7 @@ public sealed class NodeMetadataService(
             return new NodeListGateResult(false, items.AsReadOnly(), null);
         }
 
-        // Above threshold — encode a sentinel cursor so caller can start at /cursor page 1
+        // Exceeds threshold — encode a sentinel cursor so caller can start at /cursor page 1
         var firstCursor = cursorSigner.EncodeString(string.Empty, 0L);
         return new NodeListGateResult(true, null, firstCursor);
     }
