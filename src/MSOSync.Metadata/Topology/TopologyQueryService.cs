@@ -244,7 +244,7 @@ public sealed class TopologyQueryService(AppDbContext db, IMemoryCache cache, Cu
             // Throws ArgumentException if token is malformed or tampered — caller catches and returns 400
             var (cursorNodeId, _) = cursorSigner.DecodeString(cursor);
             if (!string.IsNullOrEmpty(cursorNodeId))
-                query = query.Where(n => string.Compare(n.NodeId, cursorNodeId) > 0);
+                query = query.Where(n => n.NodeId.CompareTo(cursorNodeId) > 0);
         }
 
         var rows = await query
