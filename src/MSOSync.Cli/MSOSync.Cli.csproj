@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>msosync</ToolCommandName>
+    <PackageId>MSOSync.Cli</PackageId>
+    <Version>1.0.0</Version>
+    <Description>MSOSync CLI — plugin scaffolding, packaging, publishing, and server management</Description>
+    <IsPackable>true</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="System.CommandLine" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\MSOSync.Sdk\MSOSync.Sdk.csproj" />
+  </ItemGroup>
+</Project>

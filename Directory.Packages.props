@@ -65,6 +65,9 @@
   <ItemGroup Label="Caching">
     <PackageVersion Include="StackExchange.Redis" Version="2.8.16" />
   </ItemGroup>
+  <ItemGroup Label="CLI">
+    <PackageVersion Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
+  </ItemGroup>
   <ItemGroup Label="Extensions">
     <PackageVersion Include="Microsoft.Extensions.Caching.Memory" Version="9.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Configuration" Version="9.0.0" />
