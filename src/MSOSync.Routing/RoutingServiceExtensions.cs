@@ -11,6 +11,7 @@ public static class RoutingServiceExtensions
         services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<RoutingService>());
         services.AddSingleton<RouteCacheState>();
         services.AddScoped<IRoutingService, RoutingService>();
+        services.AddScoped<IBulkRoutingService, BulkRoutingService>();
         return services;
     }
 }
