@@ -1,0 +1,18 @@
+{
+  "manifestVersion": 1,
+  "id": "samples.data-collector",
+  "name": "Data Collector Plugin",
+  "version": "1.0.0",
+  "sdkVersion": "1.0",
+  "apiVersion": "1",
+  "startupOrder": 1000,
+  "minHostVersion": "14.0.0",
+  "maxHostVersion": "14.9.999",
+  "entryAssembly": "DataCollectorPlugin.dll",
+  "entryType": "DataCollectorPlugin.DataCollectorPlugin",
+  "author": "MSOSync",
+  "description": "Data collector sample — demonstrates IPluginConfiguration, background timers, and SQL polling.",
+  "permissions": ["Collectors"],
+  "dependencies": [],
+  "capabilities": ["Collector"]
+}

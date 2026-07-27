@@ -1,0 +1,7 @@
+{
+  "ConnectionString": "Server=localhost;Database=MyDb;Trusted_Connection=True;",
+  "Polling": {
+    "IntervalSeconds": 30,
+    "TableName": "dbo.SyncEvents"
+  }
+}
