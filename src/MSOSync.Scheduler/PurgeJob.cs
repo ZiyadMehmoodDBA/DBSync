@@ -1,21 +1,20 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using MSOSync.Batch;
 using MSOSync.Common;
-using MSOSync.Common.Locks;
 using MSOSync.Common.Workers;
 using MSOSync.Event;
-using MSOSync.Persistence.Lock;
 
 namespace MSOSync.Scheduler;
 
 public sealed class PurgeJob(
-    IServiceScopeFactory  scopeFactory,
-    IClock                clock,
-    IWorkerStatusRegistry registry,
-    ILogger<PurgeJob>     logger) : BackgroundService
+    IServiceScopeFactory     scopeFactory,
+    IClock                   clock,
+    ISchedulerLockFactory    lockFactory,
+    ISchedulerHealthReporter health,
+    IWorkerStatusRegistry    registry,
+    ILogger<PurgeJob>        logger) : BackgroundService
 {
     public override async Task StartAsync(CancellationToken cancellationToken)
     {
@@ -50,21 +49,23 @@ public sealed class PurgeJob(
 
     internal async Task RunPurgeAsync(CancellationToken ct)
     {
-        await using var scope       = scopeFactory.CreateAsyncScope();
-        var lockService  = scope.ServiceProvider.GetRequiredService<IDistributedLockService>();
-        var lockOptions  = scope.ServiceProvider.GetRequiredService<IOptions<DistributedLockOptions>>();
-        var eventPurger  = scope.ServiceProvider.GetRequiredService<IEventPurger>();
-        var batchPurger  = scope.ServiceProvider.GetRequiredService<BatchPurger>();
+        await SchedulerJobGuard.RunAsync(
+            nameof(PurgeJob),
+            lockFactory,
+            health,
+            logger,
+            async innerCt =>
+            {
+                await using var scope      = scopeFactory.CreateAsyncScope();
+                var eventPurger = scope.ServiceProvider.GetRequiredService<IEventPurger>();
+                var batchPurger = scope.ServiceProvider.GetRequiredService<BatchPurger>();
 
-        var owner = $"{Environment.MachineName}:{Environment.ProcessId}";
-        await using var handle = await lockService.TryAcquireAsync(
-            LockNames.PurgeEngine, owner, lockOptions.Value.DefaultExpiry, ct);
-
-        if (handle == null) { logger.LogDebug("PurgeJob: lock held, skipping"); return; }
-
-        var events  = await eventPurger.PurgeAsync(ct);
-        var batches = await batchPurger.PurgeAsync(ct);
-        logger.LogInformation("PurgeJob: deleted {Events} events, {Batches} batches", events, batches);
+                var events  = await eventPurger.PurgeAsync(innerCt);
+                var batches = await batchPurger.PurgeAsync(innerCt);
+                logger.LogInformation(
+                    "PurgeJob: deleted {Events} events, {Batches} batches", events, batches);
+            },
+            ct);
     }
 
     internal TimeSpan TimeUntilNextFire()

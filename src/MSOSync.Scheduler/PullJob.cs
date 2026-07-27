@@ -19,6 +19,8 @@ public sealed class PullJob(
     IServiceScopeFactory     scopeFactory,
     IOptions<NodeProperties> nodeProps,
     IOptions<SyncOptions>    syncOptions,
+    ISchedulerLockFactory    lockFactory,
+    ISchedulerHealthReporter health,
     IWorkerStatusRegistry    registry,
     ILogger<PullJob>         logger) : BackgroundService
 {
@@ -63,7 +65,14 @@ public sealed class PullJob(
         registry.RecordTickStart(nameof(PullJob));
         try
         {
-            await PollAllAsync(localNodeId, ct);
+            await SchedulerJobGuard.RunAsync(
+                nameof(PullJob),
+                lockFactory,
+                health,
+                logger,
+                innerCt => PollAllAsync(localNodeId, innerCt),
+                ct);
+
             registry.RecordTickComplete(nameof(PullJob));
         }
         catch (Exception ex) when (!ct.IsCancellationRequested)

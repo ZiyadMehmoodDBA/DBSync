@@ -10,7 +10,6 @@ using MSOSync.Common;
 using MSOSync.Common.Locks;
 using MSOSync.Metadata.Export;
 using MSOSync.Metadata.OutgoingBatches;
-using MSOSync.Persistence.Lock;
 
 namespace MSOSync.Api.Controllers;
 
@@ -91,7 +90,7 @@ public sealed class BatchController(
     {
         var owner = $"{Environment.MachineName}:{Environment.ProcessId}";
         await using var handle = await lockService.TryAcquireAsync(
-            LockNames.RetryEngine, owner, lockOptions.Value.DefaultExpiry, ct);
+            "RETRY_ENGINE", owner, lockOptions.Value.DefaultExpiry, ct);
 
         if (handle == null)
             return Conflict(new CodeMessageResponse(

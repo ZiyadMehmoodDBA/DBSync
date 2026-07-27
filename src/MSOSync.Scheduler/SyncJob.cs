@@ -2,18 +2,18 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using MSOSync.Common.Locks;
 using MSOSync.Common.Workers;
 using MSOSync.Engine;
-using MSOSync.Persistence.Lock;
 
 namespace MSOSync.Scheduler;
 
 public sealed class SyncJob(
-    IServiceScopeFactory  scopeFactory,
-    IOptions<SyncOptions> syncOptions,
-    IWorkerStatusRegistry registry,
-    ILogger<SyncJob>      logger) : BackgroundService
+    IServiceScopeFactory     scopeFactory,
+    IOptions<SyncOptions>    syncOptions,
+    ISchedulerLockFactory    lockFactory,
+    ISchedulerHealthReporter health,
+    IWorkerStatusRegistry    registry,
+    ILogger<SyncJob>         logger) : BackgroundService
 {
     public override async Task StartAsync(CancellationToken cancellationToken)
     {
@@ -37,23 +37,19 @@ public sealed class SyncJob(
         registry.RecordTickStart(nameof(SyncJob));
         try
         {
-            await using var scope       = scopeFactory.CreateAsyncScope();
-            var lockService = scope.ServiceProvider.GetRequiredService<IDistributedLockService>();
-            var lockOptions = scope.ServiceProvider.GetRequiredService<IOptions<DistributedLockOptions>>();
-            var engine      = scope.ServiceProvider.GetRequiredService<SyncEngine>();
+            await SchedulerJobGuard.RunAsync(
+                nameof(SyncJob),
+                lockFactory,
+                health,
+                logger,
+                async innerCt =>
+                {
+                    await using var scope = scopeFactory.CreateAsyncScope();
+                    var engine = scope.ServiceProvider.GetRequiredService<SyncEngine>();
+                    await engine.RunAsync(innerCt);
+                },
+                ct);
 
-            var owner = $"{Environment.MachineName}:{Environment.ProcessId}";
-            await using var handle = await lockService.TryAcquireAsync(
-                LockNames.SyncEngine, owner, lockOptions.Value.DefaultExpiry, ct);
-
-            if (handle == null)
-            {
-                logger.LogDebug("SyncJob: lock held by another instance, skipping tick");
-                registry.RecordTickComplete(nameof(SyncJob));
-                return;
-            }
-
-            await engine.RunAsync(ct);
             registry.RecordTickComplete(nameof(SyncJob));
         }
         catch (Exception ex) when (!ct.IsCancellationRequested)

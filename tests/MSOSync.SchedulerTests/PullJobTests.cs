@@ -23,14 +23,16 @@ public sealed class PullJobTests
 {
     private const string LocalNodeId = "node-1";
 
-    private readonly Mock<INodeMetadataService>         _nodeMeta   = new();
-    private readonly Mock<IChannelMetadataService>      _channels   = new();
-    private readonly Mock<ITopologyService>             _topology   = new();
-    private readonly Mock<IBatchTransportQueryService>  _batchQuery = new();
-    private readonly Mock<IApplyService>                _apply      = new();
-    private readonly Mock<INodeHttpClient>              _nodeHttp   = new();
-    private readonly Mock<IWorkerStatusRegistry>        _registry   = new();
-    private readonly Mock<IClock>                       _clock      = new();
+    private readonly Mock<ISchedulerLockFactory>        _lockFactory = new();
+    private readonly Mock<ISchedulerHealthReporter>     _health      = new();
+    private readonly Mock<INodeMetadataService>         _nodeMeta    = new();
+    private readonly Mock<IChannelMetadataService>      _channels    = new();
+    private readonly Mock<ITopologyService>             _topology    = new();
+    private readonly Mock<IBatchTransportQueryService>  _batchQuery  = new();
+    private readonly Mock<IApplyService>                _apply       = new();
+    private readonly Mock<INodeHttpClient>              _nodeHttp    = new();
+    private readonly Mock<IWorkerStatusRegistry>        _registry    = new();
+    private readonly Mock<IClock>                       _clock       = new();
 
     private PullJob BuildJob()
     {
@@ -53,7 +55,21 @@ public sealed class PullJobTests
 
         return new PullJob(
             scopeFactory, props, Options.Create(new SyncOptions()),
+            _lockFactory.Object, _health.Object,
             _registry.Object, NullLogger<PullJob>.Instance);
+    }
+
+    private Mock<ISchedulerLock> SetupAcquiredLock()
+    {
+        var fakeLock = new Mock<ISchedulerLock>();
+        fakeLock.SetupGet(x => x.JobName).Returns(nameof(PullJob));
+        fakeLock.SetupGet(x => x.Owner).Returns("HOST:1");
+        fakeLock.SetupGet(x => x.AcquiredAt).Returns(DateTimeOffset.UtcNow);
+        fakeLock.Setup(x => x.DisposeAsync()).Returns(ValueTask.CompletedTask);
+        _lockFactory
+            .Setup(x => x.TryAcquireAsync(nameof(PullJob), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(fakeLock.Object);
+        return fakeLock;
     }
 
     private static NodeDto Node(TransportMode mode) => new(
@@ -101,8 +117,27 @@ public sealed class PullJobTests
     }
 
     [Fact]
+    public async Task RunTick_skips_polling_when_lock_not_acquired()
+    {
+        _lockFactory
+            .Setup(x => x.TryAcquireAsync(nameof(PullJob), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((ISchedulerLock?)null);
+
+        await BuildJob().RunTickAsync(LocalNodeId, CancellationToken.None);
+
+        _nodeHttp.Verify(
+            x => x.PostNullableAsync<PullRequest, PullResponse>(
+                It.IsAny<string>(), It.IsAny<PullRequest>(), It.IsAny<string>(),
+                It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        _registry.Verify(x => x.RecordTickComplete(nameof(PullJob)), Times.Once);
+        _health.Verify(x => x.RecordStandby(nameof(PullJob)), Times.Once);
+    }
+
+    [Fact]
     public async Task RunTick_makes_no_http_calls_when_no_source_nodes()
     {
+        SetupAcquiredLock();
         SetupTopology();
 
         await BuildJob().RunTickAsync(LocalNodeId, CancellationToken.None);
@@ -118,6 +153,7 @@ public sealed class PullJobTests
     [Fact]
     public async Task RunTick_applies_pulled_batch_and_sends_success_ack()
     {
+        SetupAcquiredLock();
         SetupTopology(new SourceNodeInfo("src-1", "http://src"));
         _batchQuery
             .Setup(x => x.GetLastSequenceAsync("src-1", "ch1", It.IsAny<CancellationToken>()))
@@ -158,6 +194,7 @@ public sealed class PullJobTests
     [Fact]
     public async Task RunTick_acks_sequence_gap_without_applying()
     {
+        SetupAcquiredLock();
         SetupTopology(new SourceNodeInfo("src-1", "http://src"));
         _batchQuery
             .Setup(x => x.GetLastSequenceAsync("src-1", "ch1", It.IsAny<CancellationToken>()))
