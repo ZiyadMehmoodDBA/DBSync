@@ -92,4 +92,17 @@ export const queryKeys = {
     detail:  (id: string) => ['plugins', id] as const,
     summary: () => ['plugins', 'summary'] as const,
   },
+
+  marketplace: {
+    search: (params: { query?: string; category?: string; page: number; pageSize: number }) =>
+      ['marketplace', 'search', params] as const,
+    detail: (id: string) =>
+      ['marketplace', 'plugin', id] as const,
+    versions: (id: string) =>
+      ['marketplace', 'versions', id] as const,
+    updates: () =>
+      ['marketplace', 'updates'] as const,
+    updateCount: () =>
+      ['marketplace', 'update-count'] as const,
+  },
 };
