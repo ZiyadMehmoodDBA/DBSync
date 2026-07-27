@@ -1,0 +1,6 @@
+{
+  "Config": {
+    "Enabled": true,
+    "IntervalSeconds": 30
+  }
+}

@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup Condition="'$(MSOSyncSdkLocal)' == 'true'">
+    <ProjectReference Include="..\..\src\MSOSync.Sdk\MSOSync.Sdk.csproj" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(MSOSyncSdkLocal)' != 'true'">
+    <PackageReference Include="MSOSync.Sdk" Version="1.0.0" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,61 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "MSOSync",
+  "classifications": ["MSOSync", "Plugin"],
+  "identity": "MSOSync.Plugin.Advanced",
+  "name": "MSOSync Plugin (Advanced)",
+  "shortName": "msosync-plugin-advanced",
+  "tags": {
+    "language": "C#",
+    "type": "project"
+  },
+  "sourceName": "MyPlugin",
+  "symbols": {
+    "pluginId": {
+      "type": "parameter",
+      "datatype": "string",
+      "defaultValue": "my.plugin",
+      "description": "Reverse-DNS plugin identifier (e.g. acme.my-plugin)",
+      "replaces": "my.plugin"
+    },
+    "author": {
+      "type": "parameter",
+      "datatype": "string",
+      "defaultValue": "My Organization",
+      "description": "Plugin author name",
+      "replaces": "My Organization"
+    },
+    "description": {
+      "type": "parameter",
+      "datatype": "string",
+      "defaultValue": "My MSOSync plugin.",
+      "description": "Short plugin description",
+      "replaces": "My MSOSync plugin."
+    },
+    "capability": {
+      "type": "parameter",
+      "datatype": "choice",
+      "choices": [
+        {
+          "choice": "None",
+          "description": "No capability declared"
+        },
+        {
+          "choice": "Collector",
+          "description": "Data collector plugin"
+        },
+        {
+          "choice": "Transport",
+          "description": "Transport/webhook plugin"
+        },
+        {
+          "choice": "Operation",
+          "description": "Operations plugin"
+        }
+      ],
+      "defaultValue": "None",
+      "description": "Primary plugin capability",
+      "replaces": "None"
+    }
+  }
+}
