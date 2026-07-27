@@ -3,13 +3,17 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Options;
+using MSOSync.Common;
 
 namespace MSOSync.Transport;
 
 public sealed class NodeHttpClient(
-    HttpClient             httpClient,
-    GzipCompressionService compression,
-    IHttpContextAccessor?  httpContextAccessor = null) : INodeHttpClient
+    HttpClient                   httpClient,
+    ICompressionNegotiator       negotiator,
+    IOptions<CompressionOptions> compressionOptions,
+    IMetricsService              metrics,
+    IHttpContextAccessor?        httpContextAccessor = null) : INodeHttpClient
 {
     private static readonly JsonSerializerOptions JsonOpts =
         new(TransportJsonContext.Default.Options);
@@ -42,27 +46,61 @@ public sealed class NodeHttpClient(
 
     private async Task<string> ReadBodyAsync(HttpResponseMessage response, CancellationToken ct)
     {
-        var bytes = await response.Content.ReadAsByteArrayAsync(ct);
-        if (response.Content.Headers.ContentEncoding.Contains("gzip"))
-            bytes = compression.Decompress(bytes);
+        var bytes    = await response.Content.ReadAsByteArrayAsync(ct);
+        var encoding = response.Content.Headers.ContentEncoding;
+
+        if (encoding.Contains("gzip"))
+        {
+            var gzip = new GzipCompressionService(compressionOptions);
+            bytes = gzip.Decompress(bytes);
+        }
+        else if (encoding.Contains("br"))
+        {
+            var brotli = new BrotliCompressionService(compressionOptions);
+            bytes = brotli.Decompress(bytes);
+        }
+
         return Encoding.UTF8.GetString(bytes);
     }
 
     private async Task<HttpResponseMessage> SendAsync<TRequest>(
         string url, TRequest body, string nodeId, string nodeToken, CancellationToken ct)
     {
-        var json       = JsonSerializer.Serialize(body, JsonOpts);
-        var jsonBytes  = Encoding.UTF8.GetBytes(json);
-        var compressed = compression.Compress(jsonBytes);
+        var json      = JsonSerializer.Serialize(body, JsonOpts);
+        var jsonBytes = Encoding.UTF8.GetBytes(json);
+        var threshold = compressionOptions.Value.ThresholdBytes;
 
-        var content = new ByteArrayContent(compressed);
-        content.Headers.ContentType     = new MediaTypeHeaderValue("application/json");
-        content.Headers.ContentEncoding.Add("gzip");
+        byte[] outBytes;
+        string? contentEncoding = null;
+
+        if (jsonBytes.Length >= threshold)
+        {
+            // Apply compression and record timing
+            var compressionSvc = negotiator.SelectFor(nodeId);
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            outBytes = compressionSvc.Compress(jsonBytes);
+            sw.Stop();
+            metrics.RecordHistogram(
+                "sync.pipeline.compress_ms",
+                sw.Elapsed.TotalMilliseconds,
+                new Dictionary<string, string> { ["node_id"] = nodeId, ["encoding"] = compressionSvc.EncodingName });
+            contentEncoding = compressionSvc.EncodingName;
+        }
+        else
+        {
+            // Below threshold — send raw; no Content-Encoding header
+            outBytes = jsonBytes;
+        }
+
+        var content = new ByteArrayContent(outBytes);
+        content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+        if (contentEncoding is not null)
+            content.Headers.ContentEncoding.Add(contentEncoding);
 
         var request = new HttpRequestMessage(HttpMethod.Post, url) { Content = content };
-        request.Headers.Add("X-Node-Id",    nodeId);
-        request.Headers.Add("X-Node-Token", nodeToken);
-        request.Headers.Add("Accept-Encoding", "gzip");
+        request.Headers.Add("X-Node-Id",       nodeId);
+        request.Headers.Add("X-Node-Token",    nodeToken);
+        request.Headers.Add("Accept-Encoding", "gzip, br");
 
         var correlationId = GetOrCreateCorrelationId();
         request.Headers.Add("X-Correlation-Id", correlationId);

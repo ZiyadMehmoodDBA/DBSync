@@ -31,13 +31,20 @@ public sealed class SyncJobTests
 
     private SyncJob BuildJob()
     {
-        var services = new ServiceCollection();
-        services.AddScoped(_ => new SyncEngine(
-            _driftDetector.Object, _eventReader.Object, _routing.Object,
-            _batchCreator.Object, _transport.Object, _mediator.Object,
-            _clock.Object, NullLogger<SyncEngine>.Instance));
+        // Inner container: resolves ITransportService from the mock so SyncEngine's scoped dispatch works
+        var innerServices = new ServiceCollection();
+        innerServices.AddSingleton(_transport.Object);
+        innerServices.AddScoped<ITransportService>(sp => sp.GetRequiredService<ITransportService>());
+        var innerSp = innerServices.BuildServiceProvider();
+        var engineScopeFactory = innerSp.GetRequiredService<IServiceScopeFactory>();
 
-        var scopeFactory = services.BuildServiceProvider()
+        var outerServices = new ServiceCollection();
+        outerServices.AddScoped(_ => new SyncEngine(
+            _driftDetector.Object, _eventReader.Object, _routing.Object,
+            _batchCreator.Object, engineScopeFactory, _mediator.Object,
+            Mock.Of<IMetricsService>(), _clock.Object, NullLogger<SyncEngine>.Instance));
+
+        var scopeFactory = outerServices.BuildServiceProvider()
             .GetRequiredService<IServiceScopeFactory>();
 
         return new SyncJob(

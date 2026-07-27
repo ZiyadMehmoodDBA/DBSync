@@ -1,22 +1,26 @@
+using System.Diagnostics;
 using MediatR;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using MSOSync.Batch;
 using MSOSync.Common;
 using MSOSync.Event;
+using MSOSync.Persistence.Entities;
 using MSOSync.Routing;
 using MSOSync.Trigger;
 
 namespace MSOSync.Engine;
 
 public sealed class SyncEngine(
-    ITriggerDriftDetector driftDetector,
-    IEventReader eventReader,
-    IRoutingService routingService,
-    IBatchCreator batchCreator,
-    ITransportService transport,
-    IMediator mediator,
-    IClock clock,
-    ILogger<SyncEngine> logger)
+    ITriggerDriftDetector   driftDetector,
+    IEventReader            eventReader,
+    IRoutingService         routingService,
+    IBatchCreator           batchCreator,
+    IServiceScopeFactory    scopeFactory,
+    IMediator               mediator,
+    IMetricsService         metrics,
+    IClock                  clock,
+    ILogger<SyncEngine>     logger)
 {
     private const int BatchReadSize = 1000;
 
@@ -29,8 +33,12 @@ public sealed class SyncEngine(
         try { await driftDetector.DetectAllAsync(ct); }
         catch (Exception ex) { logger.LogWarning(ex, "Drift detection failed — continuing"); }
 
-        // 2. Read unprocessed events
-        var events = await eventReader.ReadAsync(BatchReadSize, ct);
+        // 2. Read unprocessed events (instrumented)
+        var fetchSw = Stopwatch.StartNew();
+        var events  = await eventReader.ReadAsync(BatchReadSize, ct);
+        fetchSw.Stop();
+        metrics.RecordHistogram("sync.pipeline.fetch_ms", fetchSw.Elapsed.TotalMilliseconds);
+
         if (events.Count == 0)
         {
             logger.LogDebug("SyncEngine: no events to process");
@@ -46,14 +54,36 @@ public sealed class SyncEngine(
         // 4. Create batches
         var batches = await batchCreator.CreateBatchesAsync(events, routes, ct);
 
-        // 5. Send each batch via transport (PUSH or PULL no-op)
-        foreach (var batch in batches)
-            await transport.SendBatchAsync(batch, events, ct);
+        // 5. Parallel dispatch: group by NodeId, one IServiceScope per group
+        //    Batches within a node group are dispatched serially (preserves sequence order per channel).
+        //    Batches for different nodes are dispatched concurrently.
+        var byNode = batches.GroupBy(b => b.NodeId).ToList();
+
+        await Task.WhenAll(byNode.Select(group =>
+            DispatchNodeBatchesAsync(group.Key, group.ToList(), events, ct)));
 
         // 6. Publish cycle event
         var duration = clock.UtcNow - start;
         logger.LogInformation("SyncEngine: read={Events} batches={Batches} elapsed={Elapsed}",
             events.Count, batches.Count, duration);
         await mediator.Publish(new SyncCycleCompletedEvent(events.Count, batches.Count, duration), ct);
+    }
+
+    /// <summary>
+    /// Dispatches all batches for a single target node using a dedicated IServiceScope.
+    /// Batches within the scope are sent serially to preserve per-channel sequence order.
+    /// send_ms is instrumented per-batch inside SmartTransportService.SendBatchAsync.
+    /// </summary>
+    private async Task DispatchNodeBatchesAsync(
+        string                           nodeId,
+        IReadOnlyList<SyncOutgoingBatch> nodeBatches,
+        IReadOnlyList<SyncDataEvent>     events,
+        CancellationToken                ct)
+    {
+        await using var scope     = scopeFactory.CreateAsyncScope();
+        var scopedTransport = scope.ServiceProvider.GetRequiredService<ITransportService>();
+
+        foreach (var batch in nodeBatches)
+            await scopedTransport.SendBatchAsync(batch, events, ct);
     }
 }

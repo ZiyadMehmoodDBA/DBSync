@@ -2,6 +2,7 @@ using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using MSOSync.Batch;
+using MSOSync.Common;
 using MSOSync.Metadata.Dtos;
 using MSOSync.Metadata.Interfaces;
 using MSOSync.Persistence;
@@ -23,12 +24,12 @@ public sealed class SmartTransportServiceTests
         var clock        = new FakeClock();
         var classifier   = new TransportFailureClassifier();
         var sm           = stateMachine ?? new BatchStateMachine(db, clock);
-        var ack          = new AcknowledgementService(sm, db, NullLogger<AcknowledgementService>.Instance);
+        var ack          = new AcknowledgementService(sm, db, Mock.Of<IMetricsService>(), NullLogger<AcknowledgementService>.Instance);
         var nodeProps    = Microsoft.Extensions.Options.Options.Create(
             new MSOSync.Common.NodeProperties { NodeId = "local", GroupId = "g", SyncUrl = "http://local", NodeToken = "tok" });
         var pc           = pushClient ?? new PushClient(Mock.Of<INodeHttpClient>(), nodeProps);
 
-        return new SmartTransportService(nodeMetadata, pc, sm, ack, classifier, clock,
+        return new SmartTransportService(nodeMetadata, pc, sm, ack, classifier, Mock.Of<IMetricsService>(), clock,
             NullLogger<SmartTransportService>.Instance);
     }
 

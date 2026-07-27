@@ -1,5 +1,7 @@
+using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using MSOSync.Batch;
+using MSOSync.Common;
 using MSOSync.Persistence;
 using MSOSync.Persistence.Entities;
 using MSOSync.Transport.Payloads;
@@ -12,39 +14,56 @@ namespace MSOSync.Transport;
 public sealed class AcknowledgementService(
     IBatchStateMachine              stateMachine,
     AppDbContext                    db,
+    IMetricsService                 metrics,
     ILogger<AcknowledgementService> logger)
 {
     /// <summary>
     /// Called by SmartTransportService after a PUSH attempt completes.
     /// </summary>
     public async Task AcknowledgeOutgoingAsync(
-        long                      batchId,
-        bool                      success,
-        DateTimeOffset            ackTime,
-        TransportFailureReason?   reason,
-        string?                   errorMessage,
-        CancellationToken         ct = default)
+        long                    batchId,
+        bool                    success,
+        DateTimeOffset          ackTime,
+        TransportFailureReason? reason,
+        string?                 errorMessage,
+        CancellationToken       ct = default)
     {
-        if (success)
+        var sw = Stopwatch.StartNew();
+        try
         {
-            await stateMachine.MoveToAcknowledgedAsync(batchId, ackTime, ct);
-            logger.LogInformation("Batch {BatchId} acknowledged at {AckTime}", batchId, ackTime);
-        }
-        else
-        {
-            await stateMachine.MoveToErrorAsync(batchId, ct);
-            if (errorMessage != null)
+            if (success)
             {
-                db.BatchErrors.Add(new SyncBatchError
-                {
-                    BatchId      = batchId,
-                    ConflictType = (reason ?? TransportFailureReason.HttpError).ToString(),
-                    ErrorMessage = errorMessage
-                });
-                await db.SaveChangesAsync(ct);
+                await stateMachine.MoveToAcknowledgedAsync(batchId, ackTime, ct);
+                logger.LogInformation("Batch {BatchId} acknowledged at {AckTime}", batchId, ackTime);
             }
-            logger.LogWarning("Batch {BatchId} push failed reason={Reason}: {Error}",
-                batchId, reason, errorMessage);
+            else
+            {
+                await stateMachine.MoveToErrorAsync(batchId, ct);
+                if (errorMessage != null)
+                {
+                    db.BatchErrors.Add(new SyncBatchError
+                    {
+                        BatchId      = batchId,
+                        ConflictType = (reason ?? TransportFailureReason.HttpError).ToString(),
+                        ErrorMessage = errorMessage
+                    });
+                    await db.SaveChangesAsync(ct);
+                }
+                logger.LogWarning("Batch {BatchId} push failed reason={Reason}: {Error}",
+                    batchId, reason, errorMessage);
+            }
+        }
+        finally
+        {
+            sw.Stop();
+            metrics.RecordHistogram(
+                "sync.pipeline.ack_ms",
+                sw.Elapsed.TotalMilliseconds,
+                new Dictionary<string, string>
+                {
+                    ["node_id"] = batchId.ToString(),
+                    ["success"] = success.ToString()
+                });
         }
     }
 
@@ -60,7 +79,6 @@ public sealed class AcknowledgementService(
         var batch = await db.OutgoingBatches.FindAsync([payload.BatchId], ct);
         if (batch == null) return false;
 
-        // Idempotent: already acknowledged.
         if (batch.Status == (byte)BatchStatus.Acknowledged)
         {
             logger.LogDebug("Batch {BatchId} already acknowledged — ignoring duplicate ACK",

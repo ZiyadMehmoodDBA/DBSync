@@ -1,9 +1,11 @@
 // tests/MSOSync.EngineTests/SyncEngineTests.cs
 using FluentAssertions;
 using MediatR;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using MSOSync.Batch;
+using MSOSync.Common;
 using MSOSync.Engine;
 using MSOSync.Event;
 using MSOSync.Persistence.Entities;
@@ -15,23 +17,36 @@ namespace MSOSync.EngineTests;
 
 public sealed class SyncEngineTests
 {
+    /// <summary>
+    /// Builds a SyncEngine wired so that the scoped ITransportService resolves to the given mock.
+    /// </summary>
     private static SyncEngine CreateEngine(
-        IEventReader? reader = null,
-        IRoutingService? routing = null,
-        IBatchCreator? creator = null,
-        ITransportService? transport = null,
-        IMediator? mediator = null)
+        IEventReader?      reader     = null,
+        IRoutingService?   routing    = null,
+        IBatchCreator?     creator    = null,
+        ITransportService? transport  = null,
+        IMediator?         mediator   = null,
+        IMetricsService?   metrics    = null)
     {
-        var driftMock     = new Mock<ITriggerDriftDetector>();
-        var readerMock    = reader    ?? Mock.Of<IEventReader>(r => r.ReadAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()) == Task.FromResult<IReadOnlyList<SyncDataEvent>>(Array.Empty<SyncDataEvent>()));
-        var routingMock   = routing   ?? Mock.Of<IRoutingService>(r => r.ResolveAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()) == Task.FromResult<IReadOnlyList<string>>(Array.Empty<string>()));
-        var creatorMock   = creator   ?? Mock.Of<IBatchCreator>(c => c.CreateBatchesAsync(It.IsAny<IReadOnlyList<SyncDataEvent>>(), It.IsAny<IReadOnlyDictionary<long, IReadOnlyList<string>>>(), It.IsAny<CancellationToken>()) == Task.FromResult<IReadOnlyList<SyncOutgoingBatch>>(Array.Empty<SyncOutgoingBatch>()));
-        var transportMock = transport ?? Mock.Of<ITransportService>();
-        var mediatorMock  = mediator  ?? Mock.Of<IMediator>();
-        var clock         = new FakeClock();
+        var driftMock   = new Mock<ITriggerDriftDetector>();
+        var readerMock  = reader   ?? Mock.Of<IEventReader>(r => r.ReadAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()) == Task.FromResult<IReadOnlyList<SyncDataEvent>>(Array.Empty<SyncDataEvent>()));
+        var routingMock = routing  ?? Mock.Of<IRoutingService>(r => r.ResolveAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()) == Task.FromResult<IReadOnlyList<string>>(Array.Empty<string>()));
+        var creatorMock = creator  ?? Mock.Of<IBatchCreator>(c => c.CreateBatchesAsync(It.IsAny<IReadOnlyList<SyncDataEvent>>(), It.IsAny<IReadOnlyDictionary<long, IReadOnlyList<string>>>(), It.IsAny<CancellationToken>()) == Task.FromResult<IReadOnlyList<SyncOutgoingBatch>>(Array.Empty<SyncOutgoingBatch>()));
+        var mediatorMock = mediator ?? Mock.Of<IMediator>();
+        var metricsMock  = metrics  ?? Mock.Of<IMetricsService>();
+        var clock        = new FakeClock();
+
+        // Wire the transport into a real DI container so scopeFactory resolves it.
+        // Register as a named factory so scoped resolution doesn't conflict.
+        var transportSvc = transport ?? Mock.Of<ITransportService>();
+        var services = new ServiceCollection();
+        // Register the mock as the ITransportService (scoped lifetime matches engine expectation)
+        services.AddScoped<ITransportService>(_ => transportSvc);
+        var sp = services.BuildServiceProvider();
+        var scopeFactory = sp.GetRequiredService<IServiceScopeFactory>();
 
         return new SyncEngine(driftMock.Object, readerMock, routingMock, creatorMock,
-            transportMock, mediatorMock, clock, NullLogger<SyncEngine>.Instance);
+            scopeFactory, mediatorMock, metricsMock, clock, NullLogger<SyncEngine>.Instance);
     }
 
     [Fact]

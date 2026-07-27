@@ -1,6 +1,8 @@
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 using MSOSync.Batch;
+using MSOSync.Common;
 using MSOSync.Persistence;
 using MSOSync.Persistence.Entities;
 using MSOSync.Transport;
@@ -15,7 +17,7 @@ public sealed class AcknowledgementServiceTests
     {
         var db  = TestDb.Create();
         var sm  = new BatchStateMachine(db, new FakeClock());
-        var svc = new AcknowledgementService(sm, db, NullLogger<AcknowledgementService>.Instance);
+        var svc = new AcknowledgementService(sm, db, Mock.Of<IMetricsService>(), NullLogger<AcknowledgementService>.Instance);
         return (svc, db);
     }
 

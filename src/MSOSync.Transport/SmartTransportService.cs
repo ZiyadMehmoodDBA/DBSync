@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using MSOSync.Batch;
 using MSOSync.Common;
@@ -14,6 +15,7 @@ public sealed class SmartTransportService(
     IBatchStateMachine             stateMachine,
     AcknowledgementService         acknowledgement,
     ITransportFailureClassifier    classifier,
+    IMetricsService                metrics,
     IClock                         clock,
     ILogger<SmartTransportService> logger) : ITransportService
 {
@@ -47,15 +49,27 @@ public sealed class SmartTransportService(
 
         await stateMachine.MoveToSendingAsync(batch.BatchId, ct);
 
+        var sw = Stopwatch.StartNew();
         try
         {
             var result  = await pushClient.PushAsync(node.SyncUrl, batch, events, ct);
+            sw.Stop();
+            metrics.RecordHistogram(
+                "sync.pipeline.send_ms",
+                sw.Elapsed.TotalMilliseconds,
+                new Dictionary<string, string>
+                {
+                    ["node_id"]  = batch.NodeId,
+                    ["batch_id"] = batch.BatchId.ToString()
+                });
+
             var ackTime = new DateTimeOffset(clock.UtcNow, TimeSpan.Zero);
             await acknowledgement.AcknowledgeOutgoingAsync(
                 batch.BatchId, result.Success, ackTime, null, result.ErrorMessage, ct);
         }
         catch (Exception ex)
         {
+            sw.Stop();
             var reason  = classifier.Classify(ex);
             var ackTime = new DateTimeOffset(clock.UtcNow, TimeSpan.Zero);
             logger.LogError(ex, "Transport: push failed for batch {BatchId} — reason={Reason}",

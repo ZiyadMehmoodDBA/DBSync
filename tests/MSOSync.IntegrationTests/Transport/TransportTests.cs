@@ -6,6 +6,7 @@ using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using MSOSync.Batch;
 using MSOSync.Persistence;
 using MSOSync.Persistence.Entities;
@@ -20,7 +21,7 @@ namespace MSOSync.IntegrationTests.Transport;
 [Collection("Transport")]
 public sealed class TransportTests(TransportFixture fixture)
 {
-    private readonly GzipCompressionService _compression = new();
+    private readonly GzipCompressionService _compression = new(Options.Create(new CompressionOptions()));
 
     private static readonly JsonSerializerOptions JsonOpts =
         new(TransportJsonContext.Default.Options);
