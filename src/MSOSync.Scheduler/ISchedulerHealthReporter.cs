@@ -19,4 +19,10 @@ public interface ISchedulerHealthReporter
 
     /// <summary>Records that the job completed and the lock was released (between ticks).</summary>
     void RecordIdle(string jobName);
+
+    /// <summary>Returns status snapshots for all jobs seen so far on this instance.</summary>
+    SchedulerJobStatus[] GetAll();
+
+    /// <summary>Returns the status snapshot for a specific job, defaulting to Idle if unseen.</summary>
+    SchedulerJobStatus GetOne(string jobName);
 }

@@ -28,6 +28,7 @@ public static class SyncSchedulerExtensions
         services.Configure<MSOSync.Metadata.Options.ReplayOptions>(
             config.GetSection(MSOSync.Metadata.Options.ReplayOptions.Section));
         services.AddHostedService<ReplayWorker>();
+        services.AddSingleton<ISchedulerHealthReporter, SchedulerHealthReporter>();
         return services;
     }
 }

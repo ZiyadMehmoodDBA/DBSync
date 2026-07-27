@@ -113,6 +113,7 @@ try
     builder.Services.AddSingleton<ISystemHealthContributor, DatabaseHealthContributor>();
     builder.Services.AddSingleton<ISystemHealthContributor, ApiHealthContributor>();
     builder.Services.AddSingleton<ISystemHealthContributor, SignalRHealthContributor>();
+    builder.Services.AddSingleton<ISystemHealthContributor, SchedulerHealthContributor>();
     builder.Services.AddHealthChecks()
         .AddCheck<WorkerHealthCheck>("workers")
         .AddCheck<MSOSync.Plugin.Diagnostics.PluginHealthCheck>("plugins");
