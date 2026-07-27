@@ -14,4 +14,13 @@
   <ItemGroup>
     <ProjectReference Include="..\MSOSync.Sdk\MSOSync.Sdk.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Scaffolding\Templates\Plugin.csproj.template" />
+    <!-- PluginImpl.cs.template renamed to .cstemplate to avoid the .NET SDK stripping the .cs extension
+         from the embedded resource name and potentially treating it as a compile input. -->
+    <EmbeddedResource Include="Scaffolding\Templates\PluginImpl.cstemplate"
+                      LogicalName="MSOSync.Cli.Scaffolding.Templates.PluginImpl.cs.template" />
+    <EmbeddedResource Include="Scaffolding\Templates\plugin.json.template" />
+    <EmbeddedResource Include="Scaffolding\Templates\plugin.config.json.template" />
+  </ItemGroup>
 </Project>

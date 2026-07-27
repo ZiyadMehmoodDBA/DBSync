@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <LangVersion>13.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- Replace VERSION with the MSOSync.Sdk NuGet version you are targeting -->
+    <PackageReference Include="MSOSync.Sdk" Version="1.0.0" />
+  </ItemGroup>
+</Project>

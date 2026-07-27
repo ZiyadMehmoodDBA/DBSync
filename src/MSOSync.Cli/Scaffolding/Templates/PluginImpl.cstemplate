@@ -1,0 +1,26 @@
+using MSOSync.Sdk.Abstractions;
+using MSOSync.Sdk.Hosting;
+
+namespace {{Namespace}};
+
+// Entry point declared in plugin.json → entryType
+public sealed class {{ClassName}} : PluginBase
+{
+    public override async Task InitializeAsync(IPluginContext context, CancellationToken cancellationToken)
+    {
+        await base.InitializeAsync(context, cancellationToken);
+        // TODO: read configuration via context.Configuration
+    }
+
+    public override Task StartAsync(CancellationToken cancellationToken)
+    {
+        // TODO: start background work
+        return base.StartAsync(cancellationToken);
+    }
+
+    public override Task StopAsync(CancellationToken cancellationToken)
+    {
+        // TODO: stop background work
+        return base.StopAsync(cancellationToken);
+    }
+}
