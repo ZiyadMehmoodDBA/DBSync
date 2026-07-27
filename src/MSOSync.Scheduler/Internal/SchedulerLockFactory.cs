@@ -31,9 +31,13 @@ internal sealed class SchedulerLockFactory(
             return null;
         }
 
-        // Dispose the raw IDistributedLock handle — SchedulerLockImpl takes over lifecycle
-        // (renewal and release) via IDistributedLockService directly.
-        await handle.DisposeAsync();
+        // Do NOT dispose the raw handle here — doing so would immediately release the lock row
+        // (SqlDistributedLock.DisposeAsync sets lock_owner = NULL). SchedulerLockImpl takes
+        // over the lock lifecycle: it renews lock_expiry via IDistributedLockService and
+        // releases via ReleaseAsync on its own DisposeAsync. The raw handle is intentionally
+        // left undisposed; SqlDistributedLock has no finalizer, so the GC will reclaim it
+        // without triggering any database operation.
+        _ = handle; // acknowledge the discard; handle is owned by SchedulerLockImpl going forward
 
         logger.LogDebug(
             "SchedulerLockFactory: acquired '{LockName}' (owner={Owner})",

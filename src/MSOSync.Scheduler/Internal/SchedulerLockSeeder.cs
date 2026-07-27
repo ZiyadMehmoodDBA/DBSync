@@ -34,7 +34,7 @@ internal sealed class SchedulerLockSeeder(
             {
                 await db.Database.ExecuteSqlRawAsync(
                     $"IF NOT EXISTS (SELECT 1 FROM [{schema}].[sync_lock] WHERE lock_name = {{0}}) " +
-                    $"INSERT INTO [{schema}].[sync_lock] (lock_name, lock_owner, lock_time, lock_expiry, scope) " +
+                    $"INSERT INTO [{schema}].[sync_lock] (lock_name, lock_owner, lock_time, lock_expiry, lock_scope) " +
                     "VALUES ({0}, NULL, NULL, NULL, 0)",
                     new object[] { lockName },
                     cancellationToken);
