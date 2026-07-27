@@ -24,5 +24,6 @@
     <ProjectReference Include="..\MSOSync.Engine\MSOSync.Engine.csproj" />
     <ProjectReference Include="..\MSOSync.Topology\MSOSync.Topology.csproj" />
     <ProjectReference Include="..\MSOSync.Plugin\MSOSync.Plugin.csproj" />
+    <ProjectReference Include="..\MSOSync.Scheduler\MSOSync.Scheduler.csproj" />
   </ItemGroup>
 </Project>

@@ -2,9 +2,11 @@ using System.Reflection;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Hosting;
+using MSOSync.Api.Dtos;
 using MSOSync.Common.Health;
 using MSOSync.Common.Workers;
 using MSOSync.Metadata.Overview;
+using MSOSync.Scheduler;
 
 namespace MSOSync.Api.Controllers;
 
@@ -12,10 +14,11 @@ namespace MSOSync.Api.Controllers;
 [Route("api/v1/system")]
 [Authorize(Policy = "ViewerOrAbove")]
 public sealed class SystemController(
-    ISystemHealthService healthSvc,
-    IWorkerStatusRegistry workerRegistry,
-    IOverviewQueryService overviewSvc,
-    IHostEnvironment env) : ControllerBase
+    ISystemHealthService     healthSvc,
+    IWorkerStatusRegistry    workerRegistry,
+    IOverviewQueryService    overviewSvc,
+    ISchedulerHealthReporter schedulerHealth,
+    IHostEnvironment         env) : ControllerBase
 {
     [HttpGet("health")]
     [ProducesResponseType<HealthContribution[]>(200)]
@@ -57,5 +60,23 @@ public sealed class SystemController(
             Environment: env.EnvironmentName,
             ServerTime: DateTime.UtcNow.ToString("O"),
             ProcessUptime: $"{(int)uptime.TotalDays}d {uptime.Hours:D2}:{uptime.Minutes:D2}:{uptime.Seconds:D2}"));
+    }
+
+    [HttpGet("scheduler-status")]
+    [Authorize(Policy = "AdminOnly")]
+    [ProducesResponseType<SchedulerStatusDto>(200)]
+    public IActionResult GetSchedulerStatus()
+    {
+        var instanceId = $"{Environment.MachineName}:{Environment.ProcessId}";
+        var jobs = schedulerHealth.GetAll()
+            .Select(s => new SchedulerJobDto(
+                s.JobName,
+                s.Mode.ToString(),
+                s.LockOwner,
+                s.LockedSince,
+                s.LastUpdated))
+            .ToArray();
+
+        return Ok(new SchedulerStatusDto(instanceId, jobs));
     }
 }
