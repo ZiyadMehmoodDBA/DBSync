@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\MSOSync.Sdk\MSOSync.Sdk.csproj" />
+    <PackageReference Include="Microsoft.Extensions.Http" />
+  </ItemGroup>
+</Project>

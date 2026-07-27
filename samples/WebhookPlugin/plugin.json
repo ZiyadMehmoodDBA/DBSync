@@ -1,0 +1,18 @@
+{
+  "manifestVersion": 1,
+  "id": "samples.webhook",
+  "name": "Webhook Plugin",
+  "version": "1.0.0",
+  "sdkVersion": "1.0",
+  "apiVersion": "1",
+  "startupOrder": 1000,
+  "minHostVersion": "14.0.0",
+  "maxHostVersion": "14.9.999",
+  "entryAssembly": "WebhookPlugin.dll",
+  "entryType": "WebhookPlugin.WebhookPlugin",
+  "author": "MSOSync",
+  "description": "Webhook plugin sample — demonstrates HTTP delivery, optional service resolution, and retry patterns.",
+  "permissions": ["Transport"],
+  "dependencies": [],
+  "capabilities": ["Transport"]
+}

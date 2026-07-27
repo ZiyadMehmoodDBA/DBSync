@@ -1,0 +1,5 @@
+{
+  "WebhookUrl": "https://hooks.example.com/msosync",
+  "TimeoutSeconds": 10,
+  "RetryCount": 3
+}

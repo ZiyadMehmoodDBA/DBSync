@@ -1,0 +1,14 @@
+{
+  "Feature": {
+    "EnableDetailedLogging": true,
+    "MaxBatchSize": 500
+  },
+  "Retry": {
+    "MaxAttempts": 3,
+    "DelayMs": 1000
+  },
+  "Thresholds": {
+    "WarnAtQueueDepth": 1000,
+    "ErrorAtQueueDepth": 5000
+  }
+}
