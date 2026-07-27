@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using MSOSync.Scheduler.Internal;
+using MSOSync.Scheduler.Options;
 using MSOSync.Scheduler.Workers;
 
 namespace MSOSync.Scheduler;
@@ -30,10 +31,18 @@ public static class SyncSchedulerExtensions
         // Seed scheduler lock rows at startup
         services.AddHostedService<SchedulerLockSeeder>();
 
+        // NEW in 2D.5: Adaptive polling
+        services.Configure<AdaptivePollingOptions>(config.GetSection(AdaptivePollingOptions.Section));
+        services.AddMemoryCache(); // idempotent
+        services.AddSingleton<IAdaptivePollingService, AdaptivePollingService>();
+        services.AddHostedService<AdaptivePollingOrchestrator>();
+
+        // SyncJob demoted from BackgroundService to scoped service (orchestrator drives it)
+        services.AddScoped<SyncJob>();
+
         // Existing MediatR + hosted services (unchanged)
         services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<SchedulerRecovery>());
         services.AddHostedService<SchedulerRecovery>();
-        services.AddHostedService<SyncJob>();
         services.AddHostedService<RetryJob>();
         services.AddHostedService<PurgeJob>();
         services.AddHostedService<PullJob>();

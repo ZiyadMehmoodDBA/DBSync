@@ -1,44 +1,35 @@
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using MSOSync.Common.Workers;
 using MSOSync.Engine;
 
 namespace MSOSync.Scheduler;
 
+/// <summary>
+/// Unit of work invoked per node per poll cycle by AdaptivePollingOrchestrator.
+/// Demoted from BackgroundService in 2D.5 — no longer manages its own timer.
+/// Uses ISchedulerLockFactory + SchedulerJobGuard for distributed locking.
+/// </summary>
 public sealed class SyncJob(
     IServiceScopeFactory     scopeFactory,
-    IOptions<SyncOptions>    syncOptions,
     ISchedulerLockFactory    lockFactory,
     ISchedulerHealthReporter health,
     IWorkerStatusRegistry    registry,
-    ILogger<SyncJob>         logger) : BackgroundService
+    ILogger<SyncJob>         logger)
 {
-    public override async Task StartAsync(CancellationToken cancellationToken)
-    {
-        registry.Register(nameof(SyncJob), TimeSpan.FromSeconds(syncOptions.Value.IntervalSeconds));
-        await base.StartAsync(cancellationToken);
-    }
+    // Parameterless overload retained for test backward compatibility
+    internal Task RunTickAsync(CancellationToken ct = default) => RunTickAsync(null, ct);
 
-    protected override async Task ExecuteAsync(CancellationToken ct)
-    {
-        var interval = TimeSpan.FromSeconds(syncOptions.Value.IntervalSeconds);
-        using var timer = new PeriodicTimer(interval);
-
-        while (await timer.WaitForNextTickAsync(ct))
-        {
-            await RunTickAsync(ct);
-        }
-    }
-
-    internal async Task RunTickAsync(CancellationToken ct)
+    internal async Task RunTickAsync(string? nodeId, CancellationToken ct)
     {
         registry.RecordTickStart(nameof(SyncJob));
         try
         {
+            // Per-node lock key: "SyncJob:node-abc" or "SyncJob" (legacy/single-node)
+            var lockKey = nodeId is not null ? $"{nameof(SyncJob)}:{nodeId}" : nameof(SyncJob);
+
             await SchedulerJobGuard.RunAsync(
-                nameof(SyncJob),
+                lockKey,
                 lockFactory,
                 health,
                 logger,
@@ -55,7 +46,7 @@ public sealed class SyncJob(
         catch (Exception ex) when (!ct.IsCancellationRequested)
         {
             registry.RecordTickFailed(nameof(SyncJob), ex);
-            logger.LogError(ex, "SyncJob run failed");
+            logger.LogError(ex, "SyncJob run failed for node {NodeId}", nodeId);
         }
     }
 }

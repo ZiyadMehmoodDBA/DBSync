@@ -2,7 +2,6 @@ using FluentAssertions;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 using Moq;
 using MSOSync.Batch;
 using MSOSync.Common;
@@ -43,7 +42,6 @@ public sealed class SyncJobTests
 
         return new SyncJob(
             scopeFactory,
-            Options.Create(new SyncOptions()),
             _lockFactory.Object,
             _health.Object,
             _registry.Object,
@@ -117,5 +115,21 @@ public sealed class SyncJobTests
             x => x.RecordTickFailed(nameof(SyncJob), It.IsAny<InvalidOperationException>()),
             Times.Once);
         _registry.Verify(x => x.RecordTickComplete(nameof(SyncJob)), Times.Never);
+    }
+
+    [Fact]
+    public async Task RunTick_uses_pernode_lockkey_when_nodeId_provided()
+    {
+        _lockFactory
+            .Setup(x => x.TryAcquireAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((ISchedulerLock?)null);
+
+        await BuildJob().RunTickAsync("node-abc", CancellationToken.None);
+
+        _lockFactory.Verify(
+            x => x.TryAcquireAsync(
+                It.Is<string>(k => k == $"{nameof(SyncJob)}:node-abc"),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 }
