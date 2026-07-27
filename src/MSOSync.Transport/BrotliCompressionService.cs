@@ -3,29 +3,29 @@ using Microsoft.Extensions.Options;
 
 namespace MSOSync.Transport;
 
-public sealed class GzipCompressionService : ICompressionService
+public sealed class BrotliCompressionService : ICompressionService
 {
     private readonly CompressionLevel _level;
 
-    public GzipCompressionService(IOptions<CompressionOptions> options)
+    public BrotliCompressionService(IOptions<CompressionOptions> options)
         => _level = MapLevel(options.Value.Level);
 
-    public string EncodingName => "gzip";
+    public string EncodingName => "br";
 
     public byte[] Compress(byte[] data)
     {
-        using var output = new MemoryStream();
-        using (var gzip = new GZipStream(output, _level, leaveOpen: true))
-            gzip.Write(data, 0, data.Length);
+        using var output  = new MemoryStream();
+        using (var brotli = new BrotliStream(output, _level, leaveOpen: true))
+            brotli.Write(data, 0, data.Length);
         return output.ToArray();
     }
 
     public byte[] Decompress(byte[] data)
     {
         using var input  = new MemoryStream(data);
-        using var gzip   = new GZipStream(input, CompressionMode.Decompress);
+        using var brotli = new BrotliStream(input, CompressionMode.Decompress);
         using var output = new MemoryStream();
-        gzip.CopyTo(output);
+        brotli.CopyTo(output);
         return output.ToArray();
     }
 

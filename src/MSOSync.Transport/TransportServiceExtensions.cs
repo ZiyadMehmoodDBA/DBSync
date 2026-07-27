@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Http.Resilience;
@@ -9,10 +10,16 @@ public static class TransportServiceExtensions
 {
     public static IServiceCollection AddTransportServices(
         this IServiceCollection services,
-        IConfiguration _)
+        IConfiguration config)
     {
-        // Singletons
-        services.AddSingleton<GzipCompressionService>();
+        // Options
+        services.Configure<CompressionOptions>(config.GetSection(CompressionOptions.Section));
+
+        // Compression
+        services.AddMemoryCache();
+        services.AddSingleton<ICompressionService, GzipCompressionService>();
+        services.AddSingleton<BrotliCompressionService>();
+        services.AddSingleton<ICompressionNegotiator, CompressionNegotiator>();
         services.AddSingleton<ITransportFailureClassifier, TransportFailureClassifier>();
 
         // Typed HttpClient with Polly resilience
@@ -30,8 +37,6 @@ public static class TransportServiceExtensions
         services.AddScoped<PushClient>();
         services.AddScoped<PullClient>();
         services.AddScoped<AcknowledgementService>();
-        // SmartTransportService registered as the ITransportService implementation
-        // (replaces NoOpTransportService removed from AddSyncEngine in Task 8)
         services.AddScoped<ITransportService, SmartTransportService>();
 
         return services;

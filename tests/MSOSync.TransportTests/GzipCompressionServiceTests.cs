@@ -1,5 +1,6 @@
 using System.Text;
 using FluentAssertions;
+using Microsoft.Extensions.Options;
 using MSOSync.Transport;
 using Xunit;
 
@@ -7,7 +8,8 @@ namespace MSOSync.TransportTests;
 
 public sealed class GzipCompressionServiceTests
 {
-    private static readonly GzipCompressionService Svc = new();
+    private static readonly ICompressionService Svc =
+        new GzipCompressionService(Options.Create(new CompressionOptions()));
 
     [Fact]
     public void CompressDecompress_RoundTrip_MatchesOriginal()
