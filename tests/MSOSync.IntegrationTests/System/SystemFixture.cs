@@ -20,6 +20,7 @@ using MSOSync.App.Export;
 using MSOSync.App.Health;
 using MSOSync.App.Workers;
 using MSOSync.Common;
+using MSOSync.Common.Caching;
 using MSOSync.Common.Health;
 using MSOSync.Common.Workers;
 using MSOSync.Metadata;
@@ -27,6 +28,7 @@ using MSOSync.Metadata.Configuration;
 using MSOSync.Metadata.Export;
 using MSOSync.Persistence;
 using MSOSync.Persistence.Entities;
+using MSOSync.Scheduler;
 using MSOSync.Security;
 using MSOSync.Topology;
 using Xunit;
@@ -73,7 +75,9 @@ public sealed class SystemFixture : WebApplicationFactory<Program>, IAsyncLifeti
 
         testBuilder.Services.AddPersistence(testBuilder.Configuration);
         testBuilder.Services.AddSecurity(testBuilder.Configuration);
+        testBuilder.Services.AddCacheService(testBuilder.Configuration);
         testBuilder.Services.AddMetadata(testBuilder.Configuration);
+        testBuilder.Services.AddHttpClient();   // IHttpClientFactory (NodeDecommissionNotifier)
         testBuilder.Services.AddSingleton<IClock, SystemClock>();
         testBuilder.Services.AddTopologyServices();
         testBuilder.Services.AddHttpContextAccessor();
@@ -96,6 +100,10 @@ public sealed class SystemFixture : WebApplicationFactory<Program>, IAsyncLifeti
         testBuilder.Services.AddSingleton<ISystemHealthContributor, DatabaseHealthContributor>();
         testBuilder.Services.AddSingleton<ISystemHealthContributor, ApiHealthContributor>();
         testBuilder.Services.AddSingleton<ISystemHealthContributor, SignalRHealthContributor>();
+
+        // 2D.3: Scheduler health reporter + contributor (stub for system tests — no real scheduler in test host)
+        testBuilder.Services.AddSingleton<ISchedulerHealthReporter, SchedulerHealthReporter>();
+        testBuilder.Services.AddSingleton<ISystemHealthContributor, SchedulerHealthContributor>();
 
         testBuilder.Services.Configure<ExportOptions>(
             testBuilder.Configuration.GetSection("Export"));
