@@ -61,7 +61,7 @@ public sealed class AcknowledgementService(
                 sw.Elapsed.TotalMilliseconds,
                 new Dictionary<string, string>
                 {
-                    ["node_id"] = batchId.ToString(),
+                    ["batch_id"] = batchId.ToString(),
                     ["success"] = success.ToString()
                 });
         }
