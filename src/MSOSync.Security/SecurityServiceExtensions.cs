@@ -18,11 +18,15 @@ public static class SecurityServiceExtensions
     public static IServiceCollection AddSecurity(
         this IServiceCollection services,
         IConfiguration configuration,
-        ISecretsService secrets)
+        ISecretsService? secrets = null)
     {
-        var jwtSecret = secrets.GetSecretAsync("Jwt:Secret").GetAwaiter().GetResult()
-            ?? secrets.GetSecretAsync("MSOSYNC_JWT_SECRET").GetAwaiter().GetResult()
-            ?? throw new InvalidOperationException(
+        var jwtSecret = secrets is not null
+            ? (secrets.GetSecretAsync("Jwt:Secret").GetAwaiter().GetResult()
+                ?? secrets.GetSecretAsync("MSOSYNC_JWT_SECRET").GetAwaiter().GetResult())
+            : (configuration["Jwt:Secret"]
+                ?? Environment.GetEnvironmentVariable("MSOSYNC_JWT_SECRET"));
+        if (jwtSecret is null)
+            throw new InvalidOperationException(
                 "JWT signing key not found. Set MSOSYNC_JWT_SECRET env var or Jwt:Secret config key.");
 
         if (jwtSecret.Length < 32)
