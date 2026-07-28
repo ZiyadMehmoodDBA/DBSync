@@ -29,6 +29,7 @@ import {
   TrendingUp,
   ShieldAlert,
   Gauge,
+  Store,
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Separator } from '../../components/ui/separator';
@@ -43,6 +44,7 @@ import type { PermissionKey } from '../../shared/types/permissions';
 import { PreferenceKeys } from '../../shared/types/preferences';
 import type { Theme } from '../../shared/types/preferences';
 import { NotificationBell } from '../../features/notifications/NotificationBell';
+import { useUpdateCount } from '../../shared/hooks/useMarketplace';
 
 type NavItem = { label: string; path: string; icon: React.ElementType; requiredPermission?: PermissionKey };
 
@@ -90,6 +92,7 @@ const NAV_GROUPS: { heading: string | null; items: NavItem[] }[] = [
       { label: 'License',       path: '/administration/license',       icon: FileText },
       { label: 'Diagnostics',   path: '/administration/diagnostics',   icon: Stethoscope,     requiredPermission: PermissionKeys.ManageConfigurations },
       { label: 'Plugins',       path: '/administration/plugins',       icon: Package,         requiredPermission: PermissionKeys.ManagePlugins },
+      { label: 'Marketplace',   path: '/marketplace',                  icon: Store,           requiredPermission: PermissionKeys.ManagePlugins },
     ],
   },
   {
@@ -129,7 +132,15 @@ function SignalRIndicator() {
   );
 }
 
-function NavGroup({ heading, items }: { heading: string | null; items: NavItem[] }) {
+function NavGroup({
+  heading,
+  items,
+  updateCount = 0,
+}: {
+  heading:      string | null;
+  items:        NavItem[];
+  updateCount?: number;
+}) {
   const canViewMetrics         = useHasPermission(PermissionKeys.ViewMetrics);
   const canViewTopology        = useHasPermission(PermissionKeys.ViewTopology);
   const canViewAudit           = useHasPermission(PermissionKeys.ViewAudit);
@@ -185,6 +196,11 @@ function NavGroup({ heading, items }: { heading: string | null; items: NavItem[]
         >
           <Icon className="h-4 w-4 shrink-0" />
           {label}
+          {path === '/marketplace' && updateCount > 0 && (
+            <span className="ml-auto flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+              {updateCount > 99 ? '99+' : updateCount}
+            </span>
+          )}
         </NavLink>
       ))}
     </div>
@@ -198,6 +214,7 @@ export function AppLayout() {
   // Prefetch preferences and permissions for the whole session
   usePreferences();
   usePermissions();
+  const updateCount = useUpdateCount();
 
   // Read saved theme preference; fall back to current localStorage value
   const localTheme = (localStorage.getItem('msosync.theme') as Theme | null) ?? 'light';
@@ -241,7 +258,7 @@ export function AppLayout() {
         <Separator />
         <nav className="flex flex-col gap-4 p-3 flex-1">
           {NAV_GROUPS.map((g, groupIndex) => (
-            <NavGroup key={groupIndex} heading={g.heading} items={g.items} />
+            <NavGroup key={groupIndex} heading={g.heading} items={g.items} updateCount={updateCount} />
           ))}
         </nav>
       </aside>

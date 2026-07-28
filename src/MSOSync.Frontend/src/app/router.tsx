@@ -39,6 +39,7 @@ import { LicensePage } from '../features/administration/license/LicensePage';
 import { DiagnosticsPage } from '../features/administration/diagnostics/DiagnosticsPage';
 import { NotificationsPage } from '../features/notifications/NotificationsPage';
 import { PluginsPage } from '../features/plugins/PluginsPage';
+import { MarketplacePage } from '../features/plugins/MarketplacePage';
 // ClusterPage: brief called for lazy() + <Suspense>, but ALL other pages in this
 // router use eager imports (no lazy() anywhere in this file). Using eager import
 // here to match the established pattern. Convert the whole router to lazy-loading
@@ -165,6 +166,14 @@ export const router = createBrowserRouter([
                 element: (
                   <PermissionGuard permissionKey={PermissionKeys.ManagePlugins}>
                     <PluginsPage />
+                  </PermissionGuard>
+                ),
+              },
+              {
+                path: 'marketplace',
+                element: (
+                  <PermissionGuard permissionKey={PermissionKeys.ManagePlugins}>
+                    <MarketplacePage />
                   </PermissionGuard>
                 ),
               },
