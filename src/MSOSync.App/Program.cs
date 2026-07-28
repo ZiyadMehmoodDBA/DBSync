@@ -22,6 +22,7 @@ using MSOSync.Metadata.Export;
 using MSOSync.Persistence;
 using MSOSync.Routing;
 using MSOSync.Scheduler;
+using MSOSync.Secrets;
 using MSOSync.Security;
 using MSOSync.Security.Tenancy;
 using MSOSync.Topology;
@@ -65,7 +66,9 @@ try
     builder.Services.AddSwaggerGen();
     builder.Services.AddPersistence(builder.Configuration);
     builder.Services.AddDataProtection();
-    builder.Services.AddSecurity(builder.Configuration);
+    builder.Services.AddSecretsService(builder.Configuration, builder.Environment);
+    var bootstrapSecrets = SecretsServiceExtensions.CreateBootstrapSecrets(builder.Configuration, builder.Environment);
+    builder.Services.AddSecurity(builder.Configuration, bootstrapSecrets);
     builder.Services.AddHttpContextAccessor();
     builder.Services.AddScoped<ICurrentUserService, HttpContextCurrentUserService>();
     builder.Services.AddScoped<INodeAuthorizationService, NodeAuthorizationService>();

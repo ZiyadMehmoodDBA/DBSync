@@ -13,5 +13,6 @@
   <ItemGroup>
     <ProjectReference Include="..\MSOSync.Common\MSOSync.Common.csproj" />
     <ProjectReference Include="..\MSOSync.Persistence\MSOSync.Persistence.csproj" />
+    <ProjectReference Include="..\MSOSync.Secrets\MSOSync.Secrets.csproj" />
   </ItemGroup>
 </Project>

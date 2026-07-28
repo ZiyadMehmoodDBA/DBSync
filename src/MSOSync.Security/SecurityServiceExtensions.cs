@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
+using MSOSync.Secrets;
 using MSOSync.Security.Middleware;
 
 namespace MSOSync.Security;
@@ -16,12 +17,13 @@ public static class SecurityServiceExtensions
 {
     public static IServiceCollection AddSecurity(
         this IServiceCollection services,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        ISecretsService secrets)
     {
-        var jwtSecret = configuration["Jwt:Secret"]
-            ?? Environment.GetEnvironmentVariable("MSOSYNC_JWT_SECRET")
+        var jwtSecret = secrets.GetSecretAsync("Jwt:Secret").GetAwaiter().GetResult()
+            ?? secrets.GetSecretAsync("MSOSYNC_JWT_SECRET").GetAwaiter().GetResult()
             ?? throw new InvalidOperationException(
-                "MSOSYNC_JWT_SECRET is required (set via env var or Jwt:Secret config key)");
+                "JWT signing key not found. Set MSOSYNC_JWT_SECRET env var or Jwt:Secret config key.");
 
         if (jwtSecret.Length < 32)
             throw new InvalidOperationException(
