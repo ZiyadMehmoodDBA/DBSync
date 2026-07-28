@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ChevronDown, ChevronRight, Package } from 'lucide-react';
 import { PluginStatusBadge } from './PluginStatusBadge';
 import { PluginSummaryCard } from './PluginSummaryCard';
+import { UpdatesPanel } from './UpdatesPanel';
 import { useDisablePlugin, useEnablePlugin, usePlugins } from './hooks';
 import type { PluginDto } from './types';
 import { Button } from '../../components/ui/button';
@@ -36,6 +37,8 @@ export function PluginsPage() {
       </div>
 
       <PluginSummaryCard />
+
+      <UpdatesPanel installedPluginIds={plugins?.map(p => p.pluginId) ?? []} />
 
       {!plugins?.length ? (
         <EmptyState message="No plugins discovered. Place plugin folders in the plugins/ directory." />

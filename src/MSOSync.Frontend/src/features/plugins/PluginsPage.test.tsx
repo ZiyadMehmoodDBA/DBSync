@@ -10,6 +10,17 @@ vi.mock('./hooks', () => ({
   useDisablePlugin: () => ({ mutate: vi.fn() }),
 }));
 
+vi.mock('../../shared/hooks/useMarketplace', () => ({
+  useCheckAllUpdates: () => ({
+    data:                      { totalChecked: 0, updatesAvailable: 0, updates: [] },
+    isLoading:                 false,
+    isMarketplaceUnconfigured: false,
+    refetch:                   vi.fn(),
+  }),
+  useUpdatePlugin: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useUpdateCount:  () => 0,
+}));
+
 function wrapper({ children }: { children: React.ReactNode }) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return <QueryClientProvider client={qc}>{children}</QueryClientProvider>;

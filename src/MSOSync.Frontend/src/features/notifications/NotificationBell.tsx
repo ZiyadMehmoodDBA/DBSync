@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Bell } from 'lucide-react';
+import { Bell, Store } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '../../components/ui/button';
 import {
@@ -9,6 +9,7 @@ import {
 } from '../../components/ui/popover';
 import { NotificationItem } from './NotificationItem';
 import { useUnreadCount, useNotifications, useMarkRead, useMarkAllRead } from './hooks';
+import { useUpdateCount } from '../../shared/hooks/useMarketplace';
 
 export function NotificationBell() {
   const [open, setOpen]      = useState(false);
@@ -16,6 +17,7 @@ export function NotificationBell() {
   const { items, isLoading } = useNotifications('all', 5);
   const markRead             = useMarkRead();
   const markAllRead          = useMarkAllRead();
+  const updateCount          = useUpdateCount();
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -45,6 +47,23 @@ export function NotificationBell() {
           )}
         </div>
         <div className="divide-y divide-neutral-100 dark:divide-neutral-800 max-h-80 overflow-y-auto">
+          {updateCount > 0 && (
+            <div className="flex items-center gap-3 px-4 py-3 bg-blue-50 dark:bg-blue-900/20">
+              <Store className="h-4 w-4 text-blue-600 dark:text-blue-400 shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                  {updateCount} plugin {updateCount === 1 ? 'update' : 'updates'} available
+                </p>
+                <Link
+                  to="/marketplace"
+                  onClick={() => setOpen(false)}
+                  className="text-xs text-blue-600 hover:underline dark:text-blue-400"
+                >
+                  View updates →
+                </Link>
+              </div>
+            </div>
+          )}
           {isLoading && (
             <p className="px-4 py-6 text-sm text-center text-neutral-500">Loading…</p>
           )}
