@@ -21,6 +21,7 @@
     <ProjectReference Include="..\MSOSync.Common\MSOSync.Common.csproj" />
     <ProjectReference Include="..\MSOSync.Persistence\MSOSync.Persistence.csproj" />
     <ProjectReference Include="..\MSOSync.Plugin\MSOSync.Plugin.csproj" />
+    <ProjectReference Include="..\MSOSync.Secrets\MSOSync.Secrets.csproj" />
     <ProjectReference Include="..\MSOSync.Security\MSOSync.Security.csproj" />
   </ItemGroup>
 </Project>

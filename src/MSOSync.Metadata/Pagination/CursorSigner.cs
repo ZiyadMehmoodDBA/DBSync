@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using MSOSync.Common.Pagination;
+using MSOSync.Secrets;
 
 namespace MSOSync.Metadata.Pagination;
 
@@ -12,9 +13,10 @@ public sealed class CursorSigner
 {
     private readonly byte[] _key;
 
-    public CursorSigner(IConfiguration configuration, ILogger<CursorSigner> logger)
+    public CursorSigner(ISecretsService secrets, IConfiguration configuration, ILogger<CursorSigner> logger)
     {
-        var b64 = configuration["Pagination:CursorHmacKey"]
+        var b64 = secrets.GetSecretAsync("Pagination:CursorHmacKey").GetAwaiter().GetResult()
+            ?? configuration["Pagination:CursorHmacKey"]  // config fallback for dev
             ?? throw new InvalidOperationException(
                 "Pagination:CursorHmacKey is not configured. " +
                 "Add it to appsettings.json as a base64-encoded key (minimum 16 bytes, recommend 32).");
