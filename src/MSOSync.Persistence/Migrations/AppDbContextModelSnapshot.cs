@@ -2042,6 +2042,68 @@ namespace MSOSync.Persistence.Migrations
                     b.ToTable("sync_trigger_router", "msosync");
                 });
 
+            modelBuilder.Entity("MSOSync.Persistence.Entities.OidcConfiguration", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Authority")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)")
+                        .HasColumnName("authority");
+
+                    b.Property<string>("CallbackPath")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasDefaultValue("/auth/oidc/callback")
+                        .HasColumnName("callback_path");
+
+                    b.Property<string>("ClientId")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("client_id");
+
+                    b.Property<string>("ClientSecretKey")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)")
+                        .HasColumnName("client_secret_key");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2(7)")
+                        .HasColumnName("created_at");
+
+                    b.Property<bool>("IsEnabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true)
+                        .HasColumnName("is_enabled");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("Scopes")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)")
+                        .HasDefaultValue("openid profile email")
+                        .HasColumnName("scopes");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("oidc_configuration", "msosync");
+                });
+
             modelBuilder.Entity("MSOSync.Persistence.Entities.SyncUser", b =>
                 {
                     b.Property<long>("UserId")
@@ -2092,6 +2154,21 @@ namespace MSOSync.Persistence.Migrations
                         .IsUnicode(false)
                         .HasColumnType("varchar(100)")
                         .HasColumnName("username");
+
+                    b.Property<string>("ExternalId")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)")
+                        .HasColumnName("external_id");
+
+                    b.Property<string>("AuthProvider")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("auth_provider");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(320)
+                        .HasColumnType("nvarchar(320)")
+                        .HasColumnName("email");
 
                     b.HasKey("UserId");
 

@@ -25,5 +25,10 @@ public sealed class SyncUserConfiguration : IEntityTypeConfiguration<SyncUser>
         builder.Property(e => e.CreatedTime).HasColumnName("created_time").HasColumnType("datetime2(7)");
 
         builder.HasIndex(e => e.Username).IsUnique().HasDatabaseName("UQ_sync_user_username");
+
+        // Epic 2E.3 — OIDC/OAuth2 columns (all nullable)
+        builder.Property(e => e.ExternalId).HasColumnName("external_id").HasMaxLength(500);
+        builder.Property(e => e.AuthProvider).HasColumnName("auth_provider").HasMaxLength(100);
+        builder.Property(e => e.Email).HasColumnName("email").HasMaxLength(320);
     }
 }

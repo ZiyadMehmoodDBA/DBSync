@@ -14,4 +14,7 @@ public sealed class SyncUser
     public DateTime? LockedUntil { get; set; }
     public DateTime? PasswordChangedAt { get; set; }
     public DateTime? CreatedTime { get; set; }
+    public string? ExternalId { get; set; }    // OIDC subject claim
+    public string? AuthProvider { get; set; }  // "local" | "oidc:<providerName>"
+    public string? Email { get; set; }
 }
