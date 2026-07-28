@@ -54,7 +54,7 @@ Grafana dashboards are static JSON files operators import once. They assume a Pr
 - Metric names: `snake_case` prefixed with `sync.` (e.g., `sync.pipeline.fetch_ms`)
 - Span names: `snake_case` prefixed with `sync.` (e.g., `sync.cycle`, `sync.send`)
 - Prometheus endpoint: `/metrics` (not `/api/v1/metrics`) — separate from the existing JSON endpoint
-- Existing `MetricsController` at `/api/v1/metrics` retained as-is (serves in-memory snapshot for UI)
+- Existing `MetricsController` at `/api/v1/metrics`: when `Telemetry:Enabled = false` (Community Edition default), `InMemoryMetricsService` is active and `MetricsController` continues working as before. When `Telemetry:Enabled = true`, `OtelMetricsService` is active; `MetricsController` returns an empty snapshot (204 No Content or empty array) and the response body includes a `"grafanaUrl"` hint if `Observability:GrafanaUrl` is configured. The frontend `ObservabilityPage` handles this gracefully by showing a "View in Grafana" link instead of inline charts.
 - Telemetry optional: if `Telemetry:Enabled = false` (default for Community Edition), OTel pipeline not registered; `InMemoryMetricsService` used instead
 - No new DB migrations in 2F — all health scoring reads from existing tables
 - React 19 / TypeScript / TanStack Query v5
