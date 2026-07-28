@@ -12,6 +12,8 @@ public static class OidcAuthenticationExtensions
         this IServiceCollection services,
         IConfiguration configuration)
     {
+        services.AddScoped<IOidcUserProvisioningService, OidcUserProvisioningService>();
+
         services.AddOptions<OidcAuthOptions>()
             .BindConfiguration(OidcAuthOptions.Section)
             .ValidateOnStart();
