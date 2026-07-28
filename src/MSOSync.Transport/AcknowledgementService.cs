@@ -2,6 +2,7 @@ using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using MSOSync.Batch;
 using MSOSync.Common;
+using MSOSync.Metrics;
 using MSOSync.Persistence;
 using MSOSync.Persistence.Entities;
 using MSOSync.Transport.Payloads;
@@ -28,6 +29,8 @@ public sealed class AcknowledgementService(
         string?                 errorMessage,
         CancellationToken       ct = default)
     {
+        using var activity = PipelineActivitySource.Source.StartActivity("sync.ack");
+        activity?.SetTag("ack.direction", "outgoing");
         var sw = Stopwatch.StartNew();
         try
         {
@@ -52,6 +55,13 @@ public sealed class AcknowledgementService(
                 logger.LogWarning("Batch {BatchId} push failed reason={Reason}: {Error}",
                     batchId, reason, errorMessage);
             }
+
+            activity?.SetStatus(ActivityStatusCode.Ok);
+        }
+        catch (Exception ex)
+        {
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+            throw;
         }
         finally
         {
@@ -76,34 +86,51 @@ public sealed class AcknowledgementService(
         AckPayload        payload,
         CancellationToken ct = default)
     {
-        var batch = await db.OutgoingBatches.FindAsync([payload.BatchId], ct);
-        if (batch == null) return false;
-
-        if (batch.Status == (byte)BatchStatus.Acknowledged)
+        using var activity = PipelineActivitySource.Source.StartActivity("sync.ack");
+        activity?.SetTag("ack.direction", "incoming");
+        activity?.SetTag("node.id", payload.AckNodeId);
+        try
         {
-            logger.LogDebug("Batch {BatchId} already acknowledged — ignoring duplicate ACK",
-                payload.BatchId);
+            var batch = await db.OutgoingBatches.FindAsync([payload.BatchId], ct);
+            if (batch == null)
+            {
+                activity?.SetStatus(ActivityStatusCode.Error, "batch_not_found");
+                return false;
+            }
+
+            if (batch.Status == (byte)BatchStatus.Acknowledged)
+            {
+                logger.LogDebug("Batch {BatchId} already acknowledged — ignoring duplicate ACK",
+                    payload.BatchId);
+                activity?.SetStatus(ActivityStatusCode.Ok);
+                return true;
+            }
+
+            if (payload.Success)
+            {
+                await stateMachine.MoveToAcknowledgedAsync(payload.BatchId, payload.AckTime, ct);
+            }
+            else
+            {
+                await stateMachine.MoveToErrorAsync(payload.BatchId, ct);
+                db.BatchErrors.Add(new SyncBatchError
+                {
+                    BatchId      = payload.BatchId,
+                    ConflictType = payload.ErrorCode?.StartsWith("SEQUENCE_GAP", StringComparison.Ordinal) == true
+                        ? "SequenceGap"
+                        : TransportFailureReason.ApplyFailure.ToString(),
+                    ErrorMessage = payload.ErrorCode
+                });
+                await db.SaveChangesAsync(ct);
+            }
+
+            activity?.SetStatus(ActivityStatusCode.Ok);
             return true;
         }
-
-        if (payload.Success)
+        catch (Exception ex)
         {
-            await stateMachine.MoveToAcknowledgedAsync(payload.BatchId, payload.AckTime, ct);
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+            throw;
         }
-        else
-        {
-            await stateMachine.MoveToErrorAsync(payload.BatchId, ct);
-            db.BatchErrors.Add(new SyncBatchError
-            {
-                BatchId      = payload.BatchId,
-                ConflictType = payload.ErrorCode?.StartsWith("SEQUENCE_GAP", StringComparison.Ordinal) == true
-                    ? "SequenceGap"
-                    : TransportFailureReason.ApplyFailure.ToString(),
-                ErrorMessage = payload.ErrorCode
-            });
-            await db.SaveChangesAsync(ct);
-        }
-
-        return true;
     }
 }

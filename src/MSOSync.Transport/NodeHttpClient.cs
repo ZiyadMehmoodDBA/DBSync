@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
@@ -5,6 +6,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
 using MSOSync.Common;
+using MSOSync.Metrics;
 
 namespace MSOSync.Transport;
 
@@ -67,46 +69,59 @@ public sealed class NodeHttpClient(
     private async Task<HttpResponseMessage> SendAsync<TRequest>(
         string url, TRequest body, string nodeId, string nodeToken, CancellationToken ct)
     {
-        var json      = JsonSerializer.Serialize(body, JsonOpts);
-        var jsonBytes = Encoding.UTF8.GetBytes(json);
-        var threshold = compressionOptions.Value.ThresholdBytes;
-
-        byte[] outBytes;
-        string? contentEncoding = null;
-
-        if (jsonBytes.Length >= threshold)
+        using var activity = PipelineActivitySource.Source.StartActivity("sync.send");
+        activity?.SetTag("node.id", nodeId);
+        try
         {
-            // Apply compression and record timing
-            var compressionSvc = negotiator.SelectFor(nodeId);
-            var sw = System.Diagnostics.Stopwatch.StartNew();
-            outBytes = compressionSvc.Compress(jsonBytes);
-            sw.Stop();
-            metrics.RecordHistogram(
-                "sync.pipeline.compress_ms",
-                sw.Elapsed.TotalMilliseconds,
-                new Dictionary<string, string> { ["node_id"] = nodeId, ["encoding"] = compressionSvc.EncodingName });
-            contentEncoding = compressionSvc.EncodingName;
+            var json      = JsonSerializer.Serialize(body, JsonOpts);
+            var jsonBytes = Encoding.UTF8.GetBytes(json);
+            var threshold = compressionOptions.Value.ThresholdBytes;
+
+            byte[] outBytes;
+            string? contentEncoding = null;
+
+            if (jsonBytes.Length >= threshold)
+            {
+                // Apply compression and record timing
+                var compressionSvc = negotiator.SelectFor(nodeId);
+                var sw = Stopwatch.StartNew();
+                outBytes = compressionSvc.Compress(jsonBytes);
+                sw.Stop();
+                metrics.RecordHistogram(
+                    "sync.pipeline.compress_ms",
+                    sw.Elapsed.TotalMilliseconds,
+                    new Dictionary<string, string> { ["node_id"] = nodeId, ["encoding"] = compressionSvc.EncodingName });
+                contentEncoding = compressionSvc.EncodingName;
+            }
+            else
+            {
+                // Below threshold — send raw; no Content-Encoding header
+                outBytes = jsonBytes;
+            }
+
+            var content = new ByteArrayContent(outBytes);
+            content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+            if (contentEncoding is not null)
+                content.Headers.ContentEncoding.Add(contentEncoding);
+
+            var request = new HttpRequestMessage(HttpMethod.Post, url) { Content = content };
+            request.Headers.Add("X-Node-Id",       nodeId);
+            request.Headers.Add("X-Node-Token",    nodeToken);
+            request.Headers.Add("Accept-Encoding", "gzip, br");
+
+            var correlationId = GetOrCreateCorrelationId();
+            request.Headers.Add("X-Correlation-Id", correlationId);
+
+            var response = await httpClient.SendAsync(request, ct);
+            activity?.SetTag("http.status_code", (int)response.StatusCode);
+            activity?.SetStatus(response.IsSuccessStatusCode ? ActivityStatusCode.Ok : ActivityStatusCode.Error);
+            return response;
         }
-        else
+        catch (Exception ex)
         {
-            // Below threshold — send raw; no Content-Encoding header
-            outBytes = jsonBytes;
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+            throw;
         }
-
-        var content = new ByteArrayContent(outBytes);
-        content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
-        if (contentEncoding is not null)
-            content.Headers.ContentEncoding.Add(contentEncoding);
-
-        var request = new HttpRequestMessage(HttpMethod.Post, url) { Content = content };
-        request.Headers.Add("X-Node-Id",       nodeId);
-        request.Headers.Add("X-Node-Token",    nodeToken);
-        request.Headers.Add("Accept-Encoding", "gzip, br");
-
-        var correlationId = GetOrCreateCorrelationId();
-        request.Headers.Add("X-Correlation-Id", correlationId);
-
-        return await httpClient.SendAsync(request, ct);
     }
 
     private string GetOrCreateCorrelationId()
