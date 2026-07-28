@@ -5,6 +5,10 @@ using Xunit;
 
 namespace MSOSync.SecretsTests;
 
+[CollectionDefinition("SecretsEnvVars", DisableParallelization = true)]
+public sealed class SecretsEnvVarsCollection { }
+
+[Collection("SecretsEnvVars")]
 public sealed class EnvironmentSecretsServiceTests : IDisposable
 {
     private const string TestEnvVar = "MSOSYNC_TEST_SECRETS_KEY__VALUE";

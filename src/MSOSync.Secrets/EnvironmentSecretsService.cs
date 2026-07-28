@@ -13,7 +13,7 @@ internal sealed class EnvironmentSecretsService : ISecretsService
         _isProduction = isProduction;
     }
 
-    public Task<string?> GetSecretAsync(string key, CancellationToken ct = default)
+    public Task<string?> GetSecretAsync(string key, CancellationToken _ = default)
     {
         // Try env var first: replace : with __ (double underscore)
         var envKey = key.Replace(":", "__").ToUpperInvariant();
@@ -30,12 +30,12 @@ internal sealed class EnvironmentSecretsService : ISecretsService
         return Task.FromResult(value);
     }
 
-    public async Task<byte[]?> GetSecretBytesAsync(string key, CancellationToken ct = default)
+    public async Task<byte[]?> GetSecretBytesAsync(string key, CancellationToken _ = default)
     {
-        var value = await GetSecretAsync(key, ct);
+        var value = await GetSecretAsync(key);
         return value is null ? null : System.Text.Encoding.UTF8.GetBytes(value);
     }
 
-    public async Task<bool> ExistsAsync(string key, CancellationToken ct = default)
-        => await GetSecretAsync(key, ct) is not null;
+    public async Task<bool> ExistsAsync(string key, CancellationToken _ = default)
+        => await GetSecretAsync(key) is not null;
 }
