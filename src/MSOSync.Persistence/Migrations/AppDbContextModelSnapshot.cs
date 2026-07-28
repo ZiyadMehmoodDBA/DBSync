@@ -637,15 +637,15 @@ namespace MSOSync.Persistence.Migrations
             modelBuilder.Entity("MSOSync.Persistence.Entities.SyncLock", b =>
                 {
                     b.Property<string>("LockName")
-                        .HasMaxLength(50)
+                        .HasMaxLength(200)
                         .IsUnicode(false)
-                        .HasColumnType("varchar(50)")
+                        .HasColumnType("varchar(200)")
                         .HasColumnName("lock_name");
 
                     b.Property<string>("LockOwner")
-                        .HasMaxLength(50)
+                        .HasMaxLength(200)
                         .IsUnicode(false)
-                        .HasColumnType("varchar(50)")
+                        .HasColumnType("varchar(200)")
                         .HasColumnName("lock_owner");
 
                     b.Property<DateTime?>("LockTime")

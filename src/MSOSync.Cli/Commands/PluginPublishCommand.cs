@@ -1,4 +1,5 @@
 using System.CommandLine;
+using System.CommandLine.Invocation;
 using System.Net;
 using MSOSync.Cli.Config;
 using MSOSync.Cli.Http;
@@ -19,17 +20,24 @@ public sealed class PluginPublishCommand
         cmd.AddOption(registryOpt);
         cmd.AddOption(apiKeyOpt);
 
-        cmd.SetHandler(async (file, registry, apiKey) =>
+        cmd.SetHandler(async (InvocationContext context) =>
         {
+            var file     = context.ParseResult.GetValueForArgument(fileArg);
+            var registry = context.ParseResult.GetValueForOption(registryOpt);
+            var apiKey   = context.ParseResult.GetValueForOption(apiKeyOpt);
+
             CliConfig config = CliConfigStore.Load();
             string effectiveRegistry = registry
                 ?? (string.IsNullOrEmpty(config.RegistryUrl) ? "https://marketplace.msosync.io" : config.RegistryUrl);
             string effectiveApiKey   = apiKey
                 ?? config.RegistryApiKey;
 
-            int exitCode = await ExecuteAsync(file, effectiveRegistry, effectiveApiKey);
-            Environment.Exit(exitCode);
-        }, fileArg, registryOpt, apiKeyOpt);
+            // I11: await the async call (do not use .GetAwaiter().GetResult())
+            int exitCode = await ExecuteAsync(file, effectiveRegistry, effectiveApiKey, ct: context.GetCancellationToken());
+            // I12: set exit code via context instead of calling Environment.Exit (which
+            //      bypasses System.CommandLine teardown).
+            context.ExitCode = exitCode;
+        });
 
         return cmd;
     }
@@ -38,7 +46,7 @@ public sealed class PluginPublishCommand
     public async Task<int> ExecuteAsync(
         string filePath,
         string registryUrl,
-        string apiKey,
+        string? apiKey,
         MsoSyncHttpClient? httpClient = null,
         CancellationToken  ct = default)
     {
@@ -57,10 +65,11 @@ public sealed class PluginPublishCommand
 
         try
         {
+            // C5: pass effectiveApiKey so the X-Api-Key header is sent with the request.
             using HttpResponseMessage response = await client.PostMultipartAsync(
-                "/api/v1/packages", "package", filePath, ct);
+                "/api/v1/packages", "package", filePath, apiKey, ct);
 
-            return HandlePublishResponse(response, fileName);
+            return await HandlePublishResponseAsync(response, fileName, ct);
         }
         catch (HttpRequestException ex)
         {
@@ -83,7 +92,9 @@ public sealed class PluginPublishCommand
         }
     }
 
-    private static int HandlePublishResponse(HttpResponseMessage response, string fileName)
+    // I11: made async to avoid .GetAwaiter().GetResult() on async ReadAsStringAsync call.
+    private static async Task<int> HandlePublishResponseAsync(
+        HttpResponseMessage response, string fileName, CancellationToken ct)
     {
         switch ((int)response.StatusCode)
         {
@@ -101,7 +112,8 @@ public sealed class PluginPublishCommand
                 return 0;
 
             case 400:
-                string body400 = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                // I11: use await instead of .GetAwaiter().GetResult()
+                string body400 = await response.Content.ReadAsStringAsync(ct);
                 CliConsole.Error(string.IsNullOrWhiteSpace(body400) ? "Bad request" : body400.Trim());
                 return 2;
 

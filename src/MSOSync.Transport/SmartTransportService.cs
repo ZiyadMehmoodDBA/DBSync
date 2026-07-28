@@ -54,13 +54,13 @@ public sealed class SmartTransportService(
         {
             var result  = await pushClient.PushAsync(node.SyncUrl, batch, events, ct);
             sw.Stop();
+            // I2: batch_id removed — high-cardinality tag would explode OTel tag store.
             metrics.RecordHistogram(
                 "sync.pipeline.send_ms",
                 sw.Elapsed.TotalMilliseconds,
                 new Dictionary<string, string>
                 {
-                    ["node_id"]  = batch.NodeId,
-                    ["batch_id"] = batch.BatchId.ToString()
+                    ["node_id"] = batch.NodeId
                 });
 
             var ackTime = new DateTimeOffset(clock.UtcNow, TimeSpan.Zero);

@@ -56,12 +56,12 @@ public sealed class AcknowledgementService(
         finally
         {
             sw.Stop();
+            // I2: batch_id removed — high-cardinality tag would explode OTel tag store.
             metrics.RecordHistogram(
                 "sync.pipeline.ack_ms",
                 sw.Elapsed.TotalMilliseconds,
                 new Dictionary<string, string>
                 {
-                    ["batch_id"] = batchId.ToString(),
                     ["success"] = success.ToString()
                 });
         }

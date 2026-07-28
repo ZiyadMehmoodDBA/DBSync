@@ -32,6 +32,18 @@ public sealed class NodeMetadataService(
         return nodes.Select(MapNode).ToList().AsReadOnly();
     }
 
+    public async Task<IReadOnlyList<string>> GetActiveNodeIdsAsync(CancellationToken ct = default)
+    {
+        // Server-side filter: only Active, non-maintenance nodes. Projects only NodeId
+        // to avoid materialising full entity graphs at scale (C4 fix).
+        var ids = await db.Nodes
+            .AsNoTracking()
+            .Where(n => n.LifecycleState == NodeLifecycleState.Active && !n.MaintenanceMode)
+            .Select(n => n.NodeId)
+            .ToListAsync(ct);
+        return ids.AsReadOnly();
+    }
+
     public async Task<PagedResult<NodeDto>> GetNodesPagedAsync(
         int pageNumber, int pageSize, CancellationToken ct = default)
     {

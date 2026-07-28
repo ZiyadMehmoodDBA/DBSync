@@ -60,15 +60,29 @@ public sealed class MsoSyncHttpClient : IDisposable
     }
 
     /// <summary>POST {path} as multipart/form-data file upload — returns HttpResponseMessage.</summary>
-    public async Task<HttpResponseMessage> PostMultipartAsync(
+    public Task<HttpResponseMessage> PostMultipartAsync(
         string path, string fieldName, string filePath, CancellationToken ct = default)
+        => PostMultipartAsync(path, fieldName, filePath, apiKey: null, ct);
+
+    /// <summary>
+    /// POST {path} as multipart/form-data file upload with optional X-Api-Key header.
+    /// When <paramref name="apiKey"/> is not null, adds it as an <c>X-Api-Key</c> request
+    /// header (matching the server-side convention). Returns HttpResponseMessage.
+    /// </summary>
+    public async Task<HttpResponseMessage> PostMultipartAsync(
+        string path, string fieldName, string filePath, string? apiKey, CancellationToken ct = default)
     {
-        await using FileStream fs      = File.OpenRead(filePath);
-        using var             form     = new MultipartFormDataContent();
-        using var             fileContent = new StreamContent(fs);
-        fileContent.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
+        await using FileStream fs          = File.OpenRead(filePath);
+        using var             form         = new MultipartFormDataContent();
+        using var             fileContent  = new StreamContent(fs);
+        fileContent.Headers.ContentType    = new MediaTypeHeaderValue("application/octet-stream");
         form.Add(fileContent, fieldName, Path.GetFileName(filePath));
-        return await _http.PostAsync(path, form, ct);
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, path) { Content = form };
+        if (!string.IsNullOrEmpty(apiKey))
+            request.Headers.Add("X-Api-Key", apiKey);
+
+        return await _http.SendAsync(request, ct);
     }
 
     /// <summary>GET {path} with ApiKey header (registry auth) — returns HttpResponseMessage.</summary>

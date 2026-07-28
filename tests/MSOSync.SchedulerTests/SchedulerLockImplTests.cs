@@ -1,4 +1,5 @@
 using FluentAssertions;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using MSOSync.Common.Locks;
@@ -11,6 +12,12 @@ namespace MSOSync.SchedulerTests;
 public sealed class SchedulerLockImplTests
 {
     private readonly Mock<IDistributedLockService> _lockService = new();
+
+    private static IServiceScope CreateNullScope()
+    {
+        var services = new ServiceCollection().BuildServiceProvider();
+        return services.CreateScope();
+    }
 
     private SchedulerLockImpl BuildLock(int renewalSeconds = 1)
     {
@@ -35,8 +42,8 @@ public sealed class SchedulerLockImplTests
                 It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
-        return new SchedulerLockImpl("SyncJob", _lockService.Object, options,
-            NullLogger<SchedulerLockImpl>.Instance);
+        return SchedulerLockImpl.Create("SyncJob", _lockService.Object,
+            CreateNullScope(), options, NullLogger<SchedulerLockImpl>.Instance);
     }
 
     [Fact]
@@ -88,8 +95,9 @@ public sealed class SchedulerLockImplTests
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
 
-        var lockImpl = new SchedulerLockImpl("PullJob", _lockService.Object,
-            new SchedulerLockOptions { RenewalIntervalSeconds = 60, TtlSeconds = 120 },
+        var lockImpl = SchedulerLockImpl.Create("PullJob", _lockService.Object,
+            CreateNullScope(),
+            new SchedulerLockOptions { RenewalIntervalSeconds = 60, TtlSeconds = 120, LockPrefix = "scheduler:" },
             NullLogger<SchedulerLockImpl>.Instance);
 
         // Must not throw
@@ -114,8 +122,9 @@ public sealed class SchedulerLockImplTests
                 It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
-        await using var lockImpl = new SchedulerLockImpl("RetryJob", _lockService.Object,
-            new SchedulerLockOptions { RenewalIntervalSeconds = 1, TtlSeconds = 4 },
+        await using var lockImpl = SchedulerLockImpl.Create("RetryJob", _lockService.Object,
+            CreateNullScope(),
+            new SchedulerLockOptions { RenewalIntervalSeconds = 1, TtlSeconds = 4, LockPrefix = "scheduler:" },
             NullLogger<SchedulerLockImpl>.Instance);
 
         // Wait past first renewal interval — renewal fails but lock impl stays alive

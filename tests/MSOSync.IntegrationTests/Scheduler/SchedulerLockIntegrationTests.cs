@@ -1,5 +1,6 @@
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using MSOSync.Common.Locks;
@@ -38,7 +39,15 @@ public sealed class SchedulerLockIntegrationTests(DatabaseFixture db) : IClassFi
             RenewalIntervalSeconds = renewalSeconds,
             LockPrefix             = "scheduler:"
         });
-        var factory = new SchedulerLockFactory(lockSvc, options,
+
+        // Build a minimal DI container that resolves IDistributedLockService to the
+        // specific SqlDistributedLockService instance backed by this AppDbContext.
+        // SchedulerLockFactory now depends on IServiceScopeFactory (C2 fix).
+        var services = new ServiceCollection();
+        services.AddSingleton<IDistributedLockService>(lockSvc);
+        var scopeFactory = services.BuildServiceProvider().GetRequiredService<IServiceScopeFactory>();
+
+        var factory = new SchedulerLockFactory(scopeFactory, options,
             NullLogger<SchedulerLockFactory>.Instance);
         return (lockSvc, factory);
     }

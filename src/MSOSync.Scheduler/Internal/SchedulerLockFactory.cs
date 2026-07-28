@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MSOSync.Common.Locks;
@@ -7,9 +8,15 @@ namespace MSOSync.Scheduler.Internal;
 /// <summary>
 /// Acquires per-job scheduler locks against the <see cref="IDistributedLockService"/>.
 /// The lock name used is "{LockPrefix}{jobName}" (e.g., "scheduler:SyncJob").
+///
+/// Uses IServiceScopeFactory (not a direct IDistributedLockService dependency) to avoid
+/// the captive-dependency problem: IDistributedLockService is Scoped (it wraps a scoped
+/// DbContext), while this factory is Singleton. Each TryAcquireAsync call creates its own
+/// DI scope and resolves IDistributedLockService from that scope. The scope is passed to
+/// SchedulerLockImpl, which owns its lifetime and disposes it on DisposeAsync.
 /// </summary>
 internal sealed class SchedulerLockFactory(
-    IDistributedLockService        lockService,
+    IServiceScopeFactory           scopeFactory,
     IOptions<SchedulerLockOptions> options,
     ILogger<SchedulerLockFactory>  logger) : ISchedulerLockFactory
 {
@@ -21,28 +28,42 @@ internal sealed class SchedulerLockFactory(
         var expiry   = TimeSpan.FromSeconds(_options.TtlSeconds);
         var owner    = $"{Environment.MachineName}:{Environment.ProcessId}";
 
-        var handle = await lockService.TryAcquireAsync(lockName, owner, expiry, ct);
+        // Create a dedicated scope per acquire attempt. The scope is owned by SchedulerLockImpl
+        // and disposed when the lock is released.
+        var scope       = scopeFactory.CreateScope();
+        var lockService = scope.ServiceProvider.GetRequiredService<IDistributedLockService>();
+
+        IDistributedLock? handle;
+        try
+        {
+            handle = await lockService.TryAcquireAsync(lockName, owner, expiry, ct);
+        }
+        catch
+        {
+            scope.Dispose();
+            throw;
+        }
 
         if (handle is null)
         {
+            scope.Dispose();
             logger.LogDebug(
                 "SchedulerLockFactory: lock '{LockName}' is held — skipping",
                 lockName);
             return null;
         }
 
-        // Do NOT dispose the raw handle here — doing so would immediately release the lock row
-        // (SqlDistributedLock.DisposeAsync sets lock_owner = NULL). SchedulerLockImpl takes
-        // over the lock lifecycle: it renews lock_expiry via IDistributedLockService and
-        // releases via ReleaseAsync on its own DisposeAsync. The raw handle is intentionally
-        // left undisposed; SqlDistributedLock has no finalizer, so the GC will reclaim it
-        // without triggering any database operation.
-        _ = handle; // acknowledge the discard; handle is owned by SchedulerLockImpl going forward
+        // The raw IDistributedLock handle is intentionally left undisposed here.
+        // SqlDistributedLock has no finalizer; SchedulerLockImpl manages lock lifecycle
+        // (renewal + release) using the lockService from the same scope.
+        _ = handle;
 
         logger.LogDebug(
             "SchedulerLockFactory: acquired '{LockName}' (owner={Owner})",
             lockName, owner);
 
-        return new SchedulerLockImpl(jobName, lockService, _options, logger);
+        // Pass the scope to SchedulerLockImpl. It will dispose the scope on DisposeAsync,
+        // which also disposes the DbContext / lockService.
+        return SchedulerLockImpl.Create(jobName, lockService, scope, _options, logger);
     }
 }

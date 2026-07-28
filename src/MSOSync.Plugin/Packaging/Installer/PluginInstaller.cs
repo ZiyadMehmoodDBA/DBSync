@@ -172,8 +172,14 @@ internal sealed class PluginInstaller(
                     var destPath = Path.GetFullPath(
                         Path.Combine(tempDir, entry.FullName.Replace('/', Path.DirectorySeparatorChar)));
 
-                    // Path traversal guard
-                    if (!destPath.StartsWith(canonicalTemp, StringComparison.OrdinalIgnoreCase))
+                    // Path traversal guard — include separator so a sibling directory
+                    // named e.g. "/tmp/msopkg-foo-abc123evil" does not pass the prefix check
+                    // against "/tmp/msopkg-foo-abc123".  Also allow exact match (the temp dir
+                    // root itself, though that should not occur for file entries).
+                    if (!destPath.StartsWith(
+                            canonicalTemp + Path.DirectorySeparatorChar,
+                            StringComparison.OrdinalIgnoreCase)
+                        && !string.Equals(destPath, canonicalTemp, StringComparison.OrdinalIgnoreCase))
                         return Fail(pluginId, "Unpack",
                             $"Path traversal detected: archive entry '{entry.FullName}' would escape the temp directory.");
 

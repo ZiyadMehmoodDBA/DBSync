@@ -112,3 +112,64 @@ Replaced sequential `foreach` with `Task.WhenAll(evt.UserIds.Select(...))`. Erro
 | MSOSync.AppTests | 39 passed |
 | MSOSync.ArchTests | 2 passed |
 | MSOSync.IntegrationTests (Notification filter) | 9/9 passed |
+
+---
+
+# Phase 2C/2D Final Review Fix Report
+
+**Date:** 2026-07-28
+
+## C1+I5: SqlDistributedLockService lazy-insert + M039 migration
+
+**C1**: Added lazy-seed `INSERT … WHERE NOT EXISTS` before the `UPDATE` in `TryAcquireAsync`. Per-node lock keys (`scheduler:SyncJob:<nodeId>`) are now auto-created on first use — fixing the silent Standby failure.
+
+**I5**: Created `M039_WidenLockColumns.cs` migration widening `lock_name`/`lock_owner` from `varchar(50)` to `varchar(200)`. Updated `SyncLockConfiguration.cs` and `AppDbContextModelSnapshot.cs`.
+
+**Test result**: SchedulerTests 62/62 passed. MetadataTests 633/633 passed.
+
+## C2+C6: SchedulerLockFactory scope-per-acquire
+
+**C2**: `SchedulerLockFactory` now depends on `IServiceScopeFactory`. Each `TryAcquireAsync` creates a dedicated `IServiceScope`, resolves `IDistributedLockService`, passes the scope to `SchedulerLockImpl`. Eliminates captive Singleton→Scoped DbContext dependency.
+
+**C6**: `SchedulerLockImpl` private constructor + static `Create(...)` factory ensures renewal Task starts after full construction. `DisposeAsync` now disposes the owned `IServiceScope`.
+
+Updated `SchedulerLockImplTests`, `SchedulerLockFactoryTests`, `SchedulerLockIntegrationTests` to use the new API.
+
+**Test result**: SchedulerTests 62/62 passed.
+
+## C3: BatchController RetryAll lock name
+
+Replaced `IDistributedLockService` + `IOptions<DistributedLockOptions>` with `ISchedulerLockFactory`. `RetryAll` now calls `TryAcquireAsync("RetryJob", ct)`, matching the `scheduler:RetryJob` key used by the background job.
+
+## C4: GetActiveNodeIdsAsync
+
+Added `GetActiveNodeIdsAsync` to `INodeMetadataService` / `NodeMetadataService` — server-side EF Core query returning only `NodeId` for `Active && !MaintenanceMode` nodes. `AdaptivePollingOrchestrator.LoadActiveNodeIdsAsync` uses it instead of `GetNodesAsync()` + client-side filter.
+
+**Test result**: MetadataTests 633/633 passed.
+
+## C5: CLI publish API key
+
+New `PostMultipartAsync` overload in `MsoSyncHttpClient` adds `X-Api-Key` header when apiKey is not null. `PluginPublishCommand.ExecuteAsync` passes `effectiveApiKey` to it.
+
+## I1-I12: Other findings
+
+- **I1**: Path-traversal guard now uses `startsWith(canonicalTemp + sep) || equals(canonicalTemp)`.
+- **I2**: Removed high-cardinality `batch_id` tag from `send_ms` and `ack_ms` metric histograms.
+- **I4**: `NodeHttpClient` injects `GzipCompressionService`/`BrotliCompressionService` singletons; `TransportServiceExtensions` registers concrete type for DI.
+- **I7**: `SchedulerLockSeeder` now rethrows (after `LogCritical`) on startup failure.
+- **I10**: Added `InvalidatePluginCache(pluginId)` to `IMarketplaceService`; implemented via `memoryCache.Remove`; called from `MarketplaceController.Install` after success.
+- **I11**: `HandlePublishResponse` made async (`await ReadAsStringAsync`).
+- **I12**: `SetHandler` uses `InvocationContext`; exit code set via `context.ExitCode` not `Environment.Exit`.
+
+## Test Results
+
+| Suite | Result |
+|---|---|
+| MSOSync.SchedulerTests | 62/62 passed |
+| MSOSync.TransportTests | 37/37 passed |
+| MSOSync.MetadataTests | 633/633 passed |
+| MSOSync.PluginTests | 178/178 passed |
+| MSOSync.CliTests | 71/71 passed |
+| vitest plugins/ | 24/24 passed |
+
+## Commit: [see git log]

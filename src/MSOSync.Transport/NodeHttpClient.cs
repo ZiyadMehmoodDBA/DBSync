@@ -13,6 +13,8 @@ public sealed class NodeHttpClient(
     ICompressionNegotiator       negotiator,
     IOptions<CompressionOptions> compressionOptions,
     IMetricsService              metrics,
+    GzipCompressionService       gzipService,
+    BrotliCompressionService     brotliService,
     IHttpContextAccessor?        httpContextAccessor = null) : INodeHttpClient
 {
     private static readonly JsonSerializerOptions JsonOpts =
@@ -49,15 +51,14 @@ public sealed class NodeHttpClient(
         var bytes    = await response.Content.ReadAsByteArrayAsync(ct);
         var encoding = response.Content.Headers.ContentEncoding;
 
+        // I4: use the injected singleton instances rather than newing them up per response.
         if (encoding.Contains("gzip"))
         {
-            var gzip = new GzipCompressionService(compressionOptions);
-            bytes = gzip.Decompress(bytes);
+            bytes = gzipService.Decompress(bytes);
         }
         else if (encoding.Contains("br"))
         {
-            var brotli = new BrotliCompressionService(compressionOptions);
-            bytes = brotli.Decompress(bytes);
+            bytes = brotliService.Decompress(bytes);
         }
 
         return Encoding.UTF8.GetString(bytes);

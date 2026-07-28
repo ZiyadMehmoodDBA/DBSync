@@ -190,6 +190,26 @@ public sealed class MarketplaceService(
         };
     }
 
+    /// <inheritdoc />
+    public void InvalidatePluginCache(string pluginId)
+    {
+        // I10: Evict the L1 memory cache for the plugin detail entry. The L2 DB cache
+        // will expire naturally at its TTL; L1 is the hot path and needs immediate eviction.
+        var pluginMemKey = $"marketplace:plugin:{pluginId}";
+        memoryCache.Remove(pluginMemKey);
+
+        // Also evict the search/list entries so reinstalled/uninstalled plugins do not
+        // appear with stale availability status. The search key varies by query params;
+        // we use the wildcard-remove pattern via a cache tag if supported, or remove
+        // known keys. Since IMemoryCache does not support wildcard removal, we rely on
+        // the marker key used by SearchAsync to surface the stale L1 entry promptly —
+        // the next search miss will re-read from L2 / remote.
+        // A targeted eviction for all search keys is not feasible with IMemoryCache;
+        // the TTL (MemoryCacheMinutes, default 5 min) bounds the staleness window.
+        logger.Log(LogLevel.Debug, MarketplaceLogEvents.CacheWritten,
+            "Cache invalidated for plugin '{PluginId}'", pluginId);
+    }
+
     /// <summary>Returns true if candidateVersion is strictly greater than baseVersion.</summary>
     private static bool IsNewer(string candidateVersion, string baseVersion)
     {

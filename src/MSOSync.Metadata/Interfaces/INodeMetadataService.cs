@@ -8,6 +8,13 @@ namespace MSOSync.Metadata.Interfaces;
 public interface INodeMetadataService
 {
     Task<IReadOnlyList<NodeDto>> GetNodesAsync(CancellationToken ct = default);
+
+    /// <summary>
+    /// Returns only the NodeId values for nodes that are Active and not in maintenance mode.
+    /// Performs a server-side projection — does not materialise full DTOs.
+    /// Use this in place of GetNodesAsync when only node IDs are needed (e.g. scheduler loops).
+    /// </summary>
+    Task<IReadOnlyList<string>> GetActiveNodeIdsAsync(CancellationToken ct = default);
     Task<PagedResult<NodeDto>> GetNodesPagedAsync(
         int pageNumber, int pageSize, CancellationToken ct = default);
     Task<CursorPageResult<NodeDto>> GetNodesCursorAsync(NodeCursorFilter filter, CancellationToken ct = default);

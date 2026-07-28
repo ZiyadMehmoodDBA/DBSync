@@ -37,7 +37,7 @@ public sealed class CompressionGateTests : IDisposable
         });
 
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://fake-node/") };
-        return new NodeHttpClient(httpClient, negotiator, opts, metrics);
+        return new NodeHttpClient(httpClient, negotiator, opts, metrics, gzip, brotli);
     }
 
     [Fact]

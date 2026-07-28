@@ -1,15 +1,14 @@
 using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Options;
 using MSOSync.Api.Dtos.Batches;
 using MSOSync.Api.Dtos.Common;
 using MSOSync.Api.Validators;
 using MSOSync.Batch;
 using MSOSync.Common;
-using MSOSync.Common.Locks;
 using MSOSync.Metadata.Export;
 using MSOSync.Metadata.OutgoingBatches;
+using MSOSync.Scheduler;
 
 namespace MSOSync.Api.Controllers;
 
@@ -20,8 +19,7 @@ public sealed class BatchController(
     IBatchStateMachine                      stateMachine,
     RetryProcessor                          retryProcessor,
     ICurrentUserService                     currentUser,
-    IDistributedLockService                 lockService,
-    IOptions<DistributedLockOptions>        lockOptions,
+    ISchedulerLockFactory                   schedulerLockFactory,
     IExportService<OutgoingBatchExportFilter> exporter,
     IExportAuditService                     exportAudit,
     OutgoingBatchExportFilterValidator      exportFilterValidator) : ControllerBase
@@ -88,9 +86,10 @@ public sealed class BatchController(
     [ProducesResponseType(typeof(CodeMessageResponse), 409)]
     public async Task<IActionResult> RetryAll(CancellationToken ct)
     {
-        var owner = $"{Environment.MachineName}:{Environment.ProcessId}";
-        await using var handle = await lockService.TryAcquireAsync(
-            "RETRY_ENGINE", owner, lockOptions.Value.DefaultExpiry, ct);
+        // Use "RetryJob" to match the lock key used by RetryJob via SchedulerJobGuard.RunAsync.
+        // The factory prepends the configured LockPrefix (default "scheduler:"), producing
+        // "scheduler:RetryJob" — the same key the background job acquires.
+        await using var handle = await schedulerLockFactory.TryAcquireAsync("RetryJob", ct);
 
         if (handle == null)
             return Conflict(new CodeMessageResponse(

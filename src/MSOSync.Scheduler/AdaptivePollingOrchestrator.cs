@@ -99,11 +99,9 @@ public sealed class AdaptivePollingOrchestrator(
         {
             await using var scope   = scopeFactory.CreateAsyncScope();
             var nodeMeta = scope.ServiceProvider.GetRequiredService<INodeMetadataService>();
-            var nodes    = await nodeMeta.GetNodesAsync(ct);
-            return nodes
-                .Where(n => n.CanSynchronize)
-                .Select(n => n.NodeId)
-                .ToList();
+            // Use the id-only query to avoid materialising full DTO objects for every node
+            // on every 60-second refresh tick (C4 fix).
+            return await nodeMeta.GetActiveNodeIdsAsync(ct);
         }
         catch (Exception ex) when (!ct.IsCancellationRequested)
         {

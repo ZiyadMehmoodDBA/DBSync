@@ -13,6 +13,14 @@ internal sealed class SqlDistributedLockService(AppDbContext db) : IDistributedL
     {
         var expiryMs = (long)expiry.TotalMilliseconds;
 
+        // Lazy-seed: create the row if it does not exist (handles per-node lock keys such as
+        // "scheduler:SyncJob:<nodeId>" that are not pre-seeded by SchedulerLockSeeder).
+        await db.Database.ExecuteSqlRawAsync(
+            $"INSERT INTO [{Schema}].[sync_lock] (lock_name, lock_scope) " +
+            $"SELECT {{0}}, 0 WHERE NOT EXISTS " +
+            $"(SELECT 1 FROM [{Schema}].[sync_lock] WHERE lock_name = {{0}})",
+            new object[] { resource }, ct);
+
         var rows = await db.Database.ExecuteSqlRawAsync(
             $"UPDATE [{Schema}].[sync_lock] " +
             "SET lock_owner = {0}, lock_time = GETUTCDATE(), " +

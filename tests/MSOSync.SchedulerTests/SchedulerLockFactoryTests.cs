@@ -1,4 +1,5 @@
 using FluentAssertions;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -13,6 +14,17 @@ public sealed class SchedulerLockFactoryTests
 {
     private readonly Mock<IDistributedLockService> _lockService = new();
 
+    /// <summary>
+    /// Builds a scope factory that resolves the mock IDistributedLockService from DI.
+    /// </summary>
+    private IServiceScopeFactory BuildScopeFactory()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton(_lockService.Object);
+        var provider = services.BuildServiceProvider();
+        return provider.GetRequiredService<IServiceScopeFactory>();
+    }
+
     private ISchedulerLockFactory BuildFactory(int ttlSeconds = 120, int renewalSeconds = 10)
     {
         var options = Options.Create(new SchedulerLockOptions
@@ -22,7 +34,7 @@ public sealed class SchedulerLockFactoryTests
             LockPrefix             = "scheduler:"
         });
         return new SchedulerLockFactory(
-            _lockService.Object,
+            BuildScopeFactory(),
             options,
             NullLogger<SchedulerLockFactory>.Instance);
     }

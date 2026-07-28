@@ -17,7 +17,10 @@ public static class TransportServiceExtensions
 
         // Compression
         services.AddMemoryCache();
-        services.AddSingleton<ICompressionService, GzipCompressionService>();
+        // Register GzipCompressionService as both concrete type (for NodeHttpClient injection,
+        // I4 fix) and as ICompressionService (for CompressionNegotiator / default interface use).
+        services.AddSingleton<GzipCompressionService>();
+        services.AddSingleton<ICompressionService>(sp => sp.GetRequiredService<GzipCompressionService>());
         services.AddSingleton<BrotliCompressionService>();
         services.AddSingleton<ICompressionNegotiator, CompressionNegotiator>();
         services.AddSingleton<ITransportFailureClassifier, TransportFailureClassifier>();

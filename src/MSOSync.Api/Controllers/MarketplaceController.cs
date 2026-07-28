@@ -131,6 +131,11 @@ public sealed class MarketplaceController(
 
             var result = await installer.InstallAsync(tempPath, ct);
 
+            // I10: Invalidate the marketplace cache for this plugin so subsequent reads
+            // reflect its installed state rather than stale "available" data.
+            if (result.Success)
+                marketplaceService.InvalidatePluginCache(id);
+
             return Ok(new MarketplaceInstallResult(
                 result.Success,
                 id,

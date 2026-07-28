@@ -46,10 +46,12 @@ internal sealed class SchedulerLockSeeder(
         }
         catch (Exception ex)
         {
-            // Non-fatal at startup — rows may already exist or DB may not be ready yet.
-            // Jobs will fail to acquire locks on first tick if rows are missing.
-            logger.LogWarning(ex,
-                "SchedulerLockSeeder: failed to seed scheduler lock rows — jobs may not distribute correctly");
+            // I7: seeding failure is fatal — without lock rows, all jobs silently return Standby
+            // and no synchronisation work is performed. Fail fast so the problem is surfaced
+            // immediately rather than silently degrading the system.
+            logger.LogCritical(ex,
+                "SchedulerLockSeeder: failed to seed scheduler lock rows — application cannot start safely");
+            throw;
         }
     }
 

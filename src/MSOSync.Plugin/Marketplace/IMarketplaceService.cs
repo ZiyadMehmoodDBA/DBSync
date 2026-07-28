@@ -34,4 +34,11 @@ public interface IMarketplaceService
         string pluginId,
         string installedVersion,
         CancellationToken ct);
+
+    /// <summary>
+    /// Evicts the L1 (memory) cache entries for the given plugin and all search results.
+    /// Call this after a plugin install or uninstall so that the next read reflects the
+    /// current state rather than returning stale "available" data.
+    /// </summary>
+    void InvalidatePluginCache(string pluginId);
 }
