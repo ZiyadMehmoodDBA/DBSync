@@ -131,7 +131,7 @@ describe('UpdatesPanel', () => {
     expect(mockUpdateMutateAsync).toHaveBeenNthCalledWith(2, { id: 'p2', version: '1.0.0', name: 'p2' });
   });
 
-  it('shows spinner on individual update row while pending', () => {
+  it('shows spinner on individual update row while pending', async () => {
     const updates = [
       { pluginId: 'p1', installedVersion: '1.0.0', availableVersion: '2.0.0', downloadUrl: '', sha256: '', releaseNotes: null, publishedAt: '2026-07-01T00:00:00Z' },
     ];
@@ -146,11 +146,11 @@ describe('UpdatesPanel', () => {
 
     render(<UpdatesPanel installedPluginIds={[]} />, { wrapper });
     const updateBtn = screen.getByRole('button', { name: /update p1 to 2\.0\.0/i });
-    userEvent.click(updateBtn);
+    await userEvent.click(updateBtn);
 
     // After click, the button gets disabled and shows spinner — check disabled state
     // (spinner only appears inside inFlight set, driven by local state after click)
     // We verify the button becomes disabled after the async click starts
-    expect(updateBtn).toBeInTheDocument();
+    expect(updateBtn).toBeDisabled();
   });
 });
