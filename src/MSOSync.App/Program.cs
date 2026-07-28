@@ -27,6 +27,7 @@ using MSOSync.Security;
 using MSOSync.Security.Tenancy;
 using MSOSync.Topology;
 using MSOSync.Transport;
+using MSOSync.Metrics;
 using MSOSync.Plugin.Hosting;
 using MSOSync.Trigger;
 using Serilog;
@@ -167,7 +168,11 @@ try
     builder.Services.AddScoped<INodeTenantLookup,      DbContextNodeTenantLookup>();
     builder.Services.AddSingleton<ICurrentTenantAccessor, HttpContextCurrentTenantAccessor>();
 
+    builder.Services.AddTelemetry(builder.Configuration);
+
     var app = builder.Build();
+
+    app.UseTelemetry();
 
     app.UseExceptionHandler();        // must be first to catch exceptions
 

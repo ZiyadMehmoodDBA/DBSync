@@ -2,6 +2,14 @@
   <PropertyGroup>
     <Description>OpenTelemetry metrics collectors, Prometheus export</Description>
   </PropertyGroup>
+  <!-- Suppress GHSA-4625-4j76-fww9 (moderate, DoS via malformed response headers):
+       OTLP exporter is only active when Telemetry:Enabled=true; the exporter talks
+       to a trusted backend, so network-level exploitation is not a concern here.
+       Track https://github.com/open-telemetry/opentelemetry-dotnet/issues for a
+       1.11.x patch release and remove this suppression when it ships. -->
+  <ItemGroup>
+    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-4625-4j76-fww9" />
+  </ItemGroup>
   <ItemGroup>
     <PackageReference Include="OpenTelemetry" />
     <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
@@ -9,6 +17,8 @@
     <PackageReference Include="OpenTelemetry.Instrumentation.Http" />
     <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" />
     <PackageReference Include="OpenTelemetry.Exporter.Prometheus.AspNetCore" />
+    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.EntityFrameworkCore" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MSOSync.Common\MSOSync.Common.csproj" />
