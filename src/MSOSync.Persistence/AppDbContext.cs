@@ -58,7 +58,7 @@ public class AppDbContext : DbContext
     public DbSet<SyncOperationStep>  OperationSteps   => Set<SyncOperationStep>();
     public DbSet<SyncReplayRequest>  ReplayRequests   => Set<SyncReplayRequest>();
     public DbSet<SyncReplayItem>     ReplayItems      => Set<SyncReplayItem>();
-    internal DbSet<OidcConfiguration> OidcConfigurations => Set<OidcConfiguration>();
+    public DbSet<OidcConfiguration> OidcConfigurations => Set<OidcConfiguration>();
     public DbSet<SyncNodeScope>             NodeScopes             => Set<SyncNodeScope>();
     public DbSet<SyncNodeChannelAssignment> NodeChannelAssignments => Set<SyncNodeChannelAssignment>();
     public DbSet<SyncNodeTriggerAssignment> NodeTriggerAssignments => Set<SyncNodeTriggerAssignment>();

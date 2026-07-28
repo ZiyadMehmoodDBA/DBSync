@@ -1,6 +1,6 @@
 namespace MSOSync.Persistence.Entities;
 
-internal sealed class OidcConfiguration
+public sealed class OidcConfiguration
 {
     public int Id { get; set; }
     public string Name { get; set; } = string.Empty;
