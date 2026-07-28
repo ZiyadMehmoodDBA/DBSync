@@ -6,6 +6,7 @@ using MSOSync.Api.Auth;
 using MSOSync.Api.Authorization;
 using MSOSync.Api.Controllers.Auth;
 using MSOSync.Api.Exceptions;
+using MSOSync.Api.Health;
 using MSOSync.App;
 using MSOSync.App.Export;
 using MSOSync.App.Health;
@@ -111,6 +112,9 @@ try
         cfg.RegisterServicesFromAssemblyContaining<MSOSync.App.SignalR.NodeOperationsPublisher>());
 
     builder.Services.AddSingleton<IWorkerStatusRegistry, WorkerStatusRegistry>();
+
+    // --- Epic 2F.3: Node Health Scoring ---
+    builder.Services.AddHealthScoringService();
 
     // --- Epic 12C: System Health ---
     builder.Services.AddSingleton<ISystemHealthService, SystemHealthService>();
