@@ -2,6 +2,7 @@ using System.Text.Json.Serialization;
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using Microsoft.EntityFrameworkCore;
+using MSOSync.Api.Auth;
 using MSOSync.Api.Authorization;
 using MSOSync.Api.Controllers.Auth;
 using MSOSync.Api.Exceptions;
@@ -169,6 +170,7 @@ try
     builder.Services.AddSingleton<ICurrentTenantAccessor, HttpContextCurrentTenantAccessor>();
 
     builder.Services.AddTelemetry(builder.Configuration);
+    builder.Services.AddOidcAuthentication(builder.Configuration);
 
     var app = builder.Build();
 
