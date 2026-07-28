@@ -1,7 +1,9 @@
+using System.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using MSOSync.Common.Workers;
 using MSOSync.Engine;
+using MSOSync.Metrics;
 
 namespace MSOSync.Scheduler;
 
@@ -22,6 +24,9 @@ public sealed class SyncJob(
 
     internal async Task RunTickAsync(string? nodeId, CancellationToken ct)
     {
+        using var cycleActivity = PipelineActivitySource.Source.StartActivity("sync.cycle");
+        cycleActivity?.SetTag("node.id", nodeId);
+
         registry.RecordTickStart(nameof(SyncJob));
         try
         {
@@ -35,16 +40,23 @@ public sealed class SyncJob(
                 logger,
                 async innerCt =>
                 {
+                    using var dispatchActivity = PipelineActivitySource.Source.StartActivity("sync.dispatch");
+                    dispatchActivity?.SetTag("node.id", nodeId);
+
                     await using var scope = scopeFactory.CreateAsyncScope();
                     var engine = scope.ServiceProvider.GetRequiredService<SyncEngine>();
                     await engine.RunAsync(innerCt);
+
+                    dispatchActivity?.SetStatus(ActivityStatusCode.Ok);
                 },
                 ct);
 
+            cycleActivity?.SetStatus(ActivityStatusCode.Ok);
             registry.RecordTickComplete(nameof(SyncJob));
         }
         catch (Exception ex) when (!ct.IsCancellationRequested)
         {
+            cycleActivity?.SetStatus(ActivityStatusCode.Error, ex.Message);
             registry.RecordTickFailed(nameof(SyncJob), ex);
             logger.LogError(ex, "SyncJob run failed for node {NodeId}", nodeId);
         }
