@@ -1,6 +1,10 @@
+using Azure.Identity;
+using Azure.Security.KeyVault.Secrets;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using MSOSync.Common.Health;
 
 namespace MSOSync.Secrets;
 
@@ -17,19 +21,34 @@ public static class SecretsServiceExtensions
                 "Secrets:Provider must be 'Environment' or 'AzureKeyVault'")
             .ValidateOnStart();
 
+        var opts = config.GetSection(SecretsOptions.Section).Get<SecretsOptions>() ?? new();
+
+        services.AddMemoryCache();
         services.AddSingleton<EnvironmentSecretsService>(sp =>
             new EnvironmentSecretsService(config, isProduction: !env.IsDevelopment()));
 
-        services.AddSingleton<ISecretsService>(sp =>
+        if (opts.Provider == "AzureKeyVault")
         {
-            // Providers in resolution order: Azure KV (if registered) → env
-            // AzureKeyVaultSecretsService is prepended to this chain in 2E.2
-            var providers = new List<ISecretsService>
-            {
+            services.AddSingleton<SecretClient>(sp =>
+                new SecretClient(new Uri(opts.AzureKeyVault.VaultUri), new DefaultAzureCredential()));
+            services.AddSingleton<AzureKeyVaultSecretsService>(sp =>
+                new AzureKeyVaultSecretsService(
+                    sp.GetRequiredService<SecretClient>(),
+                    sp.GetRequiredService<IMemoryCache>(),
+                    opts.AzureKeyVault));
+            services.AddSingleton<ISystemHealthContributor, KeyVaultHealthContributor>();
+
+            services.AddSingleton<ISecretsService>(sp => new CompositeSecretsService([
+                sp.GetRequiredService<AzureKeyVaultSecretsService>(),
                 sp.GetRequiredService<EnvironmentSecretsService>()
-            };
-            return new CompositeSecretsService(providers);
-        });
+            ]));
+        }
+        else
+        {
+            services.AddSingleton<ISecretsService>(sp => new CompositeSecretsService([
+                sp.GetRequiredService<EnvironmentSecretsService>()
+            ]));
+        }
 
         return services;
     }
