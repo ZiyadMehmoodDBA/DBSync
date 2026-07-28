@@ -18,9 +18,10 @@ public sealed record OidcConfigurationDto(
     bool IsEnabled = true);
 
 [ApiController]
+[Route("api/v1/oidc")]
 public sealed class OidcController(AppDbContext db) : ControllerBase
 {
-    [HttpGet("api/oidc/configurations")]
+    [HttpGet("configurations")]
     [Authorize(Policy = "AdminOnly")]
     public async Task<ActionResult<IEnumerable<OidcConfigurationDto>>> GetConfigurations()
     {
@@ -32,7 +33,7 @@ public sealed class OidcController(AppDbContext db) : ControllerBase
         return configs;
     }
 
-    [HttpPost("api/oidc/configurations")]
+    [HttpPost("configurations")]
     [Authorize(Policy = "AdminOnly")]
     public async Task<ActionResult<OidcConfigurationDto>> CreateConfiguration(OidcConfigurationDto dto)
     {
@@ -52,7 +53,7 @@ public sealed class OidcController(AppDbContext db) : ControllerBase
         return CreatedAtAction(nameof(GetConfigurations), null, dto);
     }
 
-    [HttpPut("api/oidc/configurations/{id:int}")]
+    [HttpPut("configurations/{id:int}")]
     [Authorize(Policy = "AdminOnly")]
     public async Task<IActionResult> UpdateConfiguration(int id, OidcConfigurationDto dto)
     {
@@ -71,7 +72,7 @@ public sealed class OidcController(AppDbContext db) : ControllerBase
         return NoContent();
     }
 
-    [HttpDelete("api/oidc/configurations/{id:int}")]
+    [HttpDelete("configurations/{id:int}")]
     [Authorize(Policy = "AdminOnly")]
     public async Task<IActionResult> DeleteConfiguration(int id)
     {
