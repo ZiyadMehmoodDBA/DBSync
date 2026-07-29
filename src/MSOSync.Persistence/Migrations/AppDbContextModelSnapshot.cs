@@ -59,6 +59,16 @@ namespace MSOSync.Persistence.Migrations
                         .HasColumnType("varchar(100)")
                         .HasColumnName("username");
 
+                    b.Property<string>("PrevHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)")
+                        .HasColumnName("prev_hash");
+
+                    b.Property<string>("EntryHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)")
+                        .HasColumnName("entry_hash");
+
                     b.HasKey("AuditId");
 
                     b.HasIndex("CreateTime")
@@ -2182,6 +2192,10 @@ namespace MSOSync.Persistence.Migrations
                         .IsUnique()
                         .HasDatabaseName("UQ_sync_user_username");
 
+                    b.HasIndex("ExternalId", "AuthProvider")
+                        .HasDatabaseName("IX_sync_user_external_id_auth_provider")
+                        .HasFilter("[external_id] IS NOT NULL");
+
                     b.ToTable("sync_user", "msosync");
                 });
 
@@ -2340,6 +2354,153 @@ namespace MSOSync.Persistence.Migrations
                         .HasDatabaseName("IX_sync_user_backup_code_user_id");
 
                     b.ToTable("sync_user_backup_code", "msosync");
+                });
+
+            modelBuilder.Entity("MSOSync.Persistence.Entities.SyncUserApiKey", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<long>("UserId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("user_id");
+
+                    b.Property<string>("KeyHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)")
+                        .HasColumnName("key_hash");
+
+                    b.Property<string>("KeyPrefix")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("nvarchar(8)")
+                        .HasColumnName("key_prefix");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)")
+                        .HasColumnName("name");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2(7)")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime?>("LastUsedAt")
+                        .HasColumnType("datetime2(7)")
+                        .HasColumnName("last_used_at");
+
+                    b.Property<DateTime?>("ExpiresAt")
+                        .HasColumnType("datetime2(7)")
+                        .HasColumnName("expires_at");
+
+                    b.Property<bool>("IsRevoked")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_revoked");
+
+                    b.Property<DateTime?>("RevokedAt")
+                        .HasColumnType("datetime2(7)")
+                        .HasColumnName("revoked_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("IX_sync_user_api_key_user_id");
+
+                    b.HasIndex("KeyHash")
+                        .IsUnique()
+                        .HasDatabaseName("IX_sync_user_api_key_key_hash");
+
+                    b.ToTable("sync_user_api_key", "msosync");
+                });
+
+            modelBuilder.Entity("MSOSync.Persistence.Entities.SyncServiceAccount", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("PermissionsJson")
+                        .HasMaxLength(1024)
+                        .HasColumnType("nvarchar(1024)")
+                        .HasColumnName("description");
+
+                    b.Property<string>("ClientId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)")
+                        .HasColumnName("client_id");
+
+                    b.Property<string>("ClientSecretHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)")
+                        .HasColumnName("client_secret_hash");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2(7)")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime?>("LastUsedAt")
+                        .HasColumnType("datetime2(7)")
+                        .HasColumnName("last_used_at");
+
+                    b.Property<DateTime?>("ExpiresAt")
+                        .HasColumnType("datetime2(7)")
+                        .HasColumnName("expires_at");
+
+                    b.Property<bool>("IsEnabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true)
+                        .HasColumnName("is_enabled");
+
+                    b.Property<bool>("IsRevoked")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_revoked");
+
+                    b.Property<DateTime?>("RevokedAt")
+                        .HasColumnType("datetime2(7)")
+                        .HasColumnName("revoked_at");
+
+                    b.Property<string>("RevokedReason")
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)")
+                        .HasColumnName("revoked_reason");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClientId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_sync_service_account_client_id");
+
+                    b.HasIndex("IsEnabled")
+                        .HasDatabaseName("IX_sync_service_account_is_enabled");
+
+                    b.HasIndex("ClientSecretHash")
+                        .IsUnique()
+                        .HasDatabaseName("IX_sync_service_account_client_secret_hash");
+
+                    b.ToTable("sync_service_account", "msosync");
                 });
 
             modelBuilder.Entity("MSOSync.Persistence.Entities.SyncUserRole", b =>
@@ -2551,6 +2712,18 @@ namespace MSOSync.Persistence.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("MSOSync.Persistence.Entities.SyncUserApiKey", b =>
+                {
+                    b.HasOne("MSOSync.Persistence.Entities.SyncUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("FK_sync_user_api_key_user_id");
 
                     b.Navigation("User");
                 });
