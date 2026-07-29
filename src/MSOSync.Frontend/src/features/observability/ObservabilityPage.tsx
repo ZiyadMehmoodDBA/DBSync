@@ -1,25 +1,6 @@
 import { useHealthScores, useSloStatus } from './hooks';
-
-// Inline stubs — will be replaced by T3 with proper components
-function NodeHealthTable({ scores, loading }: { scores: unknown[]; loading: boolean }) {
-  if (loading) return <div className="text-muted-foreground">Loading…</div>;
-  return <pre className="text-xs">{JSON.stringify(scores, null, 2)}</pre>;
-}
-
-function SloStatusCard({ label, value, target, met }: {
-  label: string; value: string; target: string; met: boolean;
-}) {
-  return (
-    <div className="rounded-lg border p-4">
-      <p className="text-sm font-medium text-muted-foreground">{label}</p>
-      <p className="text-2xl font-bold">{value}</p>
-      <p className="text-xs text-muted-foreground">Target: {target}</p>
-      <span className={met ? 'text-green-600 text-xs' : 'text-red-500 text-xs'}>
-        {met ? '✓ Met' : '✗ Not met'}
-      </span>
-    </div>
-  );
-}
+import { NodeHealthTable } from './components/NodeHealthTable';
+import { SloStatusCard } from './components/SloStatusCard';
 
 export function ObservabilityPage() {
   const { data: healthScores, isLoading: scoresLoading, error: scoresError } = useHealthScores();
