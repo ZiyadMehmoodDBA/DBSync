@@ -15,7 +15,7 @@ public sealed class ApiKeyAuthenticationHandlerTests
 {
     private readonly Mock<IApiKeyService> _apiKeyService = new();
 
-    private ApiKeyAuthenticationHandler BuildHandler(HttpContext ctx)
+    private async Task<ApiKeyAuthenticationHandler> BuildHandlerAsync(HttpContext ctx)
     {
         var opts = Options.Create(new AuthenticationSchemeOptions());
         var monitor = new Mock<IOptionsMonitor<AuthenticationSchemeOptions>>();
@@ -28,7 +28,7 @@ public sealed class ApiKeyAuthenticationHandlerTests
             _apiKeyService.Object);
 
         var scheme = new AuthenticationScheme("ApiKey", "ApiKey", typeof(ApiKeyAuthenticationHandler));
-        handler.InitializeAsync(scheme, ctx).Wait();
+        await handler.InitializeAsync(scheme, ctx);
         return handler;
     }
 
@@ -42,7 +42,7 @@ public sealed class ApiKeyAuthenticationHandlerTests
         var ctx = new DefaultHttpContext();
         ctx.Request.Headers["X-Api-Key"] = "msk_testkey12_secretsecretssecret32";
 
-        var handler = BuildHandler(ctx);
+        var handler = await BuildHandlerAsync(ctx);
         var result = await handler.AuthenticateAsync();
 
         result.Succeeded.Should().BeTrue();
@@ -53,7 +53,7 @@ public sealed class ApiKeyAuthenticationHandlerTests
     public async Task AuthenticateAsync_ReturnsNoResult_WhenNoKeyPresent()
     {
         var ctx = new DefaultHttpContext();
-        var handler = BuildHandler(ctx);
+        var handler = await BuildHandlerAsync(ctx);
 
         var result = await handler.AuthenticateAsync();
 
@@ -71,9 +71,46 @@ public sealed class ApiKeyAuthenticationHandlerTests
         var ctx = new DefaultHttpContext();
         ctx.Request.Headers["X-Api-Key"] = "msk_badkey123_badsecretbadsecretbadse";
 
-        var handler = BuildHandler(ctx);
+        var handler = await BuildHandlerAsync(ctx);
         var result = await handler.AuthenticateAsync();
 
         result.Succeeded.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task AuthenticateAsync_ReturnsSuccess_WithAuthorizationHeader()
+    {
+        var user = new SyncUser { UserId = 2, Username = "bob", PasswordHash = "x" };
+        _apiKeyService.Setup(s => s.ValidateUserKeyAsync("msk_testkey12_secretsecretssecret32", default))
+            .ReturnsAsync(user);
+
+        var ctx = new DefaultHttpContext();
+        ctx.Request.Headers["Authorization"] = "ApiKey msk_testkey12_secretsecretssecret32";
+
+        var handler = await BuildHandlerAsync(ctx);
+        var result = await handler.AuthenticateAsync();
+
+        result.Succeeded.Should().BeTrue();
+        result.Principal!.Identity!.Name.Should().Be("bob");
+    }
+
+    [Fact]
+    public async Task AuthenticateAsync_ReturnsSuccess_ForValidServiceAccountKey()
+    {
+        _apiKeyService.Setup(s => s.ValidateUserKeyAsync(It.IsAny<string>(), default))
+            .ReturnsAsync((SyncUser?)null);
+        var account = new SyncServiceAccount { Id = 10, Name = "ci-bot", Description = "{\"read\":true}" };
+        _apiKeyService.Setup(s => s.ValidateServiceAccountKeyAsync("msk_svctest12_secretsecretssecret32", default))
+            .ReturnsAsync(account);
+
+        var ctx = new DefaultHttpContext();
+        ctx.Request.Headers["X-Api-Key"] = "msk_svctest12_secretsecretssecret32";
+
+        var handler = await BuildHandlerAsync(ctx);
+        var result = await handler.AuthenticateAsync();
+
+        result.Succeeded.Should().BeTrue();
+        result.Principal!.Identity!.Name.Should().Be("ci-bot");
+        result.Principal!.FindFirst("permissions")!.Value.Should().Be("{\"read\":true}");
     }
 }

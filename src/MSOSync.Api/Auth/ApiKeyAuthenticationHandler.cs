@@ -41,8 +41,9 @@ public sealed class ApiKeyAuthenticationHandler(
                 new(ClaimTypes.NameIdentifier, $"sa_{account.Id}"),
                 new(ClaimTypes.Name, account.Name),
                 new("auth_method", "service_account"),
-                new("permissions", account.Description ?? string.Empty),
             };
+            if (account.Description is not null)
+                claims.Add(new Claim("permissions", account.Description));
             var identity = new ClaimsIdentity(claims, Scheme.Name);
             var principal = new ClaimsPrincipal(identity);
             return AuthenticateResult.Success(new AuthenticationTicket(principal, Scheme.Name));

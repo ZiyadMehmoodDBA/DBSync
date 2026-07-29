@@ -177,6 +177,8 @@ try
     builder.Services.AddTelemetry(builder.Configuration);
     builder.Services.AddMfaService();
     builder.Services.AddApiKeyService();
+    builder.Services.AddAuthentication()
+        .AddScheme<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions, ApiKeyAuthenticationHandler>("ApiKey", _ => { });
     builder.Services.AddOidcAuthentication(builder.Configuration);
 
     var app = builder.Build();
