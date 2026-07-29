@@ -35,7 +35,7 @@ export function LatencyTrendChart({ data, targetMs }: LatencyTrendChartProps) {
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis dataKey="time" tick={{ fontSize: 12 }} />
         <YAxis unit="ms" tick={{ fontSize: 12 }} />
-        <Tooltip formatter={(v: number) => [`${v}ms`, 'P99 Latency']} />
+        <Tooltip formatter={(v) => [`${v as number}ms`, 'P99 Latency']} />
         <Legend />
         <ReferenceLine
           y={targetMs}
