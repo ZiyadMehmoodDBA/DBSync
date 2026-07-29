@@ -105,4 +105,7 @@ export const queryKeys = {
     updateCount: () =>
       ['marketplace', 'update-count'] as const,
   },
+
+  healthScores: () => ['health-scores'] as const,
+  sloStatus:    () => ['slo-status'] as const,
 };
