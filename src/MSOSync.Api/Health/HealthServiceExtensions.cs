@@ -9,4 +9,13 @@ public static class HealthServiceExtensions
         services.AddScoped<IHealthScoringService, HealthScoringService>();
         return services;
     }
+
+    public static IServiceCollection AddSloService(this IServiceCollection services)
+    {
+        services.AddOptions<SloOptions>()
+            .BindConfiguration(SloOptions.Section)
+            .ValidateOnStart();
+        services.AddScoped<ISloService, SloService>();
+        return services;
+    }
 }
