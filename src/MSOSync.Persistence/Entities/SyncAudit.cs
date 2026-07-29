@@ -12,4 +12,6 @@ public sealed class SyncAudit : ITenantScoped
     public string? CorrelationId { get; set; }
     public DateTime? CreateTime { get; set; }
     public Guid TenantId { get; set; }
+    public string? PrevHash { get; set; }
+    public string? EntryHash { get; set; }
 }

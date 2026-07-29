@@ -33,5 +33,8 @@ public sealed class SyncAuditConfiguration : IEntityTypeConfiguration<SyncAudit>
 
         builder.HasIndex(e => new { e.TenantId, e.CreateTime })
             .HasDatabaseName("IX_sync_audit_TenantId_CreateTime");
+
+        builder.Property(e => e.PrevHash).HasColumnName("prev_hash").HasMaxLength(64);
+        builder.Property(e => e.EntryHash).HasColumnName("entry_hash").HasMaxLength(64);
     }
 }
