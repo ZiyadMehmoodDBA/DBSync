@@ -176,6 +176,7 @@ try
 
     builder.Services.AddTelemetry(builder.Configuration);
     builder.Services.AddMfaService();
+    builder.Services.AddApiKeyService();
     builder.Services.AddOidcAuthentication(builder.Configuration);
 
     var app = builder.Build();
