@@ -14,7 +14,7 @@ public interface IApiKeyService
 
     Task<SyncServiceAccount?> ValidateServiceAccountKeyAsync(string apiKey, CancellationToken ct = default);
 
-    Task RevokeUserKeyAsync(int keyId, CancellationToken ct = default);
+    Task RevokeUserKeyAsync(int keyId, long callerUserId, CancellationToken ct = default);
 
     Task RevokeServiceAccountAsync(int id, CancellationToken ct = default);
 }

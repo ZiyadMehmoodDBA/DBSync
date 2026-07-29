@@ -76,7 +76,7 @@ public sealed class ApiKeyServiceTests : IDisposable
         _db.Users.Add(new SyncUser { UserId = 3, Username = "bob", PasswordHash = "x" });
         await _db.SaveChangesAsync();
         var (rawKey, entity) = await Build().CreateUserKeyAsync(3, "Key");
-        await Build().RevokeUserKeyAsync(entity.Id);
+        await Build().RevokeUserKeyAsync(entity.Id, 3L);
 
         var user = await Build().ValidateUserKeyAsync(rawKey);
 
@@ -90,7 +90,7 @@ public sealed class ApiKeyServiceTests : IDisposable
         await _db.SaveChangesAsync();
         var (_, entity) = await Build().CreateUserKeyAsync(4, "Key");
 
-        await Build().RevokeUserKeyAsync(entity.Id);
+        await Build().RevokeUserKeyAsync(entity.Id, 4L);
 
         var key = await _db.UserApiKeys.FindAsync(entity.Id);
         key!.IsRevoked.Should().BeTrue();
@@ -107,8 +107,8 @@ public sealed class ApiKeyServiceTests : IDisposable
         rawKey.Should().StartWith("msa_");
         entity.Name.Should().Be("CI Bot");
         entity.ClientId.Should().NotBeNullOrEmpty();
-        // Permissions stored as JSON in Description
-        var perms = JsonSerializer.Deserialize<string[]>(entity.Description!);
+        // Permissions stored as JSON in PermissionsJson (column name "description" in DB)
+        var perms = JsonSerializer.Deserialize<string[]>(entity.PermissionsJson!);
         perms.Should().Contain("read");
         perms.Should().Contain("write");
     }

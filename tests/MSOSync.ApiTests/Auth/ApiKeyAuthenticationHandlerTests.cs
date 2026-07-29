@@ -99,7 +99,7 @@ public sealed class ApiKeyAuthenticationHandlerTests
     {
         _apiKeyService.Setup(s => s.ValidateUserKeyAsync(It.IsAny<string>(), default))
             .ReturnsAsync((SyncUser?)null);
-        var account = new SyncServiceAccount { Id = 10, Name = "ci-bot", Description = "{\"read\":true}" };
+        var account = new SyncServiceAccount { Id = 10, Name = "ci-bot", PermissionsJson = "{\"read\":true}" };
         _apiKeyService.Setup(s => s.ValidateServiceAccountKeyAsync("msk_svctest12_secretsecretssecret32", default))
             .ReturnsAsync(account);
 

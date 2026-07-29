@@ -12,8 +12,10 @@ public sealed record CreateApiKeyRequest(string Name, DateTime? ExpiresAt);
 [Authorize]
 public sealed class ApiKeyController(IApiKeyService apiKeyService) : ControllerBase
 {
+    // Reads the "userId" claim emitted by JwtService. ApiKeyAuthenticationHandler also emits
+    // "userId" for user-key auth, ensuring consistent claim name across both schemes.
     private long CurrentUserId =>
-        long.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)
+        long.Parse(User.FindFirstValue("userId")
             ?? throw new InvalidOperationException("User not authenticated"));
 
     [HttpPost]
@@ -44,7 +46,7 @@ public sealed class ApiKeyController(IApiKeyService apiKeyService) : ControllerB
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> RevokeKey(int id, CancellationToken ct = default)
     {
-        await apiKeyService.RevokeUserKeyAsync(id, ct);
+        await apiKeyService.RevokeUserKeyAsync(id, CurrentUserId, ct);
         return NoContent();
     }
 }

@@ -23,7 +23,9 @@ public sealed class ApiKeyAuthenticationHandler(
         {
             var claims = new List<Claim>
             {
-                new(ClaimTypes.NameIdentifier, user.UserId.ToString()),
+                // Use "userId" to match the claim name emitted by JwtService so that
+                // controllers (e.g. ApiKeyController, MfaController) work under both schemes.
+                new("userId", user.UserId.ToString()),
                 new(ClaimTypes.Name, user.Username),
                 new("auth_method", "api_key"),
             };
@@ -38,12 +40,13 @@ public sealed class ApiKeyAuthenticationHandler(
         {
             var claims = new List<Claim>
             {
+                // Service accounts use NameIdentifier with "sa_" prefix (not a regular user ID).
                 new(ClaimTypes.NameIdentifier, $"sa_{account.Id}"),
                 new(ClaimTypes.Name, account.Name),
                 new("auth_method", "service_account"),
             };
-            if (account.Description is not null)
-                claims.Add(new Claim("permissions", account.Description));
+            if (account.PermissionsJson is not null)
+                claims.Add(new Claim("permissions", account.PermissionsJson));
             var identity = new ClaimsIdentity(claims, Scheme.Name);
             var principal = new ClaimsPrincipal(identity);
             return AuthenticateResult.Success(new AuthenticationTicket(principal, Scheme.Name));

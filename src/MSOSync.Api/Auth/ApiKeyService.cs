@@ -59,10 +59,11 @@ internal sealed class ApiKeyService(AppDbContext db) : IApiKeyService
         return key.User;
     }
 
-    public async Task RevokeUserKeyAsync(int keyId, CancellationToken ct = default)
+    public async Task RevokeUserKeyAsync(int keyId, long callerUserId, CancellationToken ct = default)
     {
         var key = await db.UserApiKeys.FindAsync([keyId], ct);
-        if (key is null) return;
+        // Return silently if not found OR if the key belongs to a different user (IDOR guard).
+        if (key is null || key.UserId != callerUserId) return;
         key.IsRevoked = true;
         key.RevokedAt = DateTime.UtcNow;
         await db.SaveChangesAsync(ct);
@@ -84,7 +85,7 @@ internal sealed class ApiKeyService(AppDbContext db) : IApiKeyService
             Name             = name,
             ClientId         = clientId,
             ClientSecretHash = hash,
-            Description      = JsonSerializer.Serialize(permissions),
+            PermissionsJson  = JsonSerializer.Serialize(permissions),
             CreatedAt        = DateTime.UtcNow,
             IsEnabled        = true,
         };

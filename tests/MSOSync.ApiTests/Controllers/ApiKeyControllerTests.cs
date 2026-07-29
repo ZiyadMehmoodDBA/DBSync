@@ -19,7 +19,7 @@ public sealed class ApiKeyControllerTests
     {
         _controller = new ApiKeyController(_svc.Object);
         var claims = new ClaimsPrincipal(new ClaimsIdentity(
-            [new Claim(ClaimTypes.NameIdentifier, "1")], "Test"));
+            [new Claim("userId", "1")], "Test"));
         _controller.ControllerContext = new ControllerContext
         {
             HttpContext = new DefaultHttpContext { User = claims }
@@ -43,7 +43,7 @@ public sealed class ApiKeyControllerTests
     [Fact]
     public async Task RevokeKey_ReturnsNoContent()
     {
-        _svc.Setup(s => s.RevokeUserKeyAsync(5, default)).Returns(Task.CompletedTask);
+        _svc.Setup(s => s.RevokeUserKeyAsync(5, 1L, default)).Returns(Task.CompletedTask);
 
         var result = await _controller.RevokeKey(5);
 
