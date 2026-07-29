@@ -174,6 +174,7 @@ try
     builder.Services.AddSingleton<ICurrentTenantAccessor, HttpContextCurrentTenantAccessor>();
 
     builder.Services.AddTelemetry(builder.Configuration);
+    builder.Services.AddMfaService();
     builder.Services.AddOidcAuthentication(builder.Configuration);
 
     var app = builder.Build();
