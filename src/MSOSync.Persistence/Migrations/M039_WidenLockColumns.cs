@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace MSOSync.Persistence.Migrations;
 
+[Migration("M039_WidenLockColumns")]
 public partial class M039_WidenLockColumns : Migration
 {
     private const string Schema = "msosync";
