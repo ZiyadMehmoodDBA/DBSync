@@ -38,6 +38,7 @@ import { RetentionPage } from '../features/administration/retention/RetentionPag
 import { LicensePage } from '../features/administration/license/LicensePage';
 import { DiagnosticsPage } from '../features/administration/diagnostics/DiagnosticsPage';
 import { ObservabilityPage } from '../features/observability/ObservabilityPage';
+import { SecurityDashboardPage } from '../features/security/SecurityDashboardPage';
 import { NotificationsPage } from '../features/notifications/NotificationsPage';
 import { PluginsPage } from '../features/plugins/PluginsPage';
 import { MarketplacePage } from '../features/plugins/MarketplacePage';
@@ -167,6 +168,14 @@ export const router = createBrowserRouter([
                 element: (
                   <PermissionGuard permissionKey={PermissionKeys.ViewMetrics}>
                     <ObservabilityPage />
+                  </PermissionGuard>
+                ),
+              },
+              {
+                path: 'administration/security',
+                element: (
+                  <PermissionGuard permissionKey={PermissionKeys.ViewAudit}>
+                    <SecurityDashboardPage />
                   </PermissionGuard>
                 ),
               },

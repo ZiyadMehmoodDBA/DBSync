@@ -30,6 +30,7 @@ import {
   ShieldAlert,
   Gauge,
   Store,
+  Lock,
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Separator } from '../../components/ui/separator';
@@ -92,6 +93,7 @@ const NAV_GROUPS: { heading: string | null; items: NavItem[] }[] = [
       { label: 'License',       path: '/administration/license',       icon: FileText },
       { label: 'Diagnostics',   path: '/administration/diagnostics',   icon: Stethoscope,     requiredPermission: PermissionKeys.ManageConfigurations },
       { label: 'Observability', path: '/administration/observability', icon: Activity,        requiredPermission: PermissionKeys.ViewMetrics },
+      { label: 'Security',      path: '/administration/security',      icon: Lock,            requiredPermission: PermissionKeys.ViewAudit },
       { label: 'Plugins',       path: '/administration/plugins',       icon: Package,         requiredPermission: PermissionKeys.ManagePlugins },
       { label: 'Marketplace',   path: '/marketplace',                  icon: Store,           requiredPermission: PermissionKeys.ManagePlugins },
     ],
