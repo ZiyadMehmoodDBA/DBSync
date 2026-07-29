@@ -5,7 +5,7 @@ using MSOSync.Api.Health;
 namespace MSOSync.Api.Controllers;
 
 [ApiController]
-[Route("api/health")]
+[Route("api/v1/health")]
 [Authorize(Policy = "AdminOnly")]
 public sealed class HealthScoreController(IHealthScoringService scoringService) : ControllerBase
 {

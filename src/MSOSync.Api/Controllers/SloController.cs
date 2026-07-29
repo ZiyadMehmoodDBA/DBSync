@@ -5,7 +5,7 @@ using MSOSync.Api.Health;
 namespace MSOSync.Api.Controllers;
 
 [ApiController]
-[Route("api/slo")]
+[Route("api/v1/slo")]
 [Authorize(Policy = "AdminOnly")]
 public sealed class SloController(ISloService sloService) : ControllerBase
 {
