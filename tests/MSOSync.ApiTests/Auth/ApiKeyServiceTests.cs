@@ -108,7 +108,7 @@ public sealed class ApiKeyServiceTests : IDisposable
         entity.Name.Should().Be("CI Bot");
         entity.ClientId.Should().NotBeNullOrEmpty();
         // Permissions stored as JSON in Description
-        var perms = JsonSerializer.Deserialize<string[]>(entity.Description);
+        var perms = JsonSerializer.Deserialize<string[]>(entity.Description!);
         perms.Should().Contain("read");
         perms.Should().Contain("write");
     }
