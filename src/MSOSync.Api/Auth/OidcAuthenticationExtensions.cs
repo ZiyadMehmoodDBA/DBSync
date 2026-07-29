@@ -21,11 +21,12 @@ public static class OidcAuthenticationExtensions
         var opts = configuration.GetSection(OidcAuthOptions.Section).Get<OidcAuthOptions>() ?? new();
         if (!opts.Enabled) return services;
 
-        services.AddAuthentication(o =>
-        {
-            o.DefaultChallengeScheme = OpenIdConnectDefaults.AuthenticationScheme;
-            o.DefaultSignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-        })
+        // Do NOT set DefaultChallengeScheme or DefaultSignInScheme globally — that would
+        // override the JWT bearer default and cause [Authorize] API endpoints to redirect
+        // to the IdP instead of returning 401 JSON, breaking the SPA.
+        // OIDC/Cookie are added as named schemes only; the OIDC flow is driven by
+        // the explicit /auth/oidc/callback path, not the global challenge scheme.
+        services.AddAuthentication()
         .AddCookie(CookieAuthenticationDefaults.AuthenticationScheme)
         .AddOpenIdConnect(OpenIdConnectDefaults.AuthenticationScheme, oidcOpts =>
         {
@@ -58,8 +59,10 @@ public static class OidcAuthenticationExtensions
                     var jwtService = ctx.HttpContext.RequestServices.GetRequiredService<JwtService>();
                     var token = jwtService.CreateAccessToken(user.UserId, user.Username, []);
 
+                    // Use URL fragment (#) so the token is never sent to the server,
+                    // never appears in Referer headers, and never lands in server access logs.
                     ctx.Response.Redirect(
-                        $"{opts.FrontendCallbackUrl}?token={Uri.EscapeDataString(token)}");
+                        $"{opts.FrontendCallbackUrl}#token={Uri.EscapeDataString(token)}");
                     ctx.HandleResponse();
                 }
             };
