@@ -35,9 +35,13 @@ internal sealed class OidcUserProvisioningService(AppDbContext db) : IOidcUserPr
             Username     = $"oidc:{providerName}:{sub}",
             PasswordHash = "!oidc",
         };
+        // Step 1: insert user and materialize the identity-generated UserId.
+        // SyncUserRole.UserId is ValueGeneratedNever() with no FK navigation, so EF
+        // cannot do identity fixup — we must flush first to get the real PK value.
         db.Users.Add(user);
+        await db.SaveChangesAsync(ct);
 
-        // Assign default VIEWER role so the user can access read-only endpoints.
+        // Step 2: assign default VIEWER role using the now-materialized UserId.
         // Role must exist in the sync_role table (seeded by migrations).
         var viewerRole = await db.Roles
             .AsNoTracking()
@@ -49,9 +53,9 @@ internal sealed class OidcUserProvisioningService(AppDbContext db) : IOidcUserPr
                 UserId = user.UserId,
                 RoleId = viewerRole.RoleId,
             });
+            await db.SaveChangesAsync(ct);
         }
 
-        await db.SaveChangesAsync(ct);
         return user;
     }
 }
