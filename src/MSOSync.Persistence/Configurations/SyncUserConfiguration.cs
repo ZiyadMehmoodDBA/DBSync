@@ -30,5 +30,8 @@ public sealed class SyncUserConfiguration : IEntityTypeConfiguration<SyncUser>
         builder.Property(e => e.ExternalId).HasColumnName("external_id").HasMaxLength(500);
         builder.Property(e => e.AuthProvider).HasColumnName("auth_provider").HasMaxLength(100);
         builder.Property(e => e.Email).HasColumnName("email").HasMaxLength(320);
+
+        // Epic 2E.4 — TOTP MFA
+        builder.Property(e => e.IsMfaEnabled).HasColumnName("is_mfa_enabled").HasDefaultValue(false);
     }
 }

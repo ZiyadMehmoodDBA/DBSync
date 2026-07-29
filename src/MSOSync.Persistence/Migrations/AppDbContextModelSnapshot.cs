@@ -2170,6 +2170,12 @@ namespace MSOSync.Persistence.Migrations
                         .HasColumnType("nvarchar(320)")
                         .HasColumnName("email");
 
+                    b.Property<bool>("IsMfaEnabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_mfa_enabled");
+
                     b.HasKey("UserId");
 
                     b.HasIndex("Username")
@@ -2211,6 +2217,33 @@ namespace MSOSync.Persistence.Migrations
                         .HasDatabaseName("IX_sync_user_preference_user_key");
 
                     b.ToTable("sync_user_preference", "msosync");
+                });
+
+            modelBuilder.Entity("MSOSync.Persistence.Entities.SyncUserTotpSecret", b =>
+                {
+                    b.Property<int>("UserId")
+                        .HasColumnType("int")
+                        .HasColumnName("user_id");
+
+                    b.Property<string>("Secret")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)")
+                        .HasColumnName("secret");
+
+                    b.Property<bool>("IsEnabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_enabled");
+
+                    b.Property<DateTime?>("EnabledAt")
+                        .HasColumnType("datetime2(7)")
+                        .HasColumnName("enabled_at");
+
+                    b.HasKey("UserId");
+
+                    b.ToTable("sync_user_totp_secret", "msosync");
                 });
 
             modelBuilder.Entity("MSOSync.Persistence.Entities.SyncUserRefreshToken", b =>
@@ -2270,6 +2303,43 @@ namespace MSOSync.Persistence.Migrations
                         .HasDatabaseName("IX_sync_user_refresh_token_user_id");
 
                     b.ToTable("sync_user_refresh_token", "msosync");
+                });
+
+            modelBuilder.Entity("MSOSync.Persistence.Entities.SyncUserBackupCode", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int")
+                        .HasColumnName("user_id");
+
+                    b.Property<string>("CodeHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)")
+                        .HasColumnName("code_hash");
+
+                    b.Property<bool>("IsUsed")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_used");
+
+                    b.Property<DateTime?>("UsedAt")
+                        .HasColumnType("datetime2(7)")
+                        .HasColumnName("used_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("IX_sync_user_backup_code_user_id");
+
+                    b.ToTable("sync_user_backup_code", "msosync");
                 });
 
             modelBuilder.Entity("MSOSync.Persistence.Entities.SyncUserRole", b =>
@@ -2493,6 +2563,30 @@ namespace MSOSync.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("FK_sync_user_refresh_token_user_id");
+                });
+
+            modelBuilder.Entity("MSOSync.Persistence.Entities.SyncUserBackupCode", b =>
+                {
+                    b.HasOne("MSOSync.Persistence.Entities.SyncUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("FK_sync_user_backup_code_user_id");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("MSOSync.Persistence.Entities.SyncUserTotpSecret", b =>
+                {
+                    b.HasOne("MSOSync.Persistence.Entities.SyncUser", "User")
+                        .WithOne()
+                        .HasForeignKey("MSOSync.Persistence.Entities.SyncUserTotpSecret", "UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("FK_sync_user_totp_secret_user_id");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("MSOSync.Persistence.Entities.SyncConfigurationTemplate", b =>

@@ -47,6 +47,8 @@ public class AppDbContext : DbContext
     public DbSet<SyncParameterHist> ParameterHists => Set<SyncParameterHist>();
     public DbSet<SyncLock> Locks => Set<SyncLock>();
     public DbSet<SyncUser> Users => Set<SyncUser>();
+    public DbSet<SyncUserTotpSecret> TotpSecrets => Set<SyncUserTotpSecret>();
+    public DbSet<SyncUserBackupCode> BackupCodes => Set<SyncUserBackupCode>();
     public DbSet<SyncRole> Roles => Set<SyncRole>();
     public DbSet<SyncUserRole> UserRoles => Set<SyncUserRole>();
     public DbSet<SyncUserRefreshToken> UserRefreshTokens => Set<SyncUserRefreshToken>();

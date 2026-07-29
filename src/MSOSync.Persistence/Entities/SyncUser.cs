@@ -17,4 +17,5 @@ public sealed class SyncUser
     public string? ExternalId { get; set; }    // OIDC subject claim
     public string? AuthProvider { get; set; }  // "local" | "oidc:<providerName>"
     public string? Email { get; set; }
+    public bool IsMfaEnabled { get; set; } = false;
 }
