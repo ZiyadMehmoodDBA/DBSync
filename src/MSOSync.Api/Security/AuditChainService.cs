@@ -7,7 +7,7 @@ using MSOSync.Persistence.Entities;
 
 namespace MSOSync.Api.Security;
 
-public sealed class AuditChainService(AppDbContext db) : IAuditChainService
+internal sealed class AuditChainService(AppDbContext db) : IAuditChainService
 {
     private static readonly JsonSerializerOptions _opts = new() { WriteIndented = false };
 

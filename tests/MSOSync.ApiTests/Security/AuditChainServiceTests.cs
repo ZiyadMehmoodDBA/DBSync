@@ -135,4 +135,51 @@ public sealed class AuditChainServiceTests : IDisposable
         isValid.Should().BeFalse();
         brokenId.Should().Be(2L);
     }
+
+    [Fact]
+    public async Task SetHashesAsync_SetsCorrectPrevHashAndEntryHash()
+    {
+        var svc = new AuditChainService(_db);
+
+        // Seed one prior entry with a fixed TenantId so PopulateTenantIds() won't alter it
+        var prior = new SyncAudit
+        {
+            AuditId    = 1,
+            ActionName = "login",
+            Username   = "alice",
+            CreateTime = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+            TenantId   = TestTenant,
+            PrevHash   = null
+        };
+        prior.EntryHash = svc.ComputeHash(null, prior);
+        _db.Audits.Add(prior);
+        await _db.SaveChangesAsync();
+
+        // New entry — set TenantId before calling SetHashesAsync so the hash is computed
+        // with the final TenantId value (PopulateTenantIds only mutates Guid.Empty entries)
+        var entry = new SyncAudit
+        {
+            AuditId    = 2,
+            ActionName = "logout",
+            Username   = "alice",
+            CreateTime = new DateTime(2026, 1, 1, 0, 0, 1, DateTimeKind.Utc),
+            TenantId   = TestTenant
+        };
+
+        await svc.SetHashesAsync(entry);
+
+        entry.PrevHash.Should().Be(prior.EntryHash);
+        entry.EntryHash.Should().Be(svc.ComputeHash(prior.EntryHash, entry));
+    }
+
+    [Fact]
+    public async Task VerifyChainAsync_ReturnsValid_ForEmptyDatabase()
+    {
+        var svc = new AuditChainService(_db);
+
+        var (isValid, brokenId) = await svc.VerifyChainAsync();
+
+        isValid.Should().BeTrue();
+        brokenId.Should().BeNull();
+    }
 }

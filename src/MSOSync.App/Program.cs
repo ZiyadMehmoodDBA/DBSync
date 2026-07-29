@@ -7,6 +7,7 @@ using MSOSync.Api.Authorization;
 using MSOSync.Api.Controllers.Auth;
 using MSOSync.Api.Exceptions;
 using MSOSync.Api.Health;
+using MSOSync.Api.Security;
 using MSOSync.App;
 using MSOSync.App.Export;
 using MSOSync.App.Health;
@@ -177,7 +178,7 @@ try
     builder.Services.AddTelemetry(builder.Configuration);
     builder.Services.AddMfaService();
     builder.Services.AddApiKeyService();
-    builder.Services.AddScoped<MSOSync.Api.Security.IAuditChainService, MSOSync.Api.Security.AuditChainService>();
+    builder.Services.AddScoped<IAuditChainService, AuditChainService>();
     builder.Services.AddAuthentication()
         .AddScheme<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions, ApiKeyAuthenticationHandler>("ApiKey", _ => { });
     builder.Services.AddOidcAuthentication(builder.Configuration);
