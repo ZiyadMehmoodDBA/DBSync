@@ -1,6 +1,7 @@
 import { useHealthScores, useSloStatus } from './hooks';
 import { NodeHealthTable } from './components/NodeHealthTable';
 import { SloStatusCard } from './components/SloStatusCard';
+import { LatencyTrendChart } from './components/LatencyTrendChart';
 
 export function ObservabilityPage() {
   const { data: healthScores, isLoading: scoresLoading, error: scoresError } = useHealthScores();
@@ -35,6 +36,14 @@ export function ObservabilityPage() {
         ) : (
           <div className="text-muted-foreground">No SLO data available</div>
         )}
+      </section>
+
+      <section>
+        <h2 className="text-lg font-medium mb-3">P99 Latency Trend</h2>
+        <LatencyTrendChart
+          data={[]}
+          targetMs={sloStatus?.latencyP99TargetMs ?? 5000}
+        />
       </section>
 
       <section>
