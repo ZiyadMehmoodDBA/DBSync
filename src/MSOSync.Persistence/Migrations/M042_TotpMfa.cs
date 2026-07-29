@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace MSOSync.Persistence.Migrations;
 
+[Migration("M042_TotpMfa")]
 public partial class M042_TotpMfa : Migration
 {
     private const string Schema = "msosync";
@@ -25,7 +26,7 @@ public partial class M042_TotpMfa : Migration
             schema: Schema,
             columns: table => new
             {
-                user_id  = table.Column<int>(type: "int", nullable: false),
+                user_id  = table.Column<long>(type: "bigint", nullable: false),
                 secret   = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false),
                 is_enabled = table.Column<bool>(type: "bit", nullable: false, defaultValue: false),
                 enabled_at = table.Column<DateTime>(type: "datetime2(7)", nullable: true),
@@ -50,7 +51,7 @@ public partial class M042_TotpMfa : Migration
             {
                 id       = table.Column<int>(type: "int", nullable: false)
                     .Annotation("SqlServer:Identity", "1, 1"),
-                user_id  = table.Column<int>(type: "int", nullable: false),
+                user_id  = table.Column<long>(type: "bigint", nullable: false),
                 code_hash = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false),
                 is_used  = table.Column<bool>(type: "bit", nullable: false, defaultValue: false),
                 used_at  = table.Column<DateTime>(type: "datetime2(7)", nullable: true),

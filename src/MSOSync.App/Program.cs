@@ -115,6 +115,7 @@ try
 
     // --- Epic 2F.3: Node Health Scoring ---
     builder.Services.AddHealthScoringService();
+    builder.Services.AddSloService();
 
     // --- Epic 12C: System Health ---
     builder.Services.AddSingleton<ISystemHealthService, SystemHealthService>();
