@@ -16,7 +16,9 @@ public sealed class SyncServiceAccountConfiguration : IEntityTypeConfiguration<S
 
         builder.Property(e => e.Id).HasColumnName("id").ValueGeneratedOnAdd();
         builder.Property(e => e.Name).HasColumnName("name").HasMaxLength(256).IsRequired();
-        builder.Property(e => e.Description).HasColumnName("description").HasMaxLength(1024);
+        // Column name stays "description" to avoid a migration; C# property renamed to PermissionsJson
+        // to make it clear this field stores JSON-serialized string[] of permissions, not a human label.
+        builder.Property(e => e.PermissionsJson).HasColumnName("description").HasMaxLength(1024);
         builder.Property(e => e.ClientId).HasColumnName("client_id").HasMaxLength(128).IsRequired();
         builder.Property(e => e.ClientSecretHash).HasColumnName("client_secret_hash").HasMaxLength(64).IsRequired();
         builder.Property(e => e.CreatedAt).HasColumnName("created_at").HasColumnType("datetime2(7)").IsRequired();

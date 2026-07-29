@@ -93,10 +93,23 @@ public partial class M043_ApiKeysServiceAccounts : Migration
             schema: Schema,
             table:  "sync_service_account",
             column: "is_enabled");
+
+        // Index for ValidateServiceAccountKeyAsync — filters by client_secret_hash per auth request.
+        migrationBuilder.CreateIndex(
+            name:   "IX_sync_service_account_client_secret_hash",
+            schema: Schema,
+            table:  "sync_service_account",
+            column: "client_secret_hash",
+            unique: true);
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)
     {
+        migrationBuilder.DropIndex(
+            name:   "IX_sync_service_account_client_secret_hash",
+            schema: Schema,
+            table:  "sync_service_account");
+
         migrationBuilder.DropTable(name: "sync_user_api_key", schema: Schema);
         migrationBuilder.DropTable(name: "sync_service_account", schema: Schema);
     }
