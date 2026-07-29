@@ -49,6 +49,8 @@ public class AppDbContext : DbContext
     public DbSet<SyncUser> Users => Set<SyncUser>();
     public DbSet<SyncUserTotpSecret> TotpSecrets => Set<SyncUserTotpSecret>();
     public DbSet<SyncUserBackupCode> BackupCodes => Set<SyncUserBackupCode>();
+    public DbSet<SyncUserApiKey> UserApiKeys => Set<SyncUserApiKey>();
+    public DbSet<SyncServiceAccount> ServiceAccounts => Set<SyncServiceAccount>();
     public DbSet<SyncRole> Roles => Set<SyncRole>();
     public DbSet<SyncUserRole> UserRoles => Set<SyncUserRole>();
     public DbSet<SyncUserRefreshToken> UserRefreshTokens => Set<SyncUserRefreshToken>();
