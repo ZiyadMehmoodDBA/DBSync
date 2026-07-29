@@ -91,6 +91,7 @@ const NAV_GROUPS: { heading: string | null; items: NavItem[] }[] = [
       { label: 'Retention',     path: '/administration/retention',     icon: Archive,         requiredPermission: PermissionKeys.ManageConfigurations },
       { label: 'License',       path: '/administration/license',       icon: FileText },
       { label: 'Diagnostics',   path: '/administration/diagnostics',   icon: Stethoscope,     requiredPermission: PermissionKeys.ManageConfigurations },
+      { label: 'Observability', path: '/administration/observability', icon: Activity,        requiredPermission: PermissionKeys.ViewMetrics },
       { label: 'Plugins',       path: '/administration/plugins',       icon: Package,         requiredPermission: PermissionKeys.ManagePlugins },
       { label: 'Marketplace',   path: '/marketplace',                  icon: Store,           requiredPermission: PermissionKeys.ManagePlugins },
     ],

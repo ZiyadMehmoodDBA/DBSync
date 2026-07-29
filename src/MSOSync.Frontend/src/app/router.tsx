@@ -37,6 +37,7 @@ import { SettingsPage } from '../features/administration/settings/SettingsPage';
 import { RetentionPage } from '../features/administration/retention/RetentionPage';
 import { LicensePage } from '../features/administration/license/LicensePage';
 import { DiagnosticsPage } from '../features/administration/diagnostics/DiagnosticsPage';
+import { ObservabilityPage } from '../features/observability/ObservabilityPage';
 import { NotificationsPage } from '../features/notifications/NotificationsPage';
 import { PluginsPage } from '../features/plugins/PluginsPage';
 import { MarketplacePage } from '../features/plugins/MarketplacePage';
@@ -158,6 +159,14 @@ export const router = createBrowserRouter([
                 element: (
                   <PermissionGuard permissionKey={PermissionKeys.ManageConfigurations}>
                     <DiagnosticsPage />
+                  </PermissionGuard>
+                ),
+              },
+              {
+                path: 'administration/observability',
+                element: (
+                  <PermissionGuard permissionKey={PermissionKeys.ViewMetrics}>
+                    <ObservabilityPage />
                   </PermissionGuard>
                 ),
               },
