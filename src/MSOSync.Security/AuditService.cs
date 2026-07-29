@@ -5,7 +5,7 @@ using MSOSync.Security.Events;
 
 namespace MSOSync.Security;
 
-public sealed class AuditService(AppDbContext db) :
+public sealed class AuditService(AppDbContext db, IAuditChainService chainService) :
     INotificationHandler<LoginSuccessEvent>,
     INotificationHandler<LoginFailureEvent>,
     INotificationHandler<AccountLockedEvent>,
@@ -28,14 +28,21 @@ public sealed class AuditService(AppDbContext db) :
         string actionName, string? username, string? objectName,
         string? correlationId, CancellationToken ct)
     {
-        db.Audits.Add(new SyncAudit
+        var entry = new SyncAudit
         {
-            ActionName = actionName,
-            Username = username,
-            ObjectName = objectName,
+            ActionName    = actionName,
+            Username      = username,
+            ObjectName    = objectName,
             CorrelationId = correlationId,
-            CreateTime = DateTime.UtcNow
-        });
+            CreateTime    = DateTime.UtcNow
+        };
+
+        // Compute hash chain BEFORE SaveChangesAsync so hashes are persisted with the row.
+        // TenantId is NOT included in the canonical form (see AuditChainService.CanonicalEntry)
+        // because PopulateTenantIds() mutates it from Guid.Empty during SaveChangesAsync.
+        await chainService.SetHashesAsync(entry, ct);
+
+        db.Audits.Add(entry);
         await db.SaveChangesAsync(ct);
     }
 }

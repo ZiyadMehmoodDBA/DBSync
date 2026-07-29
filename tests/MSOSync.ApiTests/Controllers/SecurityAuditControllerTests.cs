@@ -3,8 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Moq;
 using MSOSync.Api.Controllers;
-using MSOSync.Api.Security;
 using MSOSync.Persistence;
+using MSOSync.Security;
 using MSOSync.Persistence.Entities;
 using Xunit;
 

@@ -11,10 +11,6 @@ public sealed class AuditChainServiceTests : IDisposable
 {
     private readonly AppDbContext _db;
 
-    // Use a fixed, non-empty TenantId so AppDbContext.PopulateTenantIds() does not
-    // overwrite the value after hash computation (it only mutates Guid.Empty entries).
-    private static readonly Guid TestTenant = new("aaaaaaaa-0000-0000-0000-000000000001");
-
     public AuditChainServiceTests()
     {
         var options = new DbContextOptionsBuilder<AppDbContext>()
@@ -35,7 +31,7 @@ public sealed class AuditChainServiceTests : IDisposable
             ActionName = "login",
             Username   = "alice",
             CreateTime = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
-            TenantId   = TestTenant
+            // TenantId not included in canonical form — removed per Critical Finding 2
         };
 
         var hash1 = svc.ComputeHash(null, entry);
@@ -55,7 +51,6 @@ public sealed class AuditChainServiceTests : IDisposable
             ActionName = "login",
             Username   = "alice",
             CreateTime = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
-            TenantId   = TestTenant
         };
 
         var hashA = svc.ComputeHash(null, entry);
@@ -75,7 +70,6 @@ public sealed class AuditChainServiceTests : IDisposable
             ActionName = "login",
             Username   = "alice",
             CreateTime = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
-            TenantId   = TestTenant
         };
         e1.PrevHash  = null;
         e1.EntryHash = svc.ComputeHash(null, e1);
@@ -86,7 +80,6 @@ public sealed class AuditChainServiceTests : IDisposable
             ActionName = "logout",
             Username   = "alice",
             CreateTime = new DateTime(2026, 1, 1, 0, 0, 1, DateTimeKind.Utc),
-            TenantId   = TestTenant
         };
         e2.PrevHash  = e1.EntryHash;
         e2.EntryHash = svc.ComputeHash(e1.EntryHash, e2);
@@ -111,7 +104,6 @@ public sealed class AuditChainServiceTests : IDisposable
             ActionName = "login",
             Username   = "alice",
             CreateTime = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
-            TenantId   = TestTenant
         };
         e1.PrevHash  = null;
         e1.EntryHash = svc.ComputeHash(null, e1);
@@ -122,7 +114,6 @@ public sealed class AuditChainServiceTests : IDisposable
             ActionName = "logout",
             Username   = "alice",
             CreateTime = new DateTime(2026, 1, 1, 0, 0, 1, DateTimeKind.Utc),
-            TenantId   = TestTenant
         };
         e2.PrevHash  = "tampered-hash"; // wrong prev hash — chain break
         e2.EntryHash = svc.ComputeHash("tampered-hash", e2);
@@ -141,29 +132,26 @@ public sealed class AuditChainServiceTests : IDisposable
     {
         var svc = new AuditChainService(_db);
 
-        // Seed one prior entry with a fixed TenantId so PopulateTenantIds() won't alter it
+        // Seed one prior entry
         var prior = new SyncAudit
         {
             AuditId    = 1,
             ActionName = "login",
             Username   = "alice",
             CreateTime = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
-            TenantId   = TestTenant,
             PrevHash   = null
         };
         prior.EntryHash = svc.ComputeHash(null, prior);
         _db.Audits.Add(prior);
         await _db.SaveChangesAsync();
 
-        // New entry — set TenantId before calling SetHashesAsync so the hash is computed
-        // with the final TenantId value (PopulateTenantIds only mutates Guid.Empty entries)
+        // New entry — TenantId not included in hash so no ordering hazard
         var entry = new SyncAudit
         {
             AuditId    = 2,
             ActionName = "logout",
             Username   = "alice",
             CreateTime = new DateTime(2026, 1, 1, 0, 0, 1, DateTimeKind.Utc),
-            TenantId   = TestTenant
         };
 
         await svc.SetHashesAsync(entry);

@@ -4,6 +4,7 @@ using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using MSOSync.Persistence;
 using MSOSync.Persistence.Entities;
+using MSOSync.Security;
 
 namespace MSOSync.Api.Security;
 
@@ -60,6 +61,7 @@ public sealed class AuditChainService(AppDbContext db) : IAuditChainService
         action_name = e.ActionName,
         object_name = e.ObjectName,
         create_time = e.CreateTime?.ToString("O"),
-        tenant_id   = e.TenantId,
+        // TenantId intentionally excluded: PopulateTenantIds() mutates it from Guid.Empty
+        // to the system-tenant GUID during SaveChangesAsync, causing a hash/verify mismatch.
     }, _opts);
 }

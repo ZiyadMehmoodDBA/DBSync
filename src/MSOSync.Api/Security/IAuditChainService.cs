@@ -1,10 +1,3 @@
-using MSOSync.Persistence.Entities;
-
-namespace MSOSync.Api.Security;
-
-public interface IAuditChainService
-{
-    string ComputeHash(string? prevHash, SyncAudit entry);
-    Task SetHashesAsync(SyncAudit entry, CancellationToken ct = default);
-    Task<(bool IsValid, long? FirstBrokenId)> VerifyChainAsync(CancellationToken ct = default);
-}
+// IAuditChainService moved to MSOSync.Security.IAuditChainService so that
+// MSOSync.Security.AuditService can inject it without creating a circular dependency.
+// This file is intentionally empty — use MSOSync.Security.IAuditChainService directly.
