@@ -66,6 +66,21 @@ public sealed class AuthenticationService(
         await userService.ResetFailedAttemptsAsync(user, ct);
         await userService.UpdateLastLoginAsync(user, ct);
 
+        // MFA challenge: if the user has TOTP enabled, return a short-lived challenge result.
+        // The controller will exchange this for an mfa_token; no access token is issued here.
+        if (user.IsMfaEnabled)
+        {
+            await mediator.Publish(new LoginSuccessEvent(username, correlationId), ct);
+            return new LoginResult(
+                Success: true,
+                AccessToken: null,
+                RefreshToken: null,
+                ExpiresAt: null,
+                Error: null,
+                RequiresMfa: true,
+                UserId: user.UserId);
+        }
+
         var roles = await userService.GetRolesAsync(user.UserId, ct);
 
         // Resolve tenant membership for multi-tenant token issuance

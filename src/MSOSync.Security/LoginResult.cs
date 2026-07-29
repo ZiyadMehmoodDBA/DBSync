@@ -9,6 +9,8 @@ public sealed record LoginResult(
     Guid? TenantId = null,
     string? TenantSlug = null,
     bool RequiresTenantSelection = false,
-    IReadOnlyList<TenantPickerItem>? Tenants = null);
+    IReadOnlyList<TenantPickerItem>? Tenants = null,
+    bool RequiresMfa = false,
+    long? UserId = null);
 
 public sealed record TenantPickerItem(Guid TenantId, string TenantSlug);

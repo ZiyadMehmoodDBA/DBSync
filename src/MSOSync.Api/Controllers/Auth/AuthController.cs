@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using MSOSync.Api.Auth;
 using MSOSync.Api.Dtos.Auth;
 using MSOSync.Api.Dtos.Common;
 using MSOSync.Security;
@@ -13,11 +14,13 @@ namespace MSOSync.Api.Controllers.Auth;
 public sealed class AuthController(
     AuthenticationService authService,
     ITenantMembershipQueryService membershipQuery,
-    JwtService jwtService) : ControllerBase
+    JwtService jwtService,
+    MfaTokenService mfaTokenService) : ControllerBase
 {
     [HttpPost("login")]
     [EnableRateLimiting("LoginPolicy")]
     [ProducesResponseType(typeof(LoginResponse), 200)]
+    [ProducesResponseType(typeof(MfaChallengeResponse), 202)]
     [ProducesResponseType(typeof(TenantSelectionResponse), 300)]
     [ProducesResponseType(typeof(ErrorResponse), 401)]
     public async Task<IActionResult> Login(
@@ -30,6 +33,13 @@ public sealed class AuthController(
 
         if (!result.Success)
             return Unauthorized(new ErrorResponse(result.Error!));
+
+        // MFA challenge: password is valid but a TOTP code is required before full token issuance.
+        if (result.RequiresMfa)
+        {
+            var mfaToken = mfaTokenService.Create(result.UserId!.Value);
+            return Accepted(new MfaChallengeResponse(RequiresMfa: true, MfaToken: mfaToken));
+        }
 
         // Multiple memberships — return picker list, client must call switch-tenant
         if (result.RequiresTenantSelection)
